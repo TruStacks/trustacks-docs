@@ -1,0 +1,56 @@
+---
+title: Overview
+description: Technical documentation for TruStacks. Install the runner, connect a repository, author policy, and integrate with your existing stack.
+---
+
+# TruStacks Docs
+
+TruStacks is an AI agent crew that proposes every software-delivery change as
+a reviewed, policy-checked pull request. Engineers ship faster without breaking
+the controls auditors care about.
+
+**Agents propose. Policy decides. Humans approve.**
+
+This site is the technical reference. For positioning, pricing, and the
+product overview, head to [trustacks.com](https://trustacks.com).
+
+## Where to start
+
+- **[Getting started](/getting-started/quickstart)** · install the runner,
+  point it at your first repository, and watch the crew open its first PR.
+- **[Installation](/installation/local-dev)** · local development, cluster
+  deploy, credentials, and GitOps wiring.
+- **[Workshops](/workshops/ci-cd-generation)** · guided walk-throughs that
+  exercise the crew on real-shaped problems.
+- **[Reference](/reference/architecture)** · architecture, the constitution,
+  Specialist Packs, the runner CLI, the MCP server surface, and the policy
+  linter.
+
+## How TruStacks fits together
+
+The platform has three layers, each one strictly stricter than the one above.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Customer Overlay (your architects, SREs, compliance team)       │
+│  Your domain rules. Authoring at the Team tier and above.        │
+├──────────────────────────────────────────────────────────────────┤
+│  Specialist Packs (TruStacks, paid, signed)                      │
+│  SOC2, HIPAA, PCI, FedRAMP, ITIL                                 │
+│  Community packs (open source, free)                             │
+│  Frameworks, CI runtimes, industry overlays                      │
+├──────────────────────────────────────────────────────────────────┤
+│  Constitution (TruStacks, signed, immutable, free at all tiers)  │
+│  The universal rules every proposal must respect.                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+The agent crew reads all three. Each PR carries a citation back to the rule
+that motivated it. Your existing GitOps controller deploys merged PRs the way
+it always has.
+
+## Status
+
+These docs are under active construction ahead of the public Beta. Pages
+marked *Draft* are skeletons; expect them to fill in over the coming weeks.
+If something is missing or wrong, [open an issue](https://github.com/TruStacks/trustacks-docs/issues).

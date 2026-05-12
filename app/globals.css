@@ -1,0 +1,17 @@
+/*
+ * Brand palette overrides for nextra-theme-docs.
+ * Deep Navy #0F172A · Slate #475569 · Light Slate #94A3B8 ·
+ * Pale Slate #E2E8F0 · Green-Teal #10B981 (HSL ~158, 84%, 39%).
+ * Matches trustacks.com.
+ */
+:root {
+  --nextra-primary-hue: 158deg;
+  --nextra-primary-saturation: 84%;
+  --nextra-primary-lightness: 39%;
+}
+
+html.dark {
+  --nextra-primary-hue: 158deg;
+  --nextra-primary-saturation: 76%;
+  --nextra-primary-lightness: 45%;
+}
