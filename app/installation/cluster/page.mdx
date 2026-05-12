@@ -1,0 +1,33 @@
+---
+title: Cluster deploy
+description: Install the TruStacks runner on a production Kubernetes or OpenShift cluster.
+---
+
+import { Callout } from 'nextra/components'
+
+# Cluster deploy
+
+<Callout type="info">
+  **Draft.** This page is a skeleton.
+</Callout>
+
+A production install lands the runner as a single Helm release in your
+cluster. The runner phones home to the TruStacks Control Plane over outbound
+mTLS only. No inbound ports.
+
+## Supported platforms
+
+- Vanilla Kubernetes 1.27+
+- OpenShift 4.13+
+- EKS, GKE, AKS
+
+## Install steps
+
+*Coming soon.*
+
+## What lives where
+
+- **In your cluster:** runner pod, optional Cluster Operator, MCP clients for
+  your tools.
+- **At TruStacks:** Control Plane, rule distribution, billing, agent traces.
+  Your source code never leaves your network.

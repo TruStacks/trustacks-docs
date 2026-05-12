@@ -1,0 +1,72 @@
+---
+title: Architecture
+description: How TruStacks fits together. Three planes, three layers of rules, one agent crew.
+---
+
+import { Callout } from 'nextra/components'
+
+# Architecture
+
+<Callout type="info">
+  **Draft.** This page is a skeleton. The full reference lands ahead of the
+  public Beta.
+</Callout>
+
+TruStacks has three planes (Knowledge, Control, Data) and three layers of
+rules (constitution, packs, overlay). The agent crew reads all of them and
+proposes pull requests against a separate platform repository. Your existing
+GitOps controller deploys merged PRs the way it always has.
+
+## Three planes
+
+- **Knowledge Plane.** The rules: constitution + Specialist Packs + community
+  packs + your overlay. Rego bundles, signed with Cosign.
+- **Control Plane.** TruStacks-hosted. Coordinator, web UI, billing, rule
+  distribution. No customer source code lives here.
+- **Data Plane.** Runs in your cluster. One Helm release: runner pod,
+  optional Cluster Operator, MCP clients for your tools, outbound mTLS to the
+  Control Plane.
+
+## Three layers of rules
+
+Each layer can only ratchet *stricter* than the one above. A policy linter
+proves this at compile time. Overlays that try to weaken a rule fail to
+build.
+
+1. **Constitution.** TruStacks-authored, signed, immutable. Free at all
+   tiers.
+2. **Packs.** Specialist Packs (SOC2, HIPAA, PCI, FedRAMP, ITIL — paid,
+   TruStacks-signed) layered with community packs (frameworks, CI runtimes,
+   industry overlays — open source, free).
+3. **Customer overlay.** Your architects, SREs, and compliance team author
+   here. Signed by your own keys.
+
+## The crew
+
+- **Coordinator** · the agent your engineers talk to. Routes work to
+  specialists.
+- **DevOps Engineer** · emits CI workflow YAML, Dockerfiles, Helm charts,
+  Kustomize overlays, ArgoCD Application manifests. Reads the platform repo
+  first to preserve your customizations.
+- **Code Reviewer** · reviews application-repo changes. Detects framework
+  and runtime version.
+- **Baseline Security** · the first specialist. Consults on image scanning,
+  SAST/SCA, secret scanning, SBOM signing.
+- **Specialist agents** (paid add-ons) · SOC2 shipping today. HIPAA,
+  FedRAMP, PCI, ITIL, SRE queued.
+
+## The Environment Profile
+
+A peer concept to rules: a signed, declarative inventory of your stack.
+Which CI platform, which scanner, which registry, which GitOps controller,
+which observability vendor. Captured once, evolved over time. Every agent
+reads it on every action. Cross-session, cross-repo memory that makes *your
+AI coworker* real.
+
+## Detailed reference
+
+- [Constitution](/reference/constitution)
+- [Specialist Packs](/reference/specialist-packs)
+- [Runner CLI](/reference/runner-cli)
+- [MCP server](/reference/mcp-server)
+- [Policy linter](/reference/policy-linter)

@@ -1,0 +1,42 @@
+# CodeRabbit configuration for trustacks-docs.
+# Docs: https://docs.coderabbit.ai
+language: en-US
+early_access: false
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+  path_filters:
+    - '!**/*.lock'
+    - '!**/package-lock.json'
+    - '!**/.next/**'
+    - '!**/node_modules/**'
+    - '!**/public/_pagefind/**'
+  path_instructions:
+    - path: 'app/**/*.mdx'
+      instructions: |
+        Check that customer-facing copy follows the trustacks voice rules from CLAUDE.md:
+        - Coworker-not-replacement framing. Flag any "fully autonomous", "set it and forget it",
+          "replace your DevOps team", or framing that hides the human-in-the-loop merge step.
+        - "Agents propose. Policy decides. Humans approve." is the canonical three-beat.
+          Flag "disposes" if it appears (canon is "decides").
+        - "Specialist Pack" is the canonical term. Flag "Practice Pack", "Practice rules",
+          or "compliance pack" in customer-facing copy.
+        - No em-dashes in customer-facing copy. Suggest periods, colons, commas, or parentheses.
+        - Frontmatter must include both `title` and `description`.
+    - path: 'app/**/*.{ts,tsx}'
+      instructions: |
+        This is a Nextra v4 / Next.js 15 App Router project. The Nextra Layout owns the root
+        html/body in app/layout.tsx. Flag any duplicate html or body tags. Brand palette
+        overrides live in app/globals.css; new color values should reference the Deep Navy /
+        Slate / Green-Teal palette.
+chat:
+  auto_reply: true

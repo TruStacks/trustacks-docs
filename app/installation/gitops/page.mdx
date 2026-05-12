@@ -1,0 +1,33 @@
+---
+title: GitOps integration
+description: Wire ArgoCD or Flux to deploy merged TruStacks pull requests.
+---
+
+import { Callout } from 'nextra/components'
+
+# GitOps integration
+
+<Callout type="info">
+  **Draft.** This page is a skeleton.
+</Callout>
+
+TruStacks does not replace your GitOps controller. The DevOps Engineer agent
+emits the manifests; ArgoCD or Flux deploys them when a human merges the PR.
+
+## Supported controllers
+
+- ArgoCD 2.10+
+- Flux v2
+
+## Repository layout
+
+The DevOps Engineer agent organizes the platform repository as:
+
+```
+argo-apps/<cluster>/        ArgoCD Application manifests per service × cluster
+gitops/<app-name>/<env>/    Kustomize overlays per service × environment
+```
+
+## Wiring up
+
+*Coming soon.*

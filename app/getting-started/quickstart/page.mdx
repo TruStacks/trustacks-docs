@@ -1,0 +1,45 @@
+---
+title: Quickstart
+description: Install the TruStacks runner, point it at your first repository, and see the crew open its first pull request.
+---
+
+import { Callout } from 'nextra/components'
+
+# Quickstart
+
+<Callout type="info">
+  **Draft.** This page is a skeleton. The full quickstart lands ahead of the
+  public Beta.
+</Callout>
+
+This walkthrough takes you from a clean machine to *the crew opened a PR
+against my platform repo* in under thirty minutes.
+
+## What you will need
+
+- A Kubernetes or OpenShift cluster you can deploy to. Local clusters
+  (`k3d`, `kind`, OpenShift Local) work fine for the walkthrough.
+- A GitHub or GitLab account with admin rights on at least one application
+  repository and one platform repository.
+- An LLM provider key. The Developer tier ships with a TruStacks-managed key,
+  so you do not need your own to start.
+
+## Steps
+
+1. Install the TruStacks runner. *(coming soon)*
+2. Connect your first application repository. *(coming soon)*
+3. Watch the Coordinator hand work to the DevOps Engineer agent. *(coming soon)*
+4. Review the proposed pull request and merge. *(coming soon)*
+
+## What happens next
+
+Your existing GitOps controller (ArgoCD or Flux) deploys the merged PR. The
+runner stays in your cluster and watches for the next change. The crew
+remembers your stack via the *Environment Profile*. No re-explaining every
+session.
+
+## Where to go next
+
+- [Local development install](/installation/local-dev)
+- [Cluster install](/installation/cluster)
+- [Architecture reference](/reference/architecture)
