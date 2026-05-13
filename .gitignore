@@ -40,3 +40,6 @@ next-env.d.ts
 # editor
 .vscode/
 .idea/
+
+# agent session state
+.claude/
