@@ -1,39 +1,156 @@
 ---
 title: Specialist Packs
-description: Paid, signed Rego bundles for regulatory and specialty domains. SOC2, HIPAA, PCI, FedRAMP, ITIL.
+description: Paid, signed Rego bundles for regulatory and specialty domains. SOC2, HIPAA, PCI, FedRAMP, ITIL. Each typically pairs with a Specialist agent.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Specialist Packs
 
-<Callout type="info">
-  **Draft.** This page is a skeleton.
-</Callout>
-
 Specialist Packs are TruStacks-curated Rego bundles for regulatory and
 specialty domains. Each typically pairs with a Specialist agent of the same
-name. Sold as Enterprise-and-above add-ons.
+name. Sold as Enterprise-and-above add-ons. Available standalone for
+customers who want the rules without the agents.
+
+The boundary sits where it does deliberately. TruStacks carries the
+auditor-defensibility risk on these packs. CC6.1 has to actually map to
+CC6.1 correctly. So we curate, sign, and ship them through the vendor
+channel.
+
+## Pack and agent: two distinct things
+
+A Specialist Pack and the matching Specialist agent are independently
+usable, even though they typically ship together.
+
+- **The Pack** is content. A signed Rego bundle that ratchets stricter
+  than the constitution for a specific domain. It is *rules* the OPA
+  engine evaluates against every proposal.
+- **The agent** is reasoning. An LLM agent the Coordinator delegates to
+  during gap analysis. It surfaces findings, evidence hints, and
+  recommendations grounded in your declared stack.
+
+You can subscribe to a Pack without the agent (a compliance team that
+already has its own platform team, for example). You can subscribe to an
+agent without that Pack (rare, but supported for customers who already
+have their own regulatory rule library and want a domain expert in the
+crew).
 
 ## Available today
 
-- **SOC2 Specialist Pack** · auditor-relevant findings spanning CC1 through
-  CC9 with evidence hints grounded in your stack. Pairs with the SOC2
-  Specialist agent.
+### SOC2 Specialist Pack
+
+Shipping as of 2026-05-02. Auditor-relevant rules and findings spanning
+the CC1 through CC9 control families with evidence hints grounded in your
+declared stack.
+
+Pairs with the **SOC2 Specialist agent**. The agent contributes
+SOC2-specific observations to gap analysis, including missing controls,
+weak controls, and stack-shaped recommendations for closing each gap.
 
 ## Queued
 
-- HIPAA Specialist Pack
-- FedRAMP Specialist Pack
-- PCI Specialist Pack
-- ITIL Specialist Pack
+The order below reflects current priority, weighted toward the customer
+pedigree (regulated, federal, healthcare-adjacent).
 
-## How packs layer
+- **HIPAA Specialist Pack** · 164.308 / 164.310 / 164.312 control families.
+  Pairs with the HIPAA Specialist agent.
+- **FedRAMP Specialist Pack** · Moderate baseline first, High to follow.
+  Pairs with the FedRAMP Specialist agent and the on-premises inference
+  posture required for the Federal tier.
+- **PCI Specialist Pack** · PCI DSS v4 control families. Pairs with the
+  PCI Specialist agent.
+- **ITIL Specialist Pack** · service management and change-management
+  rules. Pairs with the ITIL Specialist agent (the closest agent to "your
+  SRE in the crew").
 
-Specialist Packs layer above the constitution and below your overlay. They
-can ratchet stricter than the constitution. Your overlay can ratchet
-stricter than them. None of them can weaken anything above.
+Specialist Packs ship in P5.4, post-Beta.
 
-## Pricing
+## How Specialist Packs layer
 
-For current pricing and availability, see [trustacks.com/pricing](https://trustacks.com/pricing).
+Specialist Packs sit above the constitution and below your overlay.
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  Your overlay                                                    │
+│  (can ratchet stricter than the Packs)                           │
+├──────────────────────────────────────────────────────────────────┤
+│  Specialist Packs (paid, TruStacks-signed)                       │
+│  (can ratchet stricter than the constitution)                    │
+├──────────────────────────────────────────────────────────────────┤
+│  Constitution                                                    │
+│  (free at all tiers, non-waivable)                               │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+A Pack can require stricter behavior than the constitution. Your overlay
+can require stricter behavior than the Pack. No layer ever weakens
+anything from a layer above. The [policy linter](/reference/policy-linter)
+enforces the ratchet cryptographically at compile time.
+
+Multiple Packs can be active simultaneously. A customer with SOC2 + HIPAA
+subscribed gets both rule sets applied. The union of all required rules is
+what every proposal is checked against.
+
+## Waivers
+
+Unlike constitution rules, Specialist Pack rules support time-bound,
+signed waivers with mandatory expiration and audit visibility.
+
+A waiver is a customer-overlay rule that explicitly cites the Pack rule
+it is suspending, the business justification, the expiration timestamp,
+and a sign-off. The Runner logs every waiver activation. The Gap Analysis
+Report flags active waivers and surfaces upcoming expirations.
+
+<Callout type="warning">
+  **Waivers are auditable, not invisible.** Your auditor will see them.
+  Your CISO will see them. The Coordinator will surface them in chat. The
+  feature exists for legitimate exceptions, not for working around rules
+  you do not like.
+</Callout>
+
+## Distribution and signing
+
+Specialist Packs ship through the same pipeline as the constitution.
+
+- **Format** · Rego bundles for OPA.
+- **Signing** · Cosign keyless OIDC, signed by the TruStacks identity.
+- **Distribution** · OCI artifact in the TruStacks registry, fetched by
+  your Runner on startup and on rule refresh. Pack subscriptions are
+  validated by the Control Plane before bundle delivery.
+- **Verification** · The Runner's init container verifies the signature
+  against the pinned TruStacks identity before extracting the bundle.
+
+The "verify yourself" property applies. Same Cosign command works on a
+Pack bundle as on the constitution bundle.
+
+## Versioning
+
+Specialist Packs follow semantic versioning, parallel to the constitution.
+
+- **Patch** · clarifications, test additions, evidence-hint refinements.
+- **Minor** · new rules added. Existing rules unchanged.
+- **Major** · a rule's behavior changes or a rule is removed. Surfaces in
+  the policy linter; your overlay may need migration.
+
+Pack updates land independently of constitution updates and independently
+of each other. Upgrading is an explicit operator action; the Runner pins
+versions per release.
+
+## Standalone subscriptions
+
+Customers who want the rules without the agents can subscribe to packs
+independently. Typical fit: a compliance team in a larger organization
+that already has its own platform team and just needs the rule library
+plus signing infrastructure.
+
+For current standalone pricing and availability, see
+[trustacks.com/pricing](https://trustacks.com/pricing).
+
+## Where to go next
+
+- [Architecture](/reference/architecture) · how Packs fit into the three
+  layers of rules
+- [Constitution](/reference/constitution) · the floor every Pack
+  ratchets above
+- [Policy linter](/reference/policy-linter) · enforces ratchet
+  refinement across all layers
