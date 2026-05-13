@@ -1,0 +1,156 @@
+---
+title: TruStacks and spec-driven development
+description: TruStacks is the policy layer for spec-driven shops. Where SDD tools generate code from specs, TruStacks ensures the resulting deploys ratchet stricter than your floor. Complementary, not competitive.
+---
+
+import { Callout } from 'nextra/components'
+
+# TruStacks and spec-driven development
+
+If you arrived here from a Spec-Driven Development (SDD) context like
+**GitHub Spec Kit**, **AWS Kiro**, or one of the other 2026 spec-first
+tools, this page tells you where TruStacks fits.
+
+The short version: **TruStacks is the policy layer for spec-driven
+shops.** SDD tools generate code from specs. TruStacks ensures the
+deploys those tools produce respect the controls your auditors care
+about. The two are complementary; we are not an SDD product ourselves.
+
+## What SDD tools do well
+
+The 2026 spec-first wave is a real shift in how teams build software.
+Tools in this category share a few load-bearing traits:
+
+- **Specifications are first-class.** Requirements and behavior are
+  authored as machine-readable specs, not just documented in tickets.
+- **Code generation from specs.** The generation step turns a spec
+  into runnable code, scaffolding tests, types, and integration
+  points.
+- **The spec becomes the source of truth.** Re-running generation
+  against an updated spec ratchets the implementation forward.
+
+This is a meaningful improvement over hand-rolled toil. Teams that
+adopt SDD ship faster on the parts of the codebase the specs cover.
+
+## What is missing from the SDD story
+
+SDD tools generate code. They do not, by design, answer the question
+*what should happen between the generated code and production?*
+
+Specifically, in 2026 the SDD tools we are aware of do not address:
+
+- **Policy and runtime conformance.** Does the generated deploy match
+  your organization's compliance and security policies?
+- **Auditor-ready evidence.** Can your SOC2 auditor trace the
+  generated deploy back to the rule that motivated each artifact?
+- **Tribal knowledge.** The architect who knows why the legacy
+  service deploys on Sunday nights; the compliance officer who knows
+  which scanner has to be FIPS-validated. SDD generation does not
+  capture this.
+- **The merge gate.** SDD tools generate. The human still has to
+  decide whether the generated change is allowed to ship in this
+  environment, against these regulations, given this team's
+  context.
+
+This is the gap TruStacks fills.
+
+## Where TruStacks fits
+
+TruStacks is what runs *after* code exists, regardless of how the code
+got there. The Code Reviewer, DevOps Engineer, and Specialist agents
+read your repository, your declared stack, and a signed Rego policy
+bundle (the constitution). They emit CI workflows, Kubernetes
+manifests, and ArgoCD Application manifests as pull requests against a
+separate platform repository. Every proposal is policy-checked by OPA
+before the PR opens. Your existing GitOps controller deploys merged
+PRs.
+
+The architectural commitment is non-negotiable:
+
+- **Agents propose. Policy decides. Humans approve.** No autonomous
+  merge path. Ever.
+- **The constitution is the floor.** Your overlay can only ratchet
+  stricter, never looser. The policy linter proves this at compile
+  time.
+- **Your code stays in your network.** Source never leaves the Data
+  Plane unless you explicitly opt in.
+
+See [the architecture page](/reference/architecture) for the full
+shape.
+
+## How TruStacks and SDD coexist
+
+A team running an SDD tool plus TruStacks gets a clean separation of
+concerns:
+
+| Concern | Where it lives |
+|---|---|
+| Specification authoring | Your SDD tool (Spec Kit, Kiro, etc.) |
+| Code generation from spec | Your SDD tool |
+| The generated source code | Your application repository |
+| Application of policy to that code | TruStacks |
+| Generation of CI / manifests / deploy artifacts | TruStacks |
+| Policy verdict on the proposed deploy | TruStacks (OPA against the constitution + Specialist Packs) |
+| Pull request open + human review | TruStacks opens; you review |
+| Actual deploy to the cluster | Your existing GitOps controller (ArgoCD, Flux) |
+
+In other words: the SDD tool decides *what the code should do*.
+TruStacks decides *what shape the deploy must take, given who you are
+and what regulations you operate under*. The human reviewer decides
+whether to merge.
+
+## What this means concretely
+
+A team running Spec Kit + TruStacks would see a typical change like
+this:
+
+1. Engineer updates a spec in Spec Kit (or equivalent).
+2. Spec Kit generates the code update; a PR opens on the application
+   repository.
+3. Engineer reviews and merges the application-repo PR. The change
+   ships to source.
+4. The TruStacks Code Reviewer agent reads the changed application
+   repo, detects what the change is (new endpoint, new dependency,
+   new deployment target).
+5. The Coordinator delegates to the DevOps Engineer agent.
+6. The DevOps Engineer reads the platform repo (read-and-preserve)
+   and emits the workflow + Helm chart + ArgoCD Application updates
+   into a platform-repo PR.
+7. OPA evaluates the proposal against the constitution and any active
+   Specialist Packs. On allow, the platform-repo PR opens.
+8. Engineer reviews the platform-repo PR. The PR body cites which
+   constitution rules motivated each artifact. Engineer merges.
+9. ArgoCD picks up the merge and deploys.
+
+The SDD tool owns steps 1 to 3. TruStacks owns steps 4 to 8. Your
+GitOps controller owns step 9. Each layer is doing what it does best.
+
+## Why this positioning matters
+
+The SDD movement is producing better generated code. It is not
+producing better governance. Teams adopting SDD without a policy layer
+end up shipping faster on the easy paths and still hand-rolling the
+hard paths (CI compliance, audit trail, compliance pack overlays,
+runtime conformance).
+
+TruStacks plugs into that gap. You can keep your SDD tool. You can
+choose any SDD tool. You can change SDD tools later. The policy layer
+is independent.
+
+<Callout type="info">
+  **We coexist; we do not compete.** TruStacks is not an SDD product
+  and does not plan to be. If you want spec-first code generation,
+  use a spec-first tool. If you want the resulting deploys to respect
+  your controls, use TruStacks.
+</Callout>
+
+## Where to go next
+
+- [Architecture](/reference/architecture) · the three planes, three
+  layers of rules, the Environment Profile
+- [The constitution](/reference/constitution) · the foundation that
+  every TruStacks proposal respects
+- [Quickstart](/getting-started/quickstart) · run the platform
+  locally in about thirty minutes
+- [Policy authoring workshop](/workshops/policy-authoring) · write
+  your first overlay rule

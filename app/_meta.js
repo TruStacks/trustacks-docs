@@ -4,6 +4,7 @@ export default {
   installation: 'Installation',
   workshops: 'Workshops',
   reference: 'Reference',
+  concepts: 'Concepts',
   'trustacks-com': {
     title: 'trustacks.com',
     type: 'page',
