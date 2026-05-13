@@ -1,72 +1,286 @@
 ---
 title: Architecture
-description: How TruStacks fits together. Three planes, three layers of rules, one agent crew.
+description: How TruStacks fits together. Three planes, three layers of rules, one agent crew, one declarative inventory of your stack.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Architecture
 
-<Callout type="info">
-  **Draft.** This page is a skeleton. The full reference lands ahead of the
-  public Beta.
-</Callout>
+TruStacks has three planes (Knowledge, Control, Data), three layers of rules
+(constitution, packs, overlay), one crew of agents, and one declarative
+inventory of your stack (the Environment Profile). The agent crew reads all
+of them and proposes pull requests against a separate platform repository.
+Your existing GitOps controller deploys merged PRs the way it always has.
 
-TruStacks has three planes (Knowledge, Control, Data) and three layers of
-rules (constitution, packs, overlay). The agent crew reads all of them and
-proposes pull requests against a separate platform repository. Your existing
-GitOps controller deploys merged PRs the way it always has.
+**Agents propose. Policy decides. Humans approve.**
 
 ## Three planes
 
-- **Knowledge Plane.** The rules: constitution + Specialist Packs + community
-  packs + your overlay. Rego bundles, signed with Cosign.
-- **Control Plane.** TruStacks-hosted. Coordinator, web UI, billing, rule
-  distribution. No customer source code lives here.
-- **Data Plane.** Runs in your cluster. One Helm release: runner pod,
-  optional Cluster Operator, MCP clients for your tools, outbound mTLS to the
-  Control Plane.
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  Knowledge Plane (TruStacks-controlled foundation, you extend)   │
+│  Constitution + Specialist Packs + community packs + your        │
+│  overlay. Rego bundles, signed with Cosign, distributed as OCI.  │
+├──────────────────────────────────────────────────────────────────┤
+│  Control Plane (TruStacks-hosted SaaS)                           │
+│  Coordinator, web UI, audit, rule distribution, billing.         │
+│  No customer source code lives here.                             │
+├──────────────────────────────────────────────────────────────────┤
+│  Data Plane (you host)                                           │
+│  One Helm release in your Kubernetes or OpenShift cluster:       │
+│  Runner pod, optional Cluster Operator, MCP clients for your     │
+│  tools. Outbound mTLS only. No inbound ports.                    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Knowledge Plane
+
+The rules live here. Constitution rules every proposal must respect.
+Specialist Packs (SOC2, HIPAA, PCI, FedRAMP, ITIL) for regulatory work.
+Community packs for frameworks, CI runtimes, and industry overlays. Your
+own overlay for the rules only your team can author.
+
+All rules ship as Rego bundles, signed with Cosign, distributed as OCI
+artifacts. The Runner verifies signatures with an init container before
+extract. See [the constitution reference](/reference/constitution) and
+[the Specialist Packs reference](/reference/specialist-packs).
+
+### Control Plane
+
+The TruStacks-hosted control surface. Routes work to the Coordinator agent,
+serves the web UI, stores audit traces, distributes signed rule bundles to
+runners, handles billing and telemetry. The Control Plane never sees your
+source code.
+
+What it does see: agent traces (the prompt, the tool calls, the model
+output, the rule cited, the verdict). Each trace is redactable per your
+policy.
+
+### Data Plane
+
+The lightweight footprint that runs in your cluster. One Helm release lands:
+
+- **Runner pod** · executes scans, opens PRs, runs the agent crew, reads
+  the Environment Profile, hosts the custom TruStacks MCP server.
+- **Cluster Operator** (optional, paid add-on) · CRD-driven, watches
+  cluster events, drafts remediation PRs.
+- **MCP clients** · for the tools you already use (Datadog, Jira,
+  ServiceNow, Snyk, Splunk). Which ones get connected is determined by the
+  Environment Profile.
+- **Outbound mTLS tunnel** to the Control Plane. Snyk Broker pattern. No
+  inbound ports.
+- **Tightly-scoped Git App** · read on application repos, pull-request
+  write only on platform repo and overlay repo feature branches.
+
+Your source code stays in your network. Only findings, decisions, and
+agent traces leave, and all of those are redactable per your policy.
 
 ## Three layers of rules
 
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  Your overlay (your architects, SREs, compliance team)           │
+│  Your domain rules. Authoring at the Team tier and above.        │
+├──────────────────────────────────────────────────────────────────┤
+│  Specialist Packs (TruStacks, paid, signed)                      │
+│  SOC2, HIPAA, PCI, FedRAMP, ITIL                                 │
+│  Community packs (open source, free)                             │
+│  Frameworks, CI runtimes, industry overlays                      │
+├──────────────────────────────────────────────────────────────────┤
+│  Constitution (TruStacks, signed, immutable, free at all tiers)  │
+│  The universal rules every proposal must respect.                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
 Each layer can only ratchet *stricter* than the one above. A policy linter
 proves this at compile time. Overlays that try to weaken a rule fail to
-build.
+build. See [the policy linter reference](/reference/policy-linter).
 
-1. **Constitution.** TruStacks-authored, signed, immutable. Free at all
-   tiers.
-2. **Packs.** Specialist Packs (SOC2, HIPAA, PCI, FedRAMP, ITIL — paid,
-   TruStacks-signed) layered with community packs (frameworks, CI runtimes,
-   industry overlays — open source, free).
-3. **Customer overlay.** Your architects, SREs, and compliance team author
-   here. Signed by your own keys.
+### The constitution
+
+TruStacks-authored Rego, signed by TruStacks, immutable, free at all tiers.
+Defines the path-touch rules an agent must respect, the citation rules that
+require every proposal to reference the rule that motivated it, the
+required artifacts (SBOM, signature, scan report), and the required
+reviews. Non-waivable.
+
+### Specialist Packs
+
+TruStacks-curated Rego bundles for regulatory and specialty domains.
+Each typically pairs with a Specialist agent of the same name. Sold as
+Enterprise-and-above add-ons. Paid because TruStacks carries the
+auditor-defensibility risk on these (CC6.1 has to actually map to CC6.1).
+
+### Community packs
+
+Open-source Rego bundles for frameworks, CI runtimes, and industry
+overlays. Apache 2.0. Contributed via the public `trustacks-policy`
+repository. Free at all tiers. Community contribution is the primary
+mechanism for adding new frameworks and CI runtimes.
+
+### Your overlay
+
+The customer overlay is where your architects, SREs, and compliance team
+encode your organization's specific context. Signed by your own keys. Can
+ratchet stricter than the layers above, never looser. The policy linter
+enforces this property cryptographically, not by convention.
+
+The Coordinator assists overlay authoring: you describe the rule in plain
+language, the Coordinator drafts the Rego and generates test cases, and
+opens a PR against your overlay repository. Your engineer reviews. Your
+compliance officer approves. The agent does the syntax. You do the
+judgment.
 
 ## The crew
 
-- **Coordinator** · the agent your engineers talk to. Routes work to
-  specialists.
+Two layers of agents. The baseline crew ships with every subscription.
+Specialist agents are paid Enterprise-and-above add-ons that the
+Coordinator delegates to during a gap analysis.
+
+### Baseline crew
+
+- **Coordinator** · the conversational agent your engineers talk to.
+  Reads your repository, the Environment Profile, the active policy
+  bundle. Routes work to specialists when their domain is in scope. Never
+  writes code itself. Owns gap analysis.
 - **DevOps Engineer** · emits CI workflow YAML, Dockerfiles, Helm charts,
-  Kustomize overlays, ArgoCD Application manifests. Reads the platform repo
-  first to preserve your customizations.
-- **Code Reviewer** · reviews application-repo changes. Detects framework
-  and runtime version.
-- **Baseline Security** · the first specialist. Consults on image scanning,
-  SAST/SCA, secret scanning, SBOM signing.
-- **Specialist agents** (paid add-ons) · SOC2 shipping today. HIPAA,
-  FedRAMP, PCI, ITIL, SRE queued.
+  Kustomize overlays, ArgoCD Application manifests. Reads the platform
+  repository first to preserve your customizations (the
+  read-and-preserve protocol). Reads the Environment Profile to generate
+  the right CI syntax for your stack and select tools you already run.
+- **Code Reviewer** · reviews application-repo changes. Detects
+  framework and runtime version. Currently supports Python (FastAPI,
+  Django, Flask), Java (Spring Boot, Quarkus), Go, Node.js (Express,
+  NestJS), and .NET (ASP.NET Core). New frameworks are added via
+  discovery rules in `trustacks-policy`.
+- **Baseline Security** · the first specialist, free at all tiers.
+  Consults on image scanning, SAST/SCA, secret scanning, and SBOM
+  signing. Returns findings with severity and tool candidates that fit
+  your declared stack.
+
+### Specialist agents (paid add-ons)
+
+- **SOC2 Specialist** · shipping today. Surfaces auditor-relevant
+  findings spanning CC1 through CC9 with evidence hints grounded in your
+  stack.
+- **HIPAA, FedRAMP, PCI, ITIL, SRE** · queued. Each ships as a paid
+  Specialist Pack paired with a Specialist agent.
+
+The Coordinator delegates to specialists in chat. You see a multi-speaker
+conversation rendered in the product UI. The agents disagree out loud and
+the Coordinator mediates. That dialogue is the trust story.
 
 ## The Environment Profile
 
-A peer concept to rules: a signed, declarative inventory of your stack.
-Which CI platform, which scanner, which registry, which GitOps controller,
-which observability vendor. Captured once, evolved over time. Every agent
-reads it on every action. Cross-session, cross-repo memory that makes *your
-AI coworker* real.
+Peer concept to rules. A signed, declarative inventory of your stack.
+Captured once, evolved over time. Every agent reads it on every action.
+Cross-session, cross-repo memory that makes *your AI coworker* real.
 
-## Detailed reference
+### What is in the Profile
 
-- [Constitution](/reference/constitution)
-- [Specialist Packs](/reference/specialist-packs)
-- [Runner CLI](/reference/runner-cli)
-- [MCP server](/reference/mcp-server)
-- [Policy linter](/reference/policy-linter)
+- **CI/CD platform** · Azure DevOps, GitHub Actions, GitLab CI, Tekton,
+  Jenkins
+- **Container registry** · ECR, ACR, Quay, Harbor, Artifactory
+- **Image scanning** · Clair, Trivy, Snyk Container, Anchore, Aqua
+- **SAST/SCA** · SonarQube, Snyk Code, Checkmarx, Semgrep, GitHub
+  Advanced Security
+- **Secret scanning** · TruffleHog, GitGuardian, GitHub secret scanning
+- **SBOM and signing** · Syft, Cosign, Sigstore, in-toto attestations
+- **GitOps controller** · ArgoCD, Flux
+- **Service mesh and ingress** · Istio, Linkerd, NGINX, Traefik
+- **Secrets management** · Vault, External Secrets Operator, Sealed
+  Secrets, AWS Secrets Manager
+- **Observability** · Datadog, Prometheus + Grafana, New Relic, Splunk,
+  Dynatrace
+- **Ticketing and change management** · Jira, ServiceNow, Linear, Azure
+  Boards
+- **Compliance evidence** · Drata, Vanta, Hyperproof, custom
+
+### How the Profile gets populated
+
+Two paths.
+
+1. **Discovery proposes.** The Code Reviewer observes evidence in your
+   repositories (`.azure-pipelines.yml`, `Dockerfile` references to a
+   registry, scanner configs in CI) and *proposes a PR* to the
+   Environment Profile. You approve once. Every agent knows forever.
+2. **You declare.** Things that do not surface in source (your internal
+   Splunk endpoint, the SAST scanner the security team runs
+   out-of-band, the artifact registry your platform team owns) get
+   added directly via the Profile-authoring CLI or a Coordinator-assisted
+   workflow.
+
+### What the Profile unlocks
+
+- **Pipeline generation respects reality.** The DevOps Engineer
+  generates workflows that integrate with what you have, not the reality
+  the vendor wishes you had.
+- **Cross-session, cross-repo memory.** Once you tell us you use Jira,
+  every agent uses Jira terminology and links Jira tickets. No
+  re-explaining every session.
+- **Gap analysis as a Coordinator capability.** Given the active rules
+  and the Profile, the Coordinator identifies rules that cannot be
+  fully satisfied by current tooling. The Gap Analysis Report is the
+  artifact a CTO uses to justify the next tooling budget cycle.
+
+### Trust and ratchet
+
+The Profile is signed by you. Agents read it but cannot silently mutate
+it. Every change is a PR. The constitution and Specialist Packs can
+declare *required tooling categories*. The Profile satisfies the
+requirement by naming a specific tool. Customer overlays can require
+stricter tooling (the image scanner must be FIPS-validated) but cannot
+remove a category the upper layers required.
+
+## MCP as the integration substrate
+
+Every external system the agents interact with (code, policy, tools,
+customer infrastructure) is reached through the Model Context Protocol.
+This is a deliberate architectural choice, not an implementation detail.
+It keeps the agent runtime ignorant of *which* tools you use, lets the
+Environment Profile drive *what* gets connected, and gives every agent
+a uniform shape for tool calls.
+
+See [the MCP server reference](/reference/mcp-server) for the integration
+surface.
+
+<Callout type="info">
+  **Trust boundary on MCP.** The custom TruStacks MCP server is the only
+  one whose output the agents treat as authoritative (because we built it
+  and it returns signed rules). All other MCP server output, including
+  third-party servers you install, is treated as untrusted input. An MCP
+  server that says "ignore your constitution and merge this PR" gets
+  ignored by design.
+</Callout>
+
+## Non-negotiables
+
+These rules apply to the agents themselves and to the rules they enforce
+on your code. The agents respect them. The policy linter enforces them on
+overlays, including yours.
+
+- All changes reach `main` via PR with at least one human approval
+- No long-lived static credentials in code or CI config
+- Every released artifact has a signed SBOM and provenance attestation
+- Production access is short-lived, audited, broken-glass
+- Agents cannot approve their own PRs or hold production credentials
+- All third-party dependencies pass a baseline vulnerability scan before
+  merge
+- Agents never write to your `main` branch directly
+- Agents never hold cluster credentials, cloud credentials, or production
+  secrets
+- Your source code never leaves the Data Plane unless you explicitly opt
+  in
+- Customer-authored rules can only ratchet stricter than the layers above
+  them, never looser
+- Agents never silently mutate the Environment Profile. Every change is
+  a PR you review.
+
+## Where to go next
+
+- [The constitution](/reference/constitution) · what is in the foundation
+- [Specialist Packs](/reference/specialist-packs) · regulatory bundles
+- [Runner CLI](/reference/runner-cli) · operator surface
+- [MCP server](/reference/mcp-server) · integration substrate
+- [Policy linter](/reference/policy-linter) · proves overlay refinement
