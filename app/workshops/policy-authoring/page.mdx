@@ -1,35 +1,192 @@
 ---
 title: Policy authoring workshop
-description: Write your first customer-overlay Rego rule with the Coordinator's help.
+description: Write your first customer-overlay Rego rule with the Coordinator's help. The agent does the syntax. You do the judgment.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Policy authoring workshop
 
-<Callout type="info">
-  **Draft.** This page is a skeleton.
-</Callout>
-
 Write your first customer-overlay rule. The Coordinator drafts the Rego,
-generates test cases, and opens a PR against your overlay repository. You
-review, refine, and approve. The agent does the syntax. You do the judgment.
+generates test cases, lints the result, and opens a PR against your
+overlay repository. You review, refine, and approve. The agent does the
+syntax. You do the judgment.
 
-## What you will build
-
-A rule that codifies one piece of your team's tribal knowledge. The most
-common starting point is a change-management rule (*"all production
-deployments require an entry in our change calendar"*) or a deployment-window
-rule (*"the legacy service deploys on Sunday nights only"*).
+By the end of this walkthrough, you will have a signed rule running in
+your Runner that codifies one piece of your team's tribal knowledge.
 
 ## Time required
 
 Roughly 30 minutes.
 
+## What you will build
+
+A change-management rule for a service that needs special handling at
+deploy time. Pick one of these starting points (or substitute your own
+real example):
+
+- **Change-calendar rule** · all production deployments require a Jira
+  ticket linked to the change calendar.
+- **Deploy-window rule** · the legacy `billing-rollup` service deploys
+  on Sunday nights only, between 22:00 and 02:00 UTC.
+- **Approver rule** · changes to the `infra/secrets/` directory in the
+  platform repo require approval from the security group.
+
+This workshop uses the change-calendar rule as the worked example.
+Substitute your own rule as you go.
+
 ## Setup
 
-*Coming soon.*
+You need:
+
+- A TruStacks Runner installed in your cluster. See
+  [the cluster install guide](/installation/cluster).
+- An overlay repository connected to your Runner. See
+  [credentials and secrets](/installation/secrets).
+- The `trustacks` CLI authenticated against your Runner:
+
+  ```bash
+  trustacks login
+  trustacks status   # should report a healthy Runner
+  ```
+
+- An overlay-signing identity registered with the Control Plane.
 
 ## Walkthrough
 
-*Coming soon.*
+### Step 1. Ask the Coordinator for a draft
+
+Open the Coordinator in chat. Describe the rule in plain language. The
+more specific you are, the closer the draft lands.
+
+> *I need a rule that requires every production deployment to link a
+> Jira ticket. The ticket key should appear in the PR body and the
+> ticket must be in our "Change Management" project (`CM-`). Deployments
+> without a `CM-`-prefixed ticket should be denied.*
+
+The Coordinator returns a draft Rego rule, two test cases (one positive,
+one negative), and a citation block. The draft lands in
+`./overlay/require-change-ticket.rego` on a new branch in your overlay
+repository.
+
+### Step 2. Review the draft
+
+Open the file and read what the Coordinator produced. Look for:
+
+- **The rule shape.** Does the rule check what you actually want it to
+  check?
+- **The test coverage.** Does the positive test reflect a realistic
+  passing case? Does the negative test reflect the failure mode you
+  care about?
+- **The citation.** Is the rule's stable ID descriptive?
+  (`CM-TICKET-REQUIRED-001` is better than `MY-RULE-001`.)
+- **Edge cases.** Hotfixes, rollbacks, automated dependabot PRs:
+  should the rule apply to those too?
+
+This is the *judgment* part. The agent wrote the syntax. You decide
+whether the syntax represents the rule you actually want.
+
+### Step 3. Refine in chat
+
+Iterate with the Coordinator on anything that needs to change. Ask
+specific questions; vague feedback gets vague drafts.
+
+> *The current draft requires the ticket key in the PR body, but our
+> team uses the Jira-GitHub integration that puts the key in the branch
+> name. Update the rule to check both locations and pass if either has
+> a `CM-` ticket reference.*
+
+The Coordinator updates the rule and the tests in the same branch. You
+see the diff in your overlay repository.
+
+### Step 4. Run the tests
+
+```bash
+trustacks rule test ./overlay/require-change-ticket.rego
+```
+
+The OPA test harness runs your positive and negative cases. Exit code 0
+means both passed. If a test fails, the output names which input case
+broke and the expected vs actual verdict.
+
+### Step 5. Lint the rule
+
+```bash
+trustacks rule lint ./overlay/require-change-ticket.rego
+```
+
+The [policy linter](/reference/policy-linter) confirms:
+
+- The rule ratchets stricter than the constitution and any active
+  Specialist Packs.
+- The signature shape is correct (you have not signed it yet, but the
+  shape will be valid).
+- The citation block is complete.
+- Test coverage (positive + negative) is present.
+
+If the linter rejects the rule, the output explains why. The most common
+first-time failure is missing test coverage. Iterate, re-run the lint.
+
+### Step 6. Sign the rule
+
+```bash
+trustacks rule sign ./overlay/require-change-ticket.rego
+```
+
+The CLI signs the rule with your overlay-signing identity. The signed
+rule is added to the overlay bundle on the branch.
+
+### Step 7. Open a PR to the overlay repo
+
+The Coordinator drafted the branch and the file. You sign the rule. Open
+the PR yourself; humans always merge.
+
+```bash
+git push -u origin policy/require-change-ticket
+gh pr create --title "policy: require CM- ticket on production deploys" --body "..."
+```
+
+The PR description should explain:
+
+- **Why** the rule exists (the business reason).
+- **What** the rule denies (the failure mode).
+- **Edge cases** the rule explicitly handles (hotfix path, rollback
+  path).
+- **Waivers** (none expected for this rule).
+
+### Step 8. Review and merge
+
+Your engineering team reviews the PR like any other code review. The
+diff shows the new Rego rule, the tests, and the citation block.
+
+When the PR merges, the Runner pulls the new overlay bundle on its next
+rule refresh and the rule goes live. The next proposal that touches a
+production deploy gets evaluated against the new rule.
+
+## What just happened
+
+You codified a piece of your team's tribal knowledge. The rule is now:
+
+- **Signed** with your overlay identity (auditor can verify the chain).
+- **Version-controlled** in your overlay repository (every change is a
+  PR; every PR has a history).
+- **Tested** (positive and negative cases run on every rule update).
+- **Queryable** by every agent (the next CI/CD generation run knows the
+  rule exists; the Coordinator can explain it in chat).
+- **Stricter than the constitution** (the [policy linter](/reference/policy-linter)
+  proved the ratchet property at compile time).
+
+The architect who knew this rule no longer has to be the architect who
+knows this rule. It is in the overlay now. Tribal knowledge,
+codified, before it walks out the door.
+
+## Where to go next
+
+- [The runner CLI reference](/reference/runner-cli) · the full
+  command surface for rule authoring
+- [The policy linter reference](/reference/policy-linter) · what the
+  linter checks and why
+- [The constitution reference](/reference/constitution) · the layer
+  your overlay ratchets above
+- [The CI/CD generation workshop](/workshops/ci-cd-generation) · the
+  other workshop, focused on the DevOps Engineer agent
