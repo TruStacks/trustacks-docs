@@ -1,45 +1,131 @@
 ---
 title: Quickstart
-description: Install the TruStacks runner, point it at your first repository, and see the crew open its first pull request.
+description: From a clean machine to the agent crew opening its first pull request in under thirty minutes. Local k3d evaluation path.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Quickstart
 
+From a clean machine to the agent crew opening its first pull request
+against a platform repository, in under thirty minutes. This walkthrough
+uses the local k3d evaluation path; for the full reference, see
+[local development](/installation/local-dev).
+
 <Callout type="info">
-  **Draft.** This page is a skeleton. The full quickstart lands ahead of the
-  public Beta.
+  **Eval scope.** This quickstart spins up the full platform on your
+  laptop. Customer production installs are moving to the Cluster
+  Operator (post-Beta). For staging or production cluster installs
+  today, see [the cluster install guide](/installation/cluster).
 </Callout>
 
-This walkthrough takes you from a clean machine to *the crew opened a PR
-against my platform repo* in under thirty minutes.
+## Prerequisites
 
-## What you will need
+You need:
 
-- A Kubernetes or OpenShift cluster you can deploy to. Local clusters
-  (`k3d`, `kind`, OpenShift Local) work fine for the walkthrough.
-- A GitHub or GitLab account with admin rights on at least one application
-  repository and one platform repository.
-- An LLM provider key. The Developer tier ships with a TruStacks-managed key,
-  so you do not need your own to start.
+- Docker Desktop (running)
+- An Anthropic API key from
+  [console.anthropic.com](https://console.anthropic.com/settings/keys)
+- Access to `github.com/TruStacks/trustacks-mvp` (private during Beta)
 
-## Steps
+Install the CLI tools:
 
-1. Install the TruStacks runner. *(coming soon)*
-2. Connect your first application repository. *(coming soon)*
-3. Watch the Coordinator hand work to the DevOps Engineer agent. *(coming soon)*
-4. Review the proposed pull request and merge. *(coming soon)*
+```bash
+brew install --cask docker
+brew install k3d helm kubectl uv node opa oras
+```
 
-## What happens next
+Then verify with `make doctor` after cloning the repo (next step).
 
-Your existing GitOps controller (ArgoCD or Flux) deploys the merged PR. The
-runner stays in your cluster and watches for the next change. The crew
-remembers your stack via the *Environment Profile*. No re-explaining every
-session.
+## The thirty-minute path
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/TruStacks/trustacks-mvp.git
+cd trustacks-mvp
+cp .env.example .env
+```
+
+Edit `.env` and set `ANTHROPIC_API_KEY=<your-key>`. Without it, the
+Runner cannot start.
+
+### 2. Bring up the cluster
+
+```bash
+make install   # Python venvs + UI deps; about 1 minute
+make up        # k3d + all services; about 5 minutes
+make seed      # signed policy bundle + demo repos + ArgoCD; about 2 minutes
+```
+
+`make seed` is idempotent and re-runs cleanly. See [the local-dev
+guide](/installation/local-dev#bring-up) for the full sequence.
+
+### 3. Confirm everything is reachable
+
+```bash
+make urls
+```
+
+The output table includes URLs and credentials for the UI, Gitea, and
+ArgoCD. The UI lives at `http://ui.localtest.me:8080`.
+
+### 4. Run your first analysis
+
+```bash
+cd runner && uv sync
+uv run trustacks review sample-app-gitea
+```
+
+The Code Reviewer streams events live: `started → cloned → tool_call /
+tool_result / finding ×N → done`. Copy the analysis ID from the top of
+the output.
+
+### 5. Promote the analysis to a pull request
+
+```bash
+uv run trustacks plan <analysis-id>
+```
+
+The DevOps Engineer agent reads your analysis and the Environment
+Profile, generates a CI workflow + Helm chart + ArgoCD Application,
+runs the proposal through the OPA policy gate, and on `allow` opens
+the PR on the platform repository.
+
+The Coordinator finishes by printing the PR URL. Open it in your browser.
+
+### 6. Review and merge
+
+The PR body explains:
+
+- **What** the DevOps Engineer proposed (file diff + summary).
+- **Why** (which rule from the constitution motivated each artifact).
+- **Blast radius** (which Applications and Services are affected).
+- **Rollback** (how to revert if the deploy goes sideways).
+
+Review like any other PR. When you merge, ArgoCD picks up the change
+and deploys it to your local cluster the way it always has.
+
+## What just happened
+
+In thirty minutes, you brought up a full local TruStacks platform,
+ran the Code Reviewer against a sample app, watched the DevOps Engineer
+emit policy-checked artifacts, and merged the agent crew's first
+proposal. The pattern scales: connect a real repo through the UI's
+**+ Connect repo** wizard (see [local-dev](/installation/local-dev#connect-your-own-repo))
+and the same loop runs against your code.
+
+The platform now remembers your stack via the Environment Profile.
+Future analyses respect what is already declared (your CI platform,
+scanner, registry, GitOps controller). No re-explaining every session.
 
 ## Where to go next
 
-- [Local development install](/installation/local-dev)
-- [Cluster install](/installation/cluster)
-- [Architecture reference](/reference/architecture)
+- [Local development install](/installation/local-dev) · the full
+  reference, including troubleshooting and re-seeding patterns
+- [Architecture](/reference/architecture) · how the three planes fit
+  together
+- [Policy authoring workshop](/workshops/policy-authoring) · write
+  your first overlay rule
+- [Credentials and secrets](/installation/secrets) · the four secrets
+  the Runner needs
