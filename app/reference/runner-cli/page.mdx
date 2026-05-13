@@ -1,26 +1,192 @@
 ---
 title: Runner CLI
-description: Command reference for the TruStacks runner.
+description: Command reference for the trustacks CLI. Rule authoring, Environment Profile management, and inspection commands the operator uses against the Runner pod.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Runner CLI
 
+The `trustacks` CLI is the operator-facing surface of the Runner. It
+drives rule authoring, manages the Environment Profile, and inspects
+agent state.
+
 <Callout type="info">
-  **Draft.** This page is a skeleton.
+  This page documents commands that are stable as of the public Beta.
+  The full surface area is still settling; commands marked **Coming
+  soon** are reserved names whose exact shape may change before they
+  ship.
 </Callout>
 
-The `trustacks` CLI is the operator-facing surface of the runner. It
-manages connections, drives rule authoring, and inspects agent traces.
+## Conventions
 
-## Common commands
-
-*Coming soon.*
+- Every command exits 0 on success, non-zero on any failure.
+- Every command prints structured output. `--output json` switches to
+  machine-readable JSON; the default is human-readable.
+- Path arguments are relative to the current working directory unless
+  qualified with `./` or an absolute path.
+- The CLI reads `~/.trustacks/config.yaml` for the active runner
+  endpoint and overlay-signing identity. `trustacks login` populates it.
 
 ## Rule authoring
 
-- `trustacks rule new` · scaffold a new customer-overlay rule
-- `trustacks rule test` · run the rule's tests
-- `trustacks rule lint` · prove the rule ratchets stricter, never looser
-- `trustacks rule sign` · sign the rule with your overlay key
+The four-step authoring flow for a customer-overlay rule.
+
+### `trustacks rule new`
+
+Scaffold a new overlay rule with a stub implementation, a positive
+test, a negative test, and a citation block.
+
+```bash
+trustacks rule new ./overlay/deploy-windows.rego
+```
+
+The scaffold drops a working rule that denies every change. Tests pass
+on the stub. You replace the rule logic with your actual rule and
+update the tests.
+
+### `trustacks rule test`
+
+Run the rule's tests via the OPA test harness. Exits non-zero if any
+test fails or if positive / negative coverage is missing.
+
+```bash
+trustacks rule test ./overlay/deploy-windows.rego
+```
+
+### `trustacks rule lint`
+
+Prove that the rule ratchets stricter than the constitution and any
+active Specialist Packs. Validates citation, signature shape, and
+waiver shape (if the rule is a waiver). See
+[the policy linter reference](/reference/policy-linter) for what is
+checked.
+
+```bash
+trustacks rule lint ./overlay/deploy-windows.rego
+trustacks rule lint ./overlay           # lint the whole overlay
+```
+
+### `trustacks rule sign`
+
+Sign the rule with your overlay key. The signing identity must be
+registered with the Control Plane. Signed rules are accepted by the
+Runner; unsigned or mis-signed rules are rejected.
+
+```bash
+trustacks rule sign ./overlay/deploy-windows.rego
+```
+
+## Rule inspection
+
+Inspect the active rule set the Runner has loaded.
+
+### `trustacks rule list`
+
+List all active rules from a specific layer.
+
+```bash
+trustacks rule list --layer constitution
+trustacks rule list --layer specialist-pack --pack soc2
+trustacks rule list --layer overlay
+trustacks rule list                     # all layers, grouped
+```
+
+### `trustacks rule show`
+
+Show the full text of a specific rule by ID, including its citation,
+its tests, and its signature metadata.
+
+```bash
+trustacks rule show CONST-CRED-001
+```
+
+## Environment Profile
+
+Manage the declarative inventory of your stack.
+
+### `trustacks env declare`
+
+Add or update a Profile entry. Coordinator-assisted authoring is the
+default; `--non-interactive` reads from `stdin` for use in CI.
+
+```bash
+trustacks env declare ci-platform=azure-devops
+trustacks env declare scanner=clair-v5
+```
+
+### `trustacks env validate`
+
+Validate the Profile against its schema. Exits non-zero on any schema
+violation.
+
+```bash
+trustacks env validate ./environment-profile.yaml
+```
+
+### `trustacks env diff`
+
+Show drift between the declared Profile and what the Discovery agent
+observes in your repositories. Useful before approving a
+Discovery-proposed Profile PR.
+
+```bash
+trustacks env diff
+```
+
+## Operator commands
+
+Commands the platform operator runs against the Runner directly.
+
+### `trustacks login`
+
+Authenticate the CLI against the Control Plane and the Runner
+endpoint. Writes the active config to `~/.trustacks/config.yaml`.
+
+```bash
+trustacks login
+```
+
+### `trustacks status`
+
+Print a health summary of the Runner: connected MCP servers, active
+rule bundle versions, current Environment Profile version, agent
+crew loaded.
+
+```bash
+trustacks status
+```
+
+### `trustacks version`
+
+Print the CLI version, the Runner version, and the constitution and
+Specialist Pack versions currently loaded.
+
+```bash
+trustacks version
+```
+
+## Coming soon
+
+The following command groups are reserved and will ship in
+post-Beta releases. Names are stable; flag surfaces may evolve.
+
+- `trustacks app` · Application-level operations (one Application
+  groups multiple Services under a single platform repo)
+- `trustacks service` · per-Service connection management
+- `trustacks pack` · subscribe, unsubscribe, list active Specialist
+  Packs
+- `trustacks trace` · inspect agent traces (prompt, tool calls, model
+  output, rule citations)
+- `trustacks gap` · generate a Gap Analysis Report against the active
+  rules and Profile
+
+## Where to go next
+
+- [Constitution](/reference/constitution) · what `rule list --layer
+  constitution` returns
+- [Specialist Packs](/reference/specialist-packs) · what `rule list
+  --layer specialist-pack` returns
+- [Policy linter](/reference/policy-linter) · what `rule lint` checks
+- [Architecture](/reference/architecture) · how the Runner fits into
+  the Data Plane
