@@ -1,33 +1,209 @@
 ---
 title: Cluster deploy
-description: Install the TruStacks runner on a production Kubernetes or OpenShift cluster.
+description: Install the TruStacks Runner into a real Kubernetes or OpenShift cluster (eval and staging). Customer production installs are moving to the Cluster Operator post-Beta.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Cluster deploy
 
-<Callout type="info">
-  **Draft.** This page is a skeleton.
-</Callout>
+This guide installs the TruStacks Runner into a real Kubernetes or
+OpenShift cluster (eval, staging, or shared dev). The Runner is
+deployed as a single Helm release; it phones home to the TruStacks
+Control Plane over outbound mTLS only, with no inbound ports.
 
-A production install lands the runner as a single Helm release in your
-cluster. The runner phones home to the TruStacks Control Plane over outbound
-mTLS only. No inbound ports.
+<Callout type="warning">
+  **Forward signpost: customer production installs are moving to a
+  Cluster Operator.** The Helm-based install on this page is the right
+  path for eval and staging today. Customer production installs will
+  ship via a CRD-driven Cluster Operator post-Beta; the operator is
+  scoped to give you a single `TruStacksRunner` custom resource and an
+  in-cluster reconciler that handles upgrades, Secret provisioning, and
+  drift. Track the architecture story on
+  [the architecture page](/reference/architecture#data-plane). The
+  Helm install here remains supported as the staging-cluster path
+  after the operator ships.
+</Callout>
 
 ## Supported platforms
 
-- Vanilla Kubernetes 1.27+
-- OpenShift 4.13+
-- EKS, GKE, AKS
+- **Vanilla Kubernetes** 1.28+
+- **OpenShift** 4.13+
+- **EKS, GKE, AKS** (any current LTS minor)
+
+The Helm chart's `kubeVersion` constraint is `>=1.28.0-0`. Older
+clusters are not supported.
+
+## Prerequisites
+
+You need:
+
+- Cluster admin access to your target cluster (to create the
+  `trustacks-system` namespace and apply the Runner resources).
+- `helm` ≥ 3.14 and `kubectl` matching your cluster version.
+- An Anthropic API key (or your OpenRouter key, if you BYO).
+- A signing identity registered with the TruStacks Control Plane
+  (required for overlay rule authoring; not required for an install
+  that only consumes the constitution).
+- Network egress from the cluster to:
+  - `api.anthropic.com` (or your chosen LLM endpoint)
+  - The TruStacks registry (for signed bundle pulls)
+  - The TruStacks Control Plane endpoint
+- The Helm chart source. During Beta you install from the chart in
+  the `trustacks-mvp` repository; post-Beta the chart ships from a
+  public OCI registry.
 
 ## Install steps
 
-*Coming soon.*
+The full sequence runs in three commands. Each is described in detail
+below.
+
+### 1. Create the namespace and apply the policy public key
+
+```bash
+kubectl create namespace trustacks-system
+kubectl -n trustacks-system apply -f https://raw.githubusercontent.com/TruStacks/trustacks-mvp/main/scripts/manifests/policy-pub-key.yaml
+```
+
+The `policy-pub-key` ConfigMap holds the Cosign public key the Runner's
+init container uses to verify policy bundles before extract. The
+manifest pins the TruStacks signing identity.
+
+### 2. Provision Runner Secrets
+
+You need at minimum the LLM provider key and one git deploy key. See
+[the credentials guide](/installation/secrets) for the full pattern.
+
+For an eval install with a single connected repo:
+
+```bash
+# LLM provider key
+kubectl -n trustacks-system create secret generic trustacks-runner-llm \
+  --from-literal=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+
+# Deploy key for one app repo (private SSH key + Gitea/GitHub registration)
+ssh-keygen -t ed25519 -f /tmp/sample-app-deploy -N "" -C "sample-app@trustacks"
+kubectl -n trustacks-system create secret generic sample-app-deploy-key \
+  --from-file=ssh-privatekey=/tmp/sample-app-deploy \
+  --from-file=ssh-publickey=/tmp/sample-app-deploy.pub
+kubectl -n trustacks-system label secret sample-app-deploy-key \
+  trustacks.io/role=git-deploy-key \
+  trustacks.io/repo=sample-app
+```
+
+For Connect-a-repo flows in real customer environments, the UI wizard
+handles this end-to-end.
+
+### 3. Install the Runner chart
+
+```bash
+git clone https://github.com/TruStacks/trustacks-mvp.git
+cd trustacks-mvp
+
+helm install runner ./charts/runner \
+  --namespace trustacks-system \
+  --set image.tag=<release-tag> \
+  --set policyBundle.bundleRef=ghcr.io/trustacks/policy/constitution:<release-tag> \
+  --set policyBundle.insecure=false \
+  --set policyBundle.verify=true
+```
+
+The chart is intentionally narrow: it deploys the Runner pod with the
+init containers (Secret discovery, policy bundle pull and verify) and
+a ClusterIP Service on port 8000. No Ingress is created by default;
+exposure is your choice.
+
+### 4. Connect the Runner to the Control Plane
+
+Set `TRUSTACKS_RUNNER_CONTROL_PLANE_URL` in the chart values to your
+Control Plane endpoint:
+
+```bash
+helm upgrade runner ./charts/runner \
+  --namespace trustacks-system \
+  --reuse-values \
+  --set env.TRUSTACKS_RUNNER_CONTROL_PLANE_URL=https://cp.your-trustacks.io
+```
+
+The Control Plane URL is provisioned per-customer during onboarding.
+
+### 5. Verify the install
+
+```bash
+kubectl -n trustacks-system get pods
+kubectl -n trustacks-system logs deployment/runner -c policy-bundle-init
+```
+
+The `policy-bundle-init` log should end with a clean Cosign verification
+and the bundle extracted under `/policy-runtime/`. If verification
+fails, the Runner falls back to the image-baked bundle and logs the
+fallback; you can run with `policyBundle.verify=false` to bypass
+signature checks while debugging, but do not do this in production.
 
 ## What lives where
 
-- **In your cluster:** runner pod, optional Cluster Operator, MCP clients for
-  your tools.
-- **At TruStacks:** Control Plane, rule distribution, billing, agent traces.
-  Your source code never leaves your network.
+| Component | Where it runs | Why |
+|---|---|---|
+| Runner pod | Your cluster | Hosts the agent crew; reads your code, the Profile, the active rules |
+| Cluster Operator (optional, paid add-on) | Your cluster | Watches cluster events, drafts remediation PRs |
+| MCP clients | Your cluster | One per Profile-declared tool (Datadog, Jira, ...) |
+| Control Plane | TruStacks SaaS | Audit, rule distribution, billing, web UI |
+| Rule bundle registry | TruStacks OCI registry (signed) | Cosign-verified by the Runner's init container |
+
+Your source code stays in your network. Only findings, decisions, and
+agent traces leave, all of them redactable per your policy. See
+[the architecture page](/reference/architecture#data-plane) for the
+trust boundary in context.
+
+## Network requirements
+
+The Runner needs outbound network access to four endpoints:
+
+- **TruStacks Control Plane** (mTLS) · for audit submission, rule
+  distribution coordination, and UI event streaming.
+- **TruStacks rule registry** (HTTPS) · for signed constitution and
+  Specialist Pack bundle pulls.
+- **LLM provider endpoint** (HTTPS) · `api.anthropic.com` by default,
+  or your OpenRouter endpoint.
+- **Your Git provider** (SSH or HTTPS) · for cloning repos and opening
+  PRs.
+
+No inbound ports. The Runner does not expose any service to the public
+internet.
+
+## Verifying signed images
+
+The Runner image and the policy bundle are both Cosign-signed. To
+verify before installing:
+
+```bash
+# Runner image
+cosign verify --key cosign.pub ghcr.io/trustacks/runner:<release-tag>
+
+# Constitution bundle
+cosign verify --key cosign.pub ghcr.io/trustacks/policy/constitution:<release-tag>
+```
+
+The TruStacks public Cosign key is published at
+`https://trustacks.com/cosign.pub` and pinned in the policy-pub-key
+ConfigMap from step 1.
+
+## Upgrading
+
+Upgrades are explicit operator actions. The chart's
+`image.tag` and `policyBundle.bundleRef` are pinned per release; bump
+them to the new release tag and run `helm upgrade`. The init container
+re-verifies the new bundle on the next pod roll.
+
+See [the constitution reference](/reference/constitution#versioning)
+for the semver semantics of constitution version bumps.
+
+## Where to go next
+
+- [Credentials and secrets](/installation/secrets) · the full
+  four-secrets pattern, including the GitHub App setup for production
+  Connect-a-repo flows
+- [GitOps integration](/installation/gitops) · how ArgoCD picks up
+  the PRs the DevOps Engineer ships
+- [Architecture · Data Plane](/reference/architecture#data-plane) ·
+  what runs where and why
