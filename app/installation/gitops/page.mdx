@@ -30,41 +30,47 @@ The DevOps Engineer agent organizes the platform repository as:
 
 ```text
 platform-repo/
-├── argocd/                                 # Root-level Application manifests
-│   └── <root-name>.yaml                    # The single Application your controller watches
-├── argo-apps/<cluster>/<service>.yaml      # Per-service × cluster Application manifests
-│   ├── prod/api.yaml
-│   ├── prod/worker.yaml
-│   ├── staging/api.yaml
-│   └── staging/worker.yaml
-└── gitops/<app-name>/<cluster>/<service>/  # Kustomize overlays per service × env
-    ├── api/
-    │   ├── prod/kustomization.yaml
-    │   └── staging/kustomization.yaml
-    └── worker/
-        ├── prod/kustomization.yaml
-        └── staging/kustomization.yaml
+├── argo-apps/                                          # App-of-Apps tree, watched by your root Application
+│   └── argo-apps-<cluster>/                            # One subdirectory per cluster
+│       └── <service>-application.yaml                  # Per-service ArgoCD Application manifests
+├── gitops/                                             # Helm charts the per-service Applications source
+│   └── <application>/
+│       └── <cluster>/
+│           └── <service>/
+│               ├── Chart.yaml
+│               ├── values.yaml
+│               └── templates/
+└── .github/workflows/                                  # CI workflows for the platform repo itself
 ```
+
+The root Application that watches `argo-apps/` recursively is applied to
+your cluster with `kubectl` and is *not* committed to the repository
+(see [the root Application pattern](#the-root-application-pattern)
+below).
 
 Two important properties:
 
-- **One Application per service per cluster.** Discoverable at
-  `argo-apps/<cluster>/<service>.yaml`. ArgoCD's view of "what is
-  deployed where" matches the customer's mental model of services and
-  environments.
-- **Kustomize overlays are the rendering primitive.** Helm charts also
-  supported via Application source spec; the choice is per-Application.
-  See [the cluster deploy guide](/installation/cluster) for which
-  rendering the DevOps Engineer agent picks by default for your stack.
+- **One Application per service per cluster.** Each child Application
+  lives at `argo-apps/argo-apps-<cluster>/<service>-application.yaml`
+  and points at `gitops/<application>/<cluster>/<service>/` for its
+  Helm chart source. ArgoCD's view of *what is deployed where*
+  matches your mental model of services and clusters.
+- **Helm is the renderer today.** The DevOps Engineer agent emits
+  Helm charts. Kustomize alongside Helm ships in the Phase 4
+  multi-service Application model; until then, Helm is the only
+  supported renderer for newly-emitted services.
 
 ## The root Application pattern
 
-You install one ArgoCD Application by hand at provisioning time. After
-that, every service the DevOps Engineer adds is picked up automatically.
+You install one ArgoCD Application (the App-of-Apps root) by hand at
+provisioning time and apply it directly to your cluster. The root
+Application is *not* committed to your platform repo; only the children
+it watches are.
 
-The root Application watches `argocd/*.yaml` in your platform repo.
-Anything the agent commits into that path becomes a child Application
-on the next sync.
+The root watches `argo-apps/` in your platform repo recursively.
+Anything the DevOps Engineer commits under
+`argo-apps/argo-apps-<cluster>/<service>-application.yaml` becomes a
+child Application on the next sync.
 
 ### Example root Application
 
@@ -81,9 +87,9 @@ spec:
   source:
     repoURL: https://github.com/<your-org>/<your-platform-repo>
     targetRevision: main
-    path: argocd
+    path: argo-apps
     directory:
-      recurse: false
+      recurse: true
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -102,8 +108,9 @@ kubectl apply -f trustacks-platform-root.yaml
 ```
 
 After that, when the DevOps Engineer ships a new
-`argocd/<service>.yaml` and you merge the PR, ArgoCD creates the
-corresponding child Application automatically.
+`argo-apps/argo-apps-<cluster>/<service>-application.yaml` and you
+merge the PR, ArgoCD creates the corresponding child Application
+automatically.
 
 ## How a proposal flows through Argo
 
@@ -113,24 +120,29 @@ End-to-end timeline of a typical proposal merge:
    pipeline.
 2. **DevOps Engineer reads the platform repo first** (the
    read-and-preserve protocol). Inspects existing
-   `argo-apps/<cluster>/`, `gitops/<app>/<cluster>/`, and `argocd/`
+   `argo-apps/argo-apps-<cluster>/` and `gitops/<app>/<cluster>/<service>/`
    for prior customizations.
 3. **DevOps Engineer emits artifacts** onto a feature branch:
    - The CI workflow under `.github/workflows/`
-   - The service Helm chart or Kustomize base
-   - Per-cluster, per-env Kustomize overlays under
-     `gitops/<app>/<cluster>/<service>/`
-   - The ArgoCD Application manifest under `argo-apps/<cluster>/<service>.yaml`
-   - The root-level Application entry under `argocd/`
+   - The service Helm chart under
+     `gitops/<app>/<cluster>/<service>/` (`Chart.yaml`, `values.yaml`,
+     `templates/`)
+   - The per-service ArgoCD Application manifest at
+     `argo-apps/argo-apps-<cluster>/<service>-application.yaml`,
+     pointing its `spec.source.path` at the matching `gitops/`
+     directory
 4. **OPA policy gate runs** against the constitution and any active
    Specialist Packs. On allow, the PR opens. On deny, no PR; the
    denial reasons are surfaced in the UI.
 5. **Human reviews and merges.** The PR body includes the rule
    citations, blast radius, and rollback steps the agent generated.
-6. **ArgoCD detects the merge.** The root Application's sync picks up
-   the new `argocd/<service>.yaml` and creates the child Application.
-7. **The child Application syncs.** ArgoCD applies the Kustomize
-   overlay; the service deploys.
+6. **ArgoCD detects the merge.** The root Application's recursive sync
+   on `argo-apps/` picks up the new
+   `argo-apps/argo-apps-<cluster>/<service>-application.yaml` and
+   creates the child Application.
+7. **The child Application syncs.** ArgoCD pulls the Helm chart from
+   the `gitops/` path the new Application points at; the service
+   deploys.
 
 **Agents propose. Policy decides. Humans approve.** The Runner is not
 in the deploy path; only your existing GitOps controller writes to the
