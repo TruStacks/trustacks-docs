@@ -132,8 +132,9 @@ End-to-end timeline of a typical proposal merge:
 7. **The child Application syncs.** ArgoCD applies the Kustomize
    overlay; the service deploys.
 
-The Runner is not in the deploy path. Only your existing GitOps
-controller writes to the cluster.
+**Agents propose. Policy decides. Humans approve.** The Runner is not
+in the deploy path; only your existing GitOps controller writes to the
+cluster.
 
 ## Permissions
 
@@ -144,7 +145,7 @@ and cannot apply manifests directly.
 ### Platform repo access for ArgoCD
 
 A deploy key or PAT on the platform repo, configured per your standard
-ArgoCD setup. ArgoCD's read access is independent of the Runner's PR-
+ArgoCD setup. ArgoCD's read access is independent of the Runner's pull-request
 write access; the two never share credentials.
 
 ### Cluster permissions for ArgoCD
@@ -154,12 +155,13 @@ and friends). Nothing TruStacks-specific is required.
 
 ## Flux
 
-Flux v2 support is alpha during Beta and ships with full coverage
-post-Beta. The repository layout the DevOps Engineer agent emits is
-the same; the difference is in how the root resource is bootstrapped.
-
-If you are evaluating with Flux today, file an issue on
-`trustacks-mvp` and we can confirm the current state.
+<Callout type="warning">
+  **Flux v2 support is alpha during Beta.** Full coverage ships
+  post-Beta. The repository layout the DevOps Engineer agent emits is
+  the same; the difference is in how the root resource is
+  bootstrapped. If you are evaluating with Flux today, file an issue
+  on `trustacks-mvp` and we can confirm the current state.
+</Callout>
 
 ## Coexistence with existing GitOps
 
