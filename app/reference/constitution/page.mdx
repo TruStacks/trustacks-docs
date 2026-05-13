@@ -24,8 +24,10 @@ that tries.
 - **Signing** · Cosign keyless OIDC. The TruStacks signing identity is
   pinned in the Runner's init container.
 - **Distribution** · OCI artifact in the public TruStacks registry.
-  The Runner pulls the latest signed bundle on startup and on rule
-  refresh.
+  The Runner pulls its *pinned* constitution version on startup and
+  re-verifies it on each rule refresh. Constitution upgrades are an
+  explicit operator action (see [Versioning](#versioning) below); the
+  Runner does not silently pick up new versions in the background.
 - **Verification** · The Runner's init container verifies the Cosign
   signature against the pinned identity before extracting the bundle.
   An unsigned or wrong-signed bundle never reaches the OPA evaluator.
