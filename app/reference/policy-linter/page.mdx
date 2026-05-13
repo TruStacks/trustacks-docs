@@ -1,32 +1,165 @@
 ---
 title: Policy linter
-description: The compile-time tool that proves your overlay ratchets stricter, never looser.
+description: The compile-time tool that proves your overlay ratchets stricter than every layer above. Overlays that try to weaken a rule fail to build.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Policy linter
 
-<Callout type="info">
-  **Draft.** This page is a skeleton.
-</Callout>
-
 The policy linter is the compile-time tool that proves your overlay
-ratchets stricter than the constitution and any Specialist Packs you have
-layered on. Overlays that try to weaken a rule fail to build.
+ratchets stricter than the constitution and any Specialist Packs you
+have layered on. Overlays that try to weaken a rule from a layer above
+fail to build. The ratchet property is enforced cryptographically, not
+by convention.
 
-## Why it matters
+This is the property the trust story rests on. The constitution is
+non-waivable. Specialist Pack rules can be waived only through
+explicit, audited, signed waivers. Customer overlays can only add
+strictness, never remove it. The linter is what makes those claims
+provable.
 
-The non-waivability of the constitution is cryptographically enforced, not
-left to convention. Auditors can verify it. Your CISO can verify it. You
-can verify it.
+## Why a separate linter
 
-## How to run it
+OPA evaluates a rule against an input. That answers *did this proposal
+satisfy the rules?* It does not answer *do these rules satisfy the
+ratchet property?* The linter is a separate static check on the rule
+bundle itself before it ever evaluates a proposal.
 
-*Coming soon.*
+If the linter fails, the overlay is not signed and not distributed. The
+Runner never loads it. Bad overlays never reach production.
 
 ## What it checks
 
-- Refinement direction (stricter only)
-- Signature presence on rule bundles
-- Citation coverage
+### Refinement direction
+
+The core property. For every rule in your overlay, the linter searches
+for a corresponding rule in the constitution and in every active
+Specialist Pack. If a corresponding rule exists, the linter compares
+the strictness of the bound:
+
+- **Stricter** · the overlay rule constrains a superset of the cases
+  the parent rule constrains, with equal or stricter verdicts. Pass.
+- **Equal** · the overlay rule duplicates the parent rule. Pass with a
+  warning (redundant rule).
+- **Looser** · the overlay rule allows a case the parent rule denies,
+  or omits a case the parent rule denies. **Fail.**
+
+Refinement is checked structurally on the Rego AST, not by sampling
+inputs. A rule that *might* be looser in some edge case is rejected.
+
+### Signature presence
+
+Every rule bundle (constitution, Specialist Pack, overlay) must be
+signed before the Runner accepts it. The linter rejects bundles that
+lack a Cosign signature or whose signature does not verify against the
+expected identity.
+
+- **Constitution bundles** must be signed by the TruStacks identity.
+- **Specialist Pack bundles** must be signed by the TruStacks identity.
+- **Overlay bundles** must be signed by *your* identity (registered
+  with the Control Plane).
+
+A bundle signed by an unexpected identity is treated as if it were
+unsigned. The Runner does not load it.
+
+### Citation coverage
+
+Every rule must carry a citation: a stable rule ID, a short
+human-readable description, the rule's category, and a link to the
+authoritative source. The linter rejects rules that omit a citation
+field.
+
+Citations are how the PR body explains *why* a change was proposed and
+*which rule decided* on a verdict. Missing citations break the audit
+trail; the linter blocks them at compile time.
+
+### Test coverage
+
+Every rule must have at least one positive test (a case the rule
+allows) and at least one negative test (a case the rule denies). The
+linter shells out to the OPA test harness and rejects bundles with
+failing tests or missing coverage.
+
+### Waiver shape
+
+If your overlay declares waivers (only valid for Specialist Pack rules,
+never for constitution rules), the linter checks each waiver's shape:
+
+- Cites the specific Pack rule being suspended.
+- Includes a business justification (free text, minimum length
+  enforced).
+- Has a hard expiration timestamp in the future.
+- Has a sign-off from a recognized waiver-approver identity.
+
+A waiver missing any of these fields fails the lint.
+
+## How to run it
+
+The linter ships with the Runner CLI.
+
+### One-off lint against your overlay
+
+```bash
+trustacks rule lint ./overlay
+```
+
+The command reports pass / fail per rule and a summary verdict. Exit
+code is 0 on pass, non-zero on any failure.
+
+### Lint as part of authoring a new rule
+
+```bash
+trustacks rule new ./overlay/my-rule.rego
+# ... edit the rule ...
+trustacks rule test ./overlay/my-rule.rego
+trustacks rule lint ./overlay/my-rule.rego
+trustacks rule sign ./overlay/my-rule.rego
+```
+
+The `rule new` scaffold drops a stub with a positive test, a negative
+test, and a citation block. Tests pass on the stub; you add the actual
+rule logic and update the tests.
+
+### In CI
+
+Add the linter to your overlay repository's CI. The Runner's signing
+infrastructure refuses to sign a bundle whose lint fails, but
+running in CI surfaces the failure earlier and protects against
+unsigned-bundle drift.
+
+```yaml
+# example: GitHub Actions
+- name: Lint TruStacks overlay
+  run: trustacks rule lint ./overlay
+```
+
+See the [Runner CLI reference](/reference/runner-cli) for the full
+command surface.
+
+## What the linter does not check
+
+- **Whether your rule logic is correct.** That is what your tests are
+  for. The linter verifies that tests exist and pass; it cannot tell
+  you whether the test cases are the right ones.
+- **Whether your rule is useful.** A rule that denies every change is
+  technically "stricter than the constitution" and will lint clean. It
+  is also useless. Code review of overlay PRs catches this.
+- **Whether the constitution itself is right.** The constitution is
+  TruStacks's responsibility; the linter trusts the signed bundle.
+
+<Callout type="info">
+  The linter is a property checker, not a quality reviewer. Treat
+  passing the linter as necessary but not sufficient. The Coordinator
+  in chat is the second check: ask it to review the rule and explain
+  what it does and what edge cases it covers before you sign and
+  distribute.
+</Callout>
+
+## Where to go next
+
+- [Constitution](/reference/constitution) · the ratchet's foundation
+- [Specialist Packs](/reference/specialist-packs) · the layer between
+  constitution and your overlay
+- [Runner CLI](/reference/runner-cli) · authoring, testing, linting,
+  signing
