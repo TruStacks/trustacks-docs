@@ -1,39 +1,177 @@
 ---
 title: Constitution
-description: The signed, immutable foundation of TruStacks policy. Universal rules every proposal must respect.
+description: The signed, immutable foundation of TruStacks policy. Universal rules every proposal must respect. Non-waivable. Free at all tiers.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Constitution
 
-<Callout type="info">
-  **Draft.** This page is a skeleton.
-</Callout>
-
 The constitution is the TruStacks-authored Rego foundation that every
 proposal must respect. It is signed by TruStacks, distributed as an OCI
-artifact, and verified by an init container before extract. Free at all
-tiers. Non-waivable.
+artifact, and verified by an init container in your Runner before extract.
+Free at all tiers. Non-waivable.
+
+If anything in this site is the load-bearing trust artifact, it is this:
+the agents *cannot* propose a change that violates a constitution rule.
+Your overlay *cannot* loosen one. The policy linter rejects any overlay
+that tries.
+
+## How the constitution is delivered
+
+- **Format** · Rego bundles for OPA. Bundle build, sign, and distribute
+  pipeline lives in the open-source `trustacks-policy` repository.
+- **Signing** · Cosign keyless OIDC. The TruStacks signing identity is
+  pinned in the Runner's init container.
+- **Distribution** · OCI artifact in the public TruStacks registry.
+  The Runner pulls the latest signed bundle on startup and on rule
+  refresh.
+- **Verification** · The Runner's init container verifies the Cosign
+  signature against the pinned identity before extracting the bundle.
+  An unsigned or wrong-signed bundle never reaches the OPA evaluator.
+
+This is the "verify yourself" property. You can verify the constitution
+bundle TruStacks ships with the same Cosign command auditors would use.
+The signature chain is auditable end-to-end.
 
 ## What is in the constitution
 
-- Path-touch rules · what files an agent is allowed to write
-- Citation rules · every change carries a citation back to the rule that
-  motivated it
-- Required artifacts · SBOM, signature, scan report
-- Required reviews · what categories of change need which approvals
+The constitution covers properties that apply to *every* customer,
+regardless of stack, regulatory regime, or domain. Categories of rules:
+
+### Process rules
+
+- **All changes reach `main` via PR with at least one human approval.**
+  No autonomous merge path. Ever.
+- **Agents cannot approve their own PRs.** A human or a non-author
+  reviewer must approve.
+- **Agents never write to your `main` branch directly.** Every change
+  is a PR against a feature branch.
+
+### Credential rules
+
+- **No long-lived static credentials in code or CI config.** Short-lived
+  tokens only, scoped to the smallest required surface.
+- **Agents never hold cluster credentials, cloud credentials, or
+  production secrets.**
+- **Production access is short-lived, audited, and broken-glass.**
+
+### Supply chain rules
+
+- **Every released artifact has a signed SBOM and provenance
+  attestation.** Syft for SBOM, Cosign for signing, in-toto for
+  provenance.
+- **All third-party dependencies pass a baseline vulnerability scan
+  before merge.** Failed scans block merge by default; severity
+  thresholds are configurable in your overlay (only stricter).
+
+### Citation rules
+
+- **Every proposal carries a citation back to the rule that motivated
+  it.** PR bodies include rule IDs, blast radius, rollback steps, and
+  which Environment Profile entries informed each tool choice.
+
+### Data residency rules
+
+- **Your source code never leaves the Data Plane unless you explicitly
+  opt in.** The Runner phones home with findings, decisions, and agent
+  traces, all of which are redactable per your policy.
+
+### Environment Profile rules
+
+- **Agents never silently mutate the Environment Profile.** Every
+  change is a PR you review.
+- **The constitution can declare required tooling categories.** The
+  Profile satisfies the requirement by naming a specific tool. Customer
+  overlays can require stricter tooling (FIPS-validated scanner) but
+  cannot remove a category the constitution required.
 
 ## What is *not* in the constitution
 
-Anything that varies between customers belongs in a Specialist Pack or your
-overlay, not the constitution. Compliance-specific rules live in Specialist
-Packs. Tribal knowledge lives in your overlay.
+Anything that varies between customers belongs elsewhere.
 
-## Inspecting the constitution
+- **Compliance-domain rules** (SOC2 CC6.1, HIPAA 164.312, PCI 6.5, etc.)
+  live in [Specialist Packs](/reference/specialist-packs).
+- **Framework-specific or CI-runtime-specific rules** live in community
+  packs in `trustacks-policy`.
+- **Your organization's tribal knowledge** lives in your overlay
+  (Sunday-night deploy windows, change-calendar requirements, that one
+  service that has to deploy with a specific feature flag set).
 
-*Coming soon.*
+The constitution stays narrow on purpose. The smaller and more universal
+the floor, the easier it is to defend, version, and trust.
+
+## The ratchet property
+
+Each layer of the rule stack can only make things *stricter* than the
+layer above. The constitution defines the floor. Specialist Packs can
+add to it. Your overlay can add to either. No layer can ever weaken a
+rule from a layer above.
+
+The [policy linter](/reference/policy-linter) proves this at compile time.
+An overlay that tries to weaken a constitution rule fails to build.
+The property is enforced cryptographically, not by convention. Auditors
+can verify it. Your CISO can verify it. You can verify it.
+
+## Non-waivability
+
+Constitution rules cannot be waived. Specialist Packs and overlay rules
+support time-bound, signed waivers with mandatory expiration and audit
+visibility, but constitution rules do not.
+
+This is the deliberate property that makes the constitution the trust
+anchor. If anyone (including TruStacks) could waive a constitution rule
+quietly, the whole stack stops being defensible. The price of
+non-waivability is real: when a constitution rule is genuinely wrong for
+your context, the only fix is a constitution version bump (community
+process, signed by TruStacks). That cost is intentional.
 
 ## Versioning
 
-*Coming soon.*
+Constitution releases follow semantic versioning.
+
+- **Patch** (`1.2.3` → `1.2.4`) · clarifications, typo fixes, test
+  additions. No rule behavior changes.
+- **Minor** (`1.2.x` → `1.3.0`) · new rules added. Existing rules
+  unchanged. Your overlay continues to validate.
+- **Major** (`1.x` → `2.0`) · a rule's behavior changes or a rule is
+  removed. Requires a migration check on your overlay. The policy
+  linter surfaces what your overlay needs to change before you can
+  upgrade.
+
+The Runner pins the constitution version per release. Upgrading is an
+explicit operator action, not a silent background update.
+
+## Inspecting the constitution
+
+You can inspect the active constitution bundle from the Runner in two
+ways.
+
+### From the Runner CLI
+
+```bash
+trustacks rule list --layer constitution
+trustacks rule show <rule-id>
+```
+
+See the [Runner CLI reference](/reference/runner-cli) for the full
+command surface.
+
+### From the Coordinator
+
+Ask the Coordinator in chat:
+
+> *Which constitution rules apply when I open a PR that adds a
+> Dockerfile?*
+
+The Coordinator returns the rule IDs, the verdicts for the current
+proposal, and links to the rule text.
+
+## Where to go next
+
+- [Architecture](/reference/architecture) · how the constitution fits
+  into the three-layer rule model
+- [Specialist Packs](/reference/specialist-packs) · regulatory bundles
+  that layer above the constitution
+- [Policy linter](/reference/policy-linter) · proves your overlay
+  ratchets stricter, never looser
