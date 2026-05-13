@@ -1,36 +1,239 @@
 ---
 title: CI/CD generation workshop
-description: A guided walkthrough of a CI/CD generation crew run from connect-a-repo to merged PR.
+description: A guided walkthrough of one full crew run. The Code Reviewer reads your repo. The Coordinator routes to the DevOps Engineer. The DevOps Engineer emits CI + manifests, the OPA policy gate verdicts, and the PR opens.
 ---
 
 import { Callout } from 'nextra/components'
 
 # CI/CD generation workshop
 
-<Callout type="info">
-  **Draft.** This page is a skeleton.
-</Callout>
+A guided walkthrough of one full crew run: the Code Reviewer reads your
+repository, the Coordinator routes the work to the DevOps Engineer, the
+DevOps Engineer emits CI workflow + Kubernetes manifests, the OPA
+policy gate runs, and the PR opens.
 
-A guided walkthrough of one full crew run: connect a repository, watch the
-Coordinator hand work to the DevOps Engineer, read the proposed pipeline, and
-merge.
+The point of this workshop is not just to make a PR happen. It is to
+show you *what* the agents are doing at each step, *why* the dialogue
+sounds the way it does, and *where* the trust boundaries are.
 
 ## What you will learn
 
-- How the Coordinator routes work to specialist agents
-- What the DevOps Engineer reads before it writes (the read-and-preserve
-  protocol)
-- How rule citations land in the PR body
-- What the Gap Analysis Report looks like for your stack
+- How the Code Reviewer detects framework and runtime version, and
+  what gets surfaced as findings.
+- How the Coordinator routes work to specialists and mediates when
+  they disagree.
+- What the DevOps Engineer reads before it writes (the
+  read-and-preserve protocol).
+- How rule citations land in the PR body.
+- What a Gap Analysis Report looks like for the sample stack.
 
 ## Time required
 
-Roughly 45 minutes for the full walkthrough.
+Roughly 45 minutes. The crew runs are fast (under a minute each); the
+time is mostly in reading what the agents produced and watching the
+multi-speaker conversation in the UI.
 
 ## Setup
 
-*Coming soon.*
+You need a fresh local install of TruStacks running. If you have not
+done that yet, work through
+[the quickstart](/getting-started/quickstart) first (about 30 minutes)
+or the [local-dev install guide](/installation/local-dev) for the full
+reference.
+
+For this workshop, use the bundled sample `sample-app-gitea` (the
+FastAPI variant). It is already seeded by `make seed`.
+
+You should be able to:
+
+- `make urls` returns a healthy table.
+- `http://ui.localtest.me:8080` loads.
+- Gitea shows `sample-app` in the `trustacks` organization.
 
 ## Walkthrough
 
-*Coming soon.*
+### Step 1. Run the Code Reviewer
+
+```bash
+cd runner && uv sync
+uv run trustacks review sample-app-gitea
+```
+
+The CLI streams the event log live:
+
+```text
+started      → analysis_id=<uuid> repo=sample-app-gitea
+cloned       → ref=main commit=<short-sha>
+tool_call    → name=list_dir args={"path": "/"}
+tool_result  → result=[Dockerfile, pyproject.toml, src/, tests/]
+tool_call    → name=read_file args={"path": "pyproject.toml"}
+tool_result  → result=<pyproject.toml contents>
+finding      → category=framework value=python-fastapi confidence=0.96
+tool_call    → name=read_file args={"path": "src/main.py"}
+finding      → category=runtime value=python-3.11 confidence=0.92
+finding      → category=test-runner value=pytest confidence=0.88
+done         → analysis_id=<uuid>
+```
+
+**What is happening:** the Code Reviewer is doing repository-aware
+discovery through Anthropic-hosted Filesystem MCP. Each `tool_call`
+event is the agent calling an MCP tool; each `tool_result` is the
+response. The agent decides what to look at next based on what it has
+already seen. The `finding` events are the structured observations
+that land in the final `RepositoryAnalysis`.
+
+Copy the analysis ID from the top of the output.
+
+### Step 2. Watch the same run in the UI
+
+Open `http://ui.localtest.me:8080`. The sidebar shows **Activity**,
+**Applications**, **Services**, **Gaps**, **Rules**, **Settings**.
+
+Click into **Services → sample-app-gitea**. You will see an Analyses
+tab and a Proposals tab. Your run is in Analyses.
+
+Click into it. The same event log you saw in the CLI is rendered as a
+timeline. Each tool call is a node. The agent's "thinking" between
+calls is rendered as activity, not as a fake-typing animation.
+
+### Step 3. Inspect the Environment Profile
+
+Click **Settings → Environment Profile** (or open the file directly in
+the overlay repo on Gitea).
+
+The Profile is the declarative inventory the agents read on every
+action. After `make seed`, it has a baseline declaration: GitHub
+Actions as the CI platform, a default scanner, ArgoCD as the GitOps
+controller. The Code Reviewer's run did not change it; if you ran
+discovery against a real repo with `.azure-pipelines.yml`, the Code
+Reviewer would *propose* a Profile PR to update the CI platform
+declaration.
+
+### Step 4. Promote the analysis to a proposal
+
+```bash
+uv run trustacks plan <analysis-id>
+```
+
+The CLI streams a longer event log:
+
+```text
+started           → analysis_id=<uuid>
+cloned_app        → ref=main
+analysis_done     → analysis_id=<uuid>
+profile_loaded    → version=<uuid> entries=12
+agent_started     → agent=devops-engineer
+tool_call         → name=read_platform_repo
+tool_result       → result=<existing files in platform/argo-apps/>
+tool_call         → name=emit_workflow args={...}
+artifact_emitted  → path=.github/workflows/sample-app-ci.yaml
+tool_call         → name=emit_helm_chart args={...}
+artifact_emitted  → path=gitops/sample-app/local/sample-app/Chart.yaml
+tool_call         → name=emit_argocd_app args={...}
+artifact_emitted  → path=argo-apps/local/sample-app.yaml
+proposal_built    → artifacts=3
+policy_check      → result=allow violations=[]
+pr_opened         → url=http://gitea.localtest.me:8080/trustacks/platform/pulls/1
+done              → proposal_id=<uuid>
+```
+
+The dialogue happens behind the scenes. Watch the same run in the UI's
+**Activity** view; the Coordinator's hand-off to the DevOps Engineer is
+rendered as a multi-speaker conversation.
+
+### Step 5. Read the PR
+
+Click the `pr_opened.url` in the CLI output. Gitea opens the PR.
+
+The PR body is structured. Look for:
+
+- **Summary** · what the DevOps Engineer proposed in plain English.
+- **Rule citations** · the constitution rule IDs that motivated each
+  artifact. For example, `proposal.has_workflow` motivated the CI
+  workflow, `proposal.has_helm_chart` motivated the Helm chart.
+- **Environment Profile inputs** · which Profile entries informed each
+  tool choice. The CI workflow uses GitHub Actions because the
+  Profile says so; the scanner step uses the declared image scanner.
+- **Blast radius** · what Applications and Services are affected by
+  this change.
+- **Rollback** · how to revert if the deploy goes sideways.
+
+The structure exists so a human reviewer can answer *why was this
+proposed, and what does it touch?* without reading the diff first.
+
+### Step 6. Watch the policy gate
+
+In the proposal's UI view, you will see a green
+`✓ policy clean` line. Click into it to see the rule evaluation
+detail: each constitution rule, the input it was evaluated against,
+the verdict (`allow` or `deny`), and the rule's text.
+
+This is the OPA evaluation against the signed constitution bundle
+(see [the constitution reference](/reference/constitution)). For this
+sample app, every rule evaluates `allow` and the PR opens.
+
+To see a denied proposal, try this experiment after merging:
+
+```bash
+# Make a change that intentionally violates a rule
+# (e.g., delete a required citation from a proposal artifact)
+```
+
+The DevOps Engineer would still emit the proposal, but
+`policy_check` would emit `result=deny` with the rule IDs of the
+violations. No PR opens. The Coordinator surfaces the denials and you
+can ask why in chat.
+
+### Step 7. Review and merge
+
+Treat the PR like any code review. The structure of the PR body is
+specifically designed to make the review tractable: read the summary,
+spot-check the rule citations, look at the diff, merge.
+
+When you merge, ArgoCD picks up the change. The `make seed`-installed
+root Application syncs and creates the child Application for
+`sample-app`. The service deploys.
+
+### Step 8. Generate a Gap Analysis Report
+
+Back at the Coordinator, ask:
+
+> *Generate a gap analysis report for sample-app-gitea.*
+
+The Coordinator delegates to the relevant Specialist agents (Baseline
+Security at minimum; SOC2 if the SOC2 Specialist is enabled). The
+report leads with a maturity tier (bronze / silver / gold) and a
+coverage percent, then lists category-by-category findings with
+stack-aware recommendations.
+
+The tier is deterministic: it is derived from the policy bundle
+evaluation against the Environment Profile, not authored by the LLM.
+This matters for trust; you can show the bronze / silver / gold tile
+to the board without worrying about hallucinated numbers.
+
+## What you should take away
+
+By the end of this workshop you should understand:
+
+- **The agent crew is a multi-speaker conversation.** You can ask
+  it questions. It disagrees out loud. Mediating disagreement is part
+  of the design.
+- **The OPA policy gate is the gate.** Not the agents' reasoning. The
+  policy gate is what decides whether a proposal can become a PR.
+- **The Environment Profile is the platform's memory.** The DevOps
+  Engineer chose GitHub Actions because the Profile said so. Change
+  the Profile, change the next proposal.
+- **The PR is the contract handoff.** Everything before the merge is
+  agents proposing. The merge is a human committing. ArgoCD is what
+  deploys.
+
+## Where to go next
+
+- [Policy authoring workshop](/workshops/policy-authoring) · write
+  your first overlay rule with the Coordinator's help
+- [Architecture](/reference/architecture) · the three planes, the
+  three layers of rules, the Environment Profile in context
+- [Constitution reference](/reference/constitution) · the rules the
+  OPA gate evaluated against
+- [Runner CLI](/reference/runner-cli) · the command surface you used
+  in this workshop
