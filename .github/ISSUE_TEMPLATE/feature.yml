@@ -1,0 +1,45 @@
+name: New section or page proposal
+description: Propose a new docs page, section, or structural change.
+title: "[proposal] "
+labels:
+  - proposal
+  - docs
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to propose a new docs page, a new top-level section, or a structural
+        change to the existing layout. For a content gap inside an existing page, use the
+        *Documentation gap* template instead.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What are you proposing?
+      description: One sentence first, then the detail.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why now?
+      description: What changed that makes this worth adding? Inbound traffic, a product launch, a missing positioning piece?
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: Rough shape
+      description: A bullet-list outline of the proposed page or section is ideal.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Does this depend on something else shipping first (a product feature, a marketing-site update, a positioning lock)?
+    validations:
+      required: false

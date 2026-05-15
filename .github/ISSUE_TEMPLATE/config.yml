@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Product bug or feature request
+    url: https://github.com/TruStacks/trustacks-mvp/issues
+    about: Issues with the runner, the agents, the Control Plane, the UI, or the policy bundles belong in trustacks-mvp.
+  - name: Marketing site issue
+    url: https://github.com/TruStacks/trustacks-www/issues
+    about: Issues with trustacks.com — pricing pages, positioning copy, marketing nav — belong in trustacks-www.
+  - name: Pricing question
+    url: https://trustacks.com/pricing
+    about: Tier details, sales contact, and pricing live on the marketing site.
