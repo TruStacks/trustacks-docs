@@ -14,8 +14,8 @@ consistent, accurate, and on-voice.
   bug* template.
 - **Topic isn't covered?** Open an issue with the *Documentation gap*
   template.
-- **Proposing a new section or page?** Open an issue with the *Feature
-  request* template.
+- **Proposing a new section or page?** Open an issue with the *New
+  section or page proposal* template.
 
 ## Setting up locally
 
@@ -45,7 +45,8 @@ npm run typecheck   # tsc against the TypeScript config
 - **One slice = one focused PR.** No bundling unrelated changes.
 - **Conventional commits with a path scope**, matching what `main`'s
   history shows:
-  ```
+
+  ```text
   docs(reference): expand architecture from skeleton to full reference
   docs(installation): correct GitOps repo layout
   fix(vercel): force framework preset to nextjs
