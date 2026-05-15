@@ -1,0 +1,45 @@
+name: Documentation gap
+description: A topic isn't covered. We need a new section, expanded explanation, or worked example.
+title: "[gap] "
+labels:
+  - gap
+  - docs
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for flagging a gap. Use this template when the docs are correct but incomplete:
+        a topic isn't covered, a worked example is missing, an explanation is too thin.
+
+  - type: input
+    id: where
+    attributes:
+      label: Where should this live?
+      description: Existing page that should be expanded, or a proposed new page path.
+      placeholder: /installation/secrets, or new page at /reference/troubleshooting
+    validations:
+      required: true
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: What's missing?
+      description: Describe the topic, question, or scenario the docs don't currently answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: who
+    attributes:
+      label: Who needs this?
+      description: Which reader profile hits this gap? (Evaluator, platform engineer, compliance officer, contributor, etc.)
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How did you work around it?
+      description: If you found the answer elsewhere (Slack, source code, asking a person), share that. It helps us calibrate.
+    validations:
+      required: false

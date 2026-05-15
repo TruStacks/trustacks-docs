@@ -1,0 +1,48 @@
+name: Documentation bug
+description: Something on docs.trustacks.com is wrong, broken, or stale.
+title: "[bug] "
+labels:
+  - bug
+  - docs
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a doc bug. Before submitting, a quick check:
+        - Is this a *content* issue (wrong fact, broken link, stale claim)? Use this template.
+        - Is this a *product* bug? File it in [trustacks-mvp](https://github.com/TruStacks/trustacks-mvp/issues) instead.
+        - Is this a *marketing site* issue? File it in [trustacks-www](https://github.com/TruStacks/trustacks-www/issues).
+
+  - type: input
+    id: page
+    attributes:
+      label: Page URL
+      description: Where on docs.trustacks.com did you see the issue?
+      placeholder: https://docs.trustacks.com/reference/architecture
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong?
+      description: Quote the offending text or describe what's broken. Screenshots welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What should the doc say or do instead?
+    validations:
+      required: false
+
+  - type: input
+    id: source
+    attributes:
+      label: Source for the correction (optional)
+      description: If you have a link or reference that backs the correction, drop it here.
+      placeholder: https://github.com/TruStacks/trustacks-mvp/blob/main/PROJECT_BRIEF.md
+    validations:
+      required: false
