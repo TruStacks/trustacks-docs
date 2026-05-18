@@ -1,0 +1,228 @@
+---
+title: License and the bright line
+description: TruStacks's open-core boundary. Scripts, the constitution, and framework packs are Apache 2.0. The container images are governed by a Beta-period EULA covering evaluation, workshop attendance, and local development on infrastructure you control.
+---
+
+import { Callout } from 'nextra/components'
+
+# License and the bright line
+
+TruStacks is open-core. The scripts you run, the policy bundles your
+runner verifies, and the framework packs the agents read are all
+Apache 2.0. The container images that run the agents are governed by a
+Beta-period End-User License Agreement. Three lines hold the whole
+story.
+
+## The three lines
+
+The boundary is the same one customers see in the
+<a href="https://github.com/TruStacks/trustacks-quickstart#license--the-bright-line" target="_blank" rel="noopener noreferrer">quickstart README</a>
+and on the [quickstart landing page](https://trustacks.com/quickstart).
+Stated once here so a procurement reviewer can read it without
+following links.
+
+| What | License | Where |
+|---|---|---|
+| **Quickstart scripts, Helm chart, sample apps** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a> |
+| **Constitution Rego bundle, framework packs** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a> |
+| **Container images** (`ghcr.io/trustacks/control-plane`, `ghcr.io/trustacks/runner`, `ghcr.io/trustacks/ui`) | [TruStacks EULA (Beta)](https://trustacks.com/eula) | `ghcr.io/trustacks/*` |
+
+Everything in the first two rows you can fork, modify, and run
+anywhere with no further permission. Everything in the third row you
+can pull and run on infrastructure you control during the Beta
+program, under the terms summarized below.
+
+## What the EULA covers
+
+The canonical text lives at [trustacks.com/eula](https://trustacks.com/eula).
+Three images, one Beta program, three permitted purposes.
+
+**The three images.** `control-plane`, `runner`, and `ui`, all published
+to `ghcr.io/trustacks/*`. Each image is signed via Sigstore keyless
+OIDC and ships with an SBOM attached to its manifest.
+
+**The Beta period.** Begins on the date you first pull an image.
+Ends at General Availability (target **April 28, 2027**) or earlier
+if the EULA is terminated. TruStacks will give thirty days' notice
+on [trustacks.com](https://trustacks.com) before any GA-date change.
+
+**The three permitted purposes during Beta.** The grant in EULA
+Section 1 covers:
+
+1. **Evaluating** the TruStacks product.
+2. **Attending or running a TruStacks workshop** or design-partner
+   trial.
+3. **Developing** integrations, customer overlays, or contributions
+   against the published constitution and framework packs.
+
+All three run on infrastructure you control: your laptop, your private
+Kubernetes cluster, your cloud account. The grant is non-exclusive,
+non-transferable, royalty-free, and revocable.
+
+## What you can do locally during the Beta
+
+- Pull the images from `ghcr.io/trustacks/*` and run them on
+  infrastructure you control.
+- Cache the images on your build systems for air-gapped or offline
+  operation, as long as the cached copies stay within your
+  infrastructure.
+- Verify the signatures and SBOMs against the publishing identity
+  (the EULA documents the exact `cosign verify` command).
+- Build customer overlays and run them against the constitution.
+- Author new framework packs or industry overlays and contribute them
+  upstream to <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">trustacks-policy</a>
+  under Apache 2.0.
+
+## What you can't do during the Beta
+
+The full restriction list is in EULA Section 2. The short form:
+
+- **Don't redistribute the images outside your own infrastructure.**
+  Republishing to a public registry, bundling them into a product you
+  ship to third parties, or sharing image tarballs (`docker save`
+  output) outside your organization all need written permission.
+- **Don't deploy the images to production workloads.** The Beta grant
+  is for evaluation, workshop, and local development. Production use is
+  governed by a separate commercial license at General Availability.
+- **Don't reverse engineer the images to build a competing product.**
+  Reverse engineering for interoperability, security review, or
+  academic study is permitted. The bright line is competitive intent.
+- **Don't remove or obscure the OCI annotations, license files,
+  trademark, or copyright notices** on the images.
+
+If you're not sure whether a use case is permitted, the EULA invites
+you to email `legal@trustacks.com` before proceeding. The response
+target is five business days during the Beta period.
+
+## What's open source
+
+Three repositories, all Apache 2.0, all public.
+
+### `trustacks-policy`
+
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>
+
+Holds the [constitution](/reference/constitution) Rego bundle and the
+framework packs the agents read. The same policy primitives your
+runner verifies on every proposal. Fork it, write your own packs
+against the same schema, and run them through the
+[policy linter](/reference/policy-linter) without permission.
+
+Contributions land via DCO sign-off, no CLA required during the Beta
+program. See `CONTRIBUTING.md` in the repo for the workflow.
+
+### `trustacks-quickstart`
+
+<a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a>
+
+Holds the `install.sh` and `bootstrap.sh` scripts the
+[curl-pipe-bash install](https://trustacks.com/quickstart) runs, the
+Helm chart values the local sandbox uses, and the four polyglot sample
+applications. Fork it, modify the install flow for your environment,
+or lift the samples into your own evaluation harness.
+
+### Vendored third-party libraries inside the images
+
+Each retains its upstream license (Apache 2.0, MIT, BSD, and others).
+The SBOM attached to each image manifest is the authoritative
+enumeration. Pull it with:
+
+```bash
+VERSION=0.1.0
+docker buildx imagetools inspect \
+  "ghcr.io/trustacks/runner:${VERSION}" \
+  --format '{{ json .SBOM }}'
+```
+
+The EULA does not modify any of these upstream licenses. The image's
+EULA governs the *composition*, not the individual components.
+
+## Specialist Packs sit on a third axis
+
+The constitution and the framework packs are Apache 2.0. The agent
+container images are EULA-governed. The
+[Specialist Packs](/reference/specialist-packs) (SOC 2, HIPAA, PCI,
+FedRAMP, ITIL) are on a third axis: **vendor-curated, paid**.
+
+A Specialist Pack ships through the same signed OCI bundle channel as
+the constitution. A subscriber on the Enterprise tier or above can
+read every rule in the bundle. We're charging for the *curation* and
+the *brand attestation* that the rules map correctly to the regulatory
+control families, not for secrecy. The bundle is closed in the
+distribution sense (entitlement-gated) but not in the read sense
+(subscribers see the Rego).
+
+This third axis exists because regulatory compliance carries
+auditor-defensibility risk we accept on the customer's behalf. A
+community-contributed SOC 2 overlay that misreads CC6.1 would damage
+both the customer and the brand. The vendor channel exists so that
+risk lives with us.
+
+## Trademark policy
+
+"TruStacks", the TruStacks logo, and the TruStacks trade dress are
+trademarks of TruStacks, Inc. The canonical policy is the
+<a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">TruStacks Trademark Policy</a>
+in the `trustacks-policy` repo, incorporated into the EULA by reference.
+
+The plain-language summary:
+
+- You **may** factually reference TruStacks in technical documentation,
+  blog posts, talks, or evaluation reports.
+- You **may not** use the TruStacks name or logo in a way that
+  suggests TruStacks endorses, sponsors, or is affiliated with your
+  product or service without written permission.
+- You **may not** distribute a fork or derivative work under the
+  TruStacks name. Forks must be renamed. "Powered by TruStacks" is
+  fine; "TruStacks Pro" is not.
+
+## Beta versus General Availability
+
+The Beta grant is time-bounded. General Availability changes the
+license model. The table below is the procurement-shaped view.
+
+| Concern | Beta period (today) | General Availability (target 2026-07-27 hosted, 2027-04-28 image GA) |
+|---|---|---|
+| Image license | EULA Beta v1.0 (royalty-free) | Commercial license, tier-specific |
+| Permitted use | Evaluation, workshop, local development | Production workloads |
+| Infrastructure | Infrastructure you control | Customer-controlled or TruStacks-managed (hosted SaaS) |
+| Cost | Free under the Beta grant | Subscription per tier (Developer, Team, Enterprise, Enterprise+) |
+| Support | Best-effort via the public Discord | SLAs per tier |
+| Transition | Beta grant ends at GA + 30-day window | Continuing under commercial license |
+
+The constitution Rego bundle, framework packs, and quickstart scripts
+**stay Apache 2.0** at GA. Only the container images transition.
+
+<Callout type="warning">
+  **Do not deploy the Beta images to production workloads or in
+  regulated environments.** The Beta period is exactly that. The
+  images may contain bugs, security issues, or incomplete features.
+  Production-grade terms, support, and SLAs become available at
+  General Availability under a separate commercial agreement.
+</Callout>
+
+## Where to ask license questions
+
+| Topic | Address |
+|---|---|
+| License clarification, custom-use questions | `legal@trustacks.com` |
+| Trademark queries | `legal@trustacks.com` (see also the <a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">Trademark Policy</a>) |
+| Security reports (tampering, vulnerability disclosure) | `security@trustacks.com` |
+| General product questions | `hello@trustacks.com` or the public Discord linked from [trustacks.com](https://trustacks.com) |
+
+The EULA response target during the Beta period is five business
+days.
+
+## Where to go next
+
+- [Constitution](/reference/constitution) · the Apache-licensed Rego
+  bundle every runner verifies
+- [Specialist Packs](/reference/specialist-packs) · the
+  vendor-curated, paid third axis
+- [Architecture](/reference/architecture) · how the open-core boundary
+  shows up across the runtime
+- [Spec-driven development](/concepts/spec-driven-development) ·
+  TruStacks's positioning against Spec Kit, Kiro, and the broader
+  SDD ecosystem
+- [trustacks.com/eula](https://trustacks.com/eula) · the canonical
+  EULA text
