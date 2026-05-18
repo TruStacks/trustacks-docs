@@ -4,5 +4,6 @@ export default {
   'specialist-packs': 'Specialist Packs',
   'runner-cli': 'Runner CLI',
   'mcp-server': 'MCP server',
-  'policy-linter': 'Policy linter'
+  'policy-linter': 'Policy linter',
+  license: 'License'
 }
