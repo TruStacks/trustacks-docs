@@ -57,7 +57,17 @@
   The reciprocal boundary holds: sessions in those repos won't write here. If you 
   discover content drift in a sibling repo (e.g., a feature documented here that's
    been removed from trustacks-mvp), surface it to the user — let the *other* 
-  session ship the fix.                                                           
+  session ship the fix.
+
+  **Carve-out — trustacks-mvp session as authorized contributor (locked
+  2026-05-18).** The trustacks-mvp session may also write here for sweeping
+  mvp-derived changes — renamed CLI flags, updated diagrams, new reference
+  pages when a slice ships customer-visible surface — that would otherwise
+  need a handoff prompt. Both sessions follow PR-only on `main` + the
+  CodeRabbit-on-every-PR rule; coordinate via the user when both sessions
+  might touch overlapping files the same day. The trustacks-www session
+  has no such carve-out — it still won't write here. Reciprocal entry
+  lives in the trustacks-mvp CLAUDE.md sibling-repos section.                                                           
                                                              
   ## Working agreement
 
