@@ -16,15 +16,15 @@ story.
 ## The three lines
 
 The boundary is the same one customers see in the
-[quickstart README](https://github.com/TruStacks/trustacks-quickstart#license--the-bright-line)
+<a href="https://github.com/TruStacks/trustacks-quickstart#license--the-bright-line" target="_blank" rel="noopener noreferrer">quickstart README</a>
 and on the [quickstart landing page](https://trustacks.com/quickstart).
 Stated once here so a procurement reviewer can read it without
 following links.
 
 | What | License | Where |
 |---|---|---|
-| **Quickstart scripts, Helm chart, sample apps** | Apache License 2.0 | [github.com/TruStacks/trustacks-quickstart](https://github.com/TruStacks/trustacks-quickstart) |
-| **Constitution Rego bundle, framework packs** | Apache License 2.0 | [github.com/TruStacks/trustacks-policy](https://github.com/TruStacks/trustacks-policy) |
+| **Quickstart scripts, Helm chart, sample apps** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a> |
+| **Constitution Rego bundle, framework packs** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a> |
 | **Container images** (`ghcr.io/trustacks/control-plane`, `ghcr.io/trustacks/runner`, `ghcr.io/trustacks/ui`) | [TruStacks EULA (Beta)](https://trustacks.com/eula) | `ghcr.io/trustacks/*` |
 
 Everything in the first two rows you can fork, modify, and run
@@ -70,7 +70,7 @@ non-transferable, royalty-free, and revocable.
   (the EULA documents the exact `cosign verify` command).
 - Build customer overlays and run them against the constitution.
 - Author new framework packs or industry overlays and contribute them
-  upstream to [trustacks-policy](https://github.com/TruStacks/trustacks-policy)
+  upstream to <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">trustacks-policy</a>
   under Apache 2.0.
 
 ## What you can't do during the Beta
@@ -100,7 +100,7 @@ Three repositories, all Apache 2.0, all public.
 
 ### `trustacks-policy`
 
-[github.com/TruStacks/trustacks-policy](https://github.com/TruStacks/trustacks-policy)
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>
 
 Holds the [constitution](/reference/constitution) Rego bundle and the
 framework packs the agents read. The same policy primitives your
@@ -113,7 +113,7 @@ program. See `CONTRIBUTING.md` in the repo for the workflow.
 
 ### `trustacks-quickstart`
 
-[github.com/TruStacks/trustacks-quickstart](https://github.com/TruStacks/trustacks-quickstart)
+<a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a>
 
 Holds the `install.sh` and `bootstrap.sh` scripts the
 [curl-pipe-bash install](https://trustacks.com/quickstart) runs, the
@@ -127,9 +127,10 @@ Each retains its upstream license (Apache 2.0, MIT, BSD, and others).
 The SBOM attached to each image manifest is the authoritative
 enumeration. Pull it with:
 
-```sh
+```bash
+VERSION=0.1.0
 docker buildx imagetools inspect \
-  ghcr.io/trustacks/runner:<version> \
+  "ghcr.io/trustacks/runner:${VERSION}" \
   --format '{{ json .SBOM }}'
 ```
 
@@ -161,7 +162,7 @@ risk lives with us.
 
 "TruStacks", the TruStacks logo, and the TruStacks trade dress are
 trademarks of TruStacks, Inc. The canonical policy is the
-[TruStacks Trademark Policy](https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md)
+<a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">TruStacks Trademark Policy</a>
 in the `trustacks-policy` repo, incorporated into the EULA by reference.
 
 The plain-language summary:
@@ -205,7 +206,7 @@ The constitution Rego bundle, framework packs, and quickstart scripts
 | Topic | Address |
 |---|---|
 | License clarification, custom-use questions | `legal@trustacks.com` |
-| Trademark queries | `legal@trustacks.com` (see also the [Trademark Policy](https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md)) |
+| Trademark queries | `legal@trustacks.com` (see also the <a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">Trademark Policy</a>) |
 | Security reports (tampering, vulnerability disclosure) | `security@trustacks.com` |
 | General product questions | `hello@trustacks.com` or the public Discord linked from [trustacks.com](https://trustacks.com) |
 
