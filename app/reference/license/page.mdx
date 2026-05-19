@@ -24,13 +24,16 @@ following links.
 | What | License | Where |
 |---|---|---|
 | **Quickstart scripts, Helm chart, sample apps** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a> |
-| **Constitution Rego bundle, framework packs** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a> |
+| **Constitution Rego bundle, framework packs** | Apache License 2.0 | `trustacks-policy` repository (private during Beta; flips public at Beta launch on 2026-07-27) |
 | **Container images** (`ghcr.io/trustacks/control-plane`, `ghcr.io/trustacks/runner`, `ghcr.io/trustacks/ui`) | [TruStacks EULA (Beta)](https://trustacks.com/eula) | `ghcr.io/trustacks/*` |
 
 Everything in the first two rows you can fork, modify, and run
-anywhere with no further permission. Everything in the third row you
-can pull and run on infrastructure you control during the Beta
-program, under the terms summarized below.
+anywhere with no further permission, under their Apache 2.0 grants.
+`trustacks-quickstart` is accessible today; `trustacks-policy` flips
+public at Beta launch on 2026-07-27, so the license is in place from
+day one but the code becomes readable then. Everything in the third
+row you can pull and run on infrastructure you control during the
+Beta program, under the terms summarized below.
 
 ## What the EULA covers
 
@@ -69,9 +72,6 @@ non-transferable, royalty-free, and revocable.
 - Verify the signatures and SBOMs against the publishing identity
   (the EULA documents the exact `cosign verify` command).
 - Build customer overlays and run them against the constitution.
-- Author new framework packs or industry overlays and contribute them
-  upstream to <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">trustacks-policy</a>
-  under Apache 2.0.
 
 ## What you can't do during the Beta
 
@@ -96,20 +96,23 @@ target is five business days during the Beta period.
 
 ## What's open source
 
-Three repositories, all Apache 2.0, all public.
+Three repositories, all Apache 2.0. The `trustacks-quickstart`
+repository is public today; `trustacks-policy` flips public at Beta
+launch on 2026-07-27 (it's licensed Apache 2.0 from day one, the
+visibility flip is a soft-launch sequencing decision).
 
 ### `trustacks-policy`
 
-<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>
-
 Holds the [constitution](/reference/constitution) Rego bundle and the
 framework packs the agents read. The same policy primitives your
-runner verifies on every proposal. Fork it, write your own packs
-against the same schema, and run them through the
-[policy linter](/reference/policy-linter) without permission.
+runner verifies on every proposal. After the Beta-launch visibility
+flip, you'll be able to fork it, write your own packs against the same
+schema, and run them through the [policy linter](/reference/policy-linter)
+without permission.
 
 Contributions land via DCO sign-off, no CLA required during the Beta
-program. See `CONTRIBUTING.md` in the repo for the workflow.
+program. The `CONTRIBUTING.md` in the repo will document the workflow
+once the repo is public.
 
 ### `trustacks-quickstart`
 
@@ -161,9 +164,11 @@ risk lives with us.
 ## Trademark policy
 
 "TruStacks", the TruStacks logo, and the TruStacks trade dress are
-trademarks of TruStacks, Inc. The canonical policy is the
-<a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">TruStacks Trademark Policy</a>
-in the `trustacks-policy` repo, incorporated into the EULA by reference.
+trademarks of TruStacks, Inc. The plain-language policy summary is
+the [EULA's Trademarks section](https://trustacks.com/eula#trademarks)
+on trustacks.com; the canonical TRADEMARK.md in the `trustacks-policy`
+repository (incorporated into the EULA by reference) becomes publicly
+readable when that repository flips public at Beta launch on 2026-07-27.
 
 The plain-language summary:
 
@@ -206,7 +211,7 @@ The constitution Rego bundle, framework packs, and quickstart scripts
 | Topic | Address |
 |---|---|
 | License clarification, custom-use questions | `legal@trustacks.com` |
-| Trademark queries | `legal@trustacks.com` (see also the <a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">Trademark Policy</a>) |
+| Trademark queries | `legal@trustacks.com` (see also the [EULA Trademarks section](https://trustacks.com/eula#trademarks)) |
 | Security reports (tampering, vulnerability disclosure) | `security@trustacks.com` |
 | General product questions | `hello@trustacks.com` or the public Discord linked from [trustacks.com](https://trustacks.com) |
 
