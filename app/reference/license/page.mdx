@@ -28,9 +28,12 @@ following links.
 | **Container images** (`ghcr.io/trustacks/control-plane`, `ghcr.io/trustacks/runner`, `ghcr.io/trustacks/ui`) | [TruStacks EULA (Beta)](https://trustacks.com/eula) | `ghcr.io/trustacks/*` |
 
 Everything in the first two rows you can fork, modify, and run
-anywhere with no further permission. Everything in the third row you
-can pull and run on infrastructure you control during the Beta
-program, under the terms summarized below.
+anywhere with no further permission, under their Apache 2.0 grants.
+`trustacks-quickstart` is accessible today; `trustacks-policy` flips
+public at Beta launch on 2026-07-27, so the license is in place from
+day one but the code becomes readable then. Everything in the third
+row you can pull and run on infrastructure you control during the
+Beta program, under the terms summarized below.
 
 ## What the EULA covers
 
@@ -69,10 +72,6 @@ non-transferable, royalty-free, and revocable.
 - Verify the signatures and SBOMs against the publishing identity
   (the EULA documents the exact `cosign verify` command).
 - Build customer overlays and run them against the constitution.
-- Author new framework packs or industry overlays and contribute them
-  upstream to the `trustacks-policy` repository under Apache 2.0. The
-  repository is private during the Beta program and flips public at
-  Beta launch on 2026-07-27.
 
 ## What you can't do during the Beta
 
@@ -165,12 +164,11 @@ risk lives with us.
 ## Trademark policy
 
 "TruStacks", the TruStacks logo, and the TruStacks trade dress are
-trademarks of TruStacks, Inc. The canonical policy is the TruStacks
-Trademark Policy in the `trustacks-policy` repository, incorporated
-into the EULA by reference. The plain-language summary lives in the
-[EULA's Trademarks section](https://trustacks.com/eula#trademarks) on
-trustacks.com; the full TRADEMARK.md text becomes publicly readable
-when `trustacks-policy` flips public at Beta launch on 2026-07-27.
+trademarks of TruStacks, Inc. The plain-language policy summary is
+the [EULA's Trademarks section](https://trustacks.com/eula#trademarks)
+on trustacks.com; the canonical TRADEMARK.md in the `trustacks-policy`
+repository (incorporated into the EULA by reference) becomes publicly
+readable when that repository flips public at Beta launch on 2026-07-27.
 
 The plain-language summary:
 
