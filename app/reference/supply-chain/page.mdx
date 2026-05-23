@@ -1,0 +1,292 @@
+---
+title: Supply-chain verification
+description: Verify the four signed TruStacks OCI artifacts (control-plane, runner, UI images plus the constitution Rego bundle) before you run them. Sigstore keyless OIDC, no static keys, Rekor transparency log entries per release. The customer verification flow; integration points for Kyverno, Gatekeeper, and Connaisseur.
+---
+
+import { Callout } from 'nextra/components'
+
+# Supply-chain verification
+
+Every TruStacks OCI artifact you pull is Sigstore-signed. Before the
+runner starts inside your cluster, before the control plane talks to
+your repos, before the policy bundle is extracted: verify the
+signatures against the publishing identity. This page is the
+customer-side verification flow.
+
+## Why this matters
+
+The runner pod runs inside your Kubernetes cluster, with read access
+to your source repositories and write access (via your git provider)
+to the platform repo it opens pull requests against. That's a
+meaningful trust ask. Before you apply the chart, you and your
+security team should be able to answer two questions:
+
+1. **What's in the image?** The SBOM attached to each image manifest
+   enumerates the contents.
+2. **Is the image the one TruStacks built?** The Sigstore signature,
+   verified against the publishing workflow identity, attests the
+   bits.
+
+The same applies to the constitution Rego bundle the runner verifies
+before policy evaluation. Both questions, both artifact families, the
+same verification tooling.
+
+## What gets signed
+
+Four artifacts, one tag per release, signed against two publishing
+workflow identities.
+
+| Artifact | OCI reference | Signing workflow |
+|---|---|---|
+| Control-plane image | `ghcr.io/trustacks/control-plane:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-images.yml" target="_blank" rel="noopener noreferrer">`publish-images.yml`</a> |
+| Runner image | `ghcr.io/trustacks/runner:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-images.yml" target="_blank" rel="noopener noreferrer">`publish-images.yml`</a> |
+| UI image | `ghcr.io/trustacks/ui:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-images.yml" target="_blank" rel="noopener noreferrer">`publish-images.yml`</a> |
+| Constitution Rego bundle | `ghcr.io/trustacks/policy/constitution:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-policy.yml" target="_blank" rel="noopener noreferrer">`publish-policy.yml`</a> |
+
+All four share a single tag on every release. A `git tag v0.2.0 &&
+git push origin v0.2.0` fires both workflows in parallel; the images
+and the policy bundle move together. See
+[the versioning policy](#versioning) below for the cadence.
+
+## How signing works
+
+Sigstore keyless OIDC. There is no static signing key TruStacks owns
+or rotates. At publish time:
+
+1. The publishing workflow authenticates to Sigstore's Fulcio CA via
+   GitHub Actions OIDC.
+2. Fulcio issues a short-lived signing certificate whose subject is
+   the workflow URL (for example,
+   `https://github.com/TruStacks/trustacks-mvp/.github/workflows/publish-images.yml@refs/tags/v0.1.2`).
+3. The workflow signs the image (or bundle) digest with that
+   certificate.
+4. A signature entry lands in the public
+   [Rekor transparency log](https://search.sigstore.dev/), pinning
+   the signing event in time.
+
+Customer-side verification doesn't need any pre-shared secret. You
+verify two strings: the **certificate-identity-regex** (which
+workflow file is allowed to sign) and the **OIDC issuer** (which
+identity provider issued the certificate, always
+`https://token.actions.githubusercontent.com` for our workflows). If
+the signature on your pull matches both, the image was built and
+pushed by that specific workflow in that specific repository.
+
+## Verifying images
+
+Install [cosign](https://docs.sigstore.dev/cosign/installation/) 3.x
+(`brew install cosign` on macOS).
+
+```bash
+cosign verify \
+  --certificate-identity-regexp \
+    'https://github.com/TruStacks/trustacks-mvp/.github/workflows/publish-images.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/trustacks/runner:0.1.2
+```
+
+The same command shape verifies all three images; swap the final
+argument to `control-plane:<version>` or `ui:<version>`. Successful
+output ends with `The code-signing certificate was verified using
+trusted certificate authority certificates`.
+
+The canonical commands live at the top of
+<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/NOTICE" target="_blank" rel="noopener noreferrer">trustacks-mvp's NOTICE file</a>;
+if the regex on this page ever drifts from NOTICE, NOTICE is the
+source of truth.
+
+## Verifying the policy bundle
+
+Same shape, different workflow filename and OCI reference.
+
+```bash
+cosign verify \
+  --certificate-identity-regexp \
+    'https://github.com/TruStacks/trustacks-mvp/.github/workflows/publish-policy.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/trustacks/policy/constitution:0.1.2
+```
+
+The runner's `load-policy-bundle` init container performs the
+equivalent verification at pod startup before extracting the bundle
+into the policy-runtime volume. A verification failure blocks
+extract; the runner falls back to the rego baked into the image so
+the cluster stays functional but the freshly-published bundle is not
+trusted on that pod.
+
+## Why the regex anchors on a tag ref
+
+The regex ends with `@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$`,
+not the older `@.*` form. Two reasons.
+
+**Defense in depth.** The workflow itself runs a *Guard ref + resolve
+version* step that refuses to publish from anything other than a
+semver tag. The regex enforces the same constraint at verify time.
+If an attacker ever found a way to trigger the workflow from a
+branch ref, the signature would carry a branch-shaped identity and
+fail customer verification.
+
+**Pre-release support.** The trailing `(-[0-9A-Za-z.-]+)?` allows
+release-candidate and pre-release tags like `v0.2.0-rc1` to verify,
+while still rejecting non-semver shapes. The pre-release tags don't
+move `:latest` (a guard in the workflow), but the signatures are
+still valid against their immutable tag.
+
+## Org casing matters
+
+The regex is case-sensitive. Use `TruStacks/trustacks-mvp`
+(uppercase T and S in the org segment), not lowercase.
+
+Fulcio captures the workflow URL verbatim from the GitHub Actions
+identity, which preserves the org's actual casing. The repo path
+segment (`trustacks-mvp`) and the GHCR namespace
+(`ghcr.io/trustacks/*`) are correctly lowercase. Only the
+`github.com/<org>` segment in the certificate identity needs the
+case fix.
+
+If your verify command returns *none of the expected identities
+matched* with `got subjects [https://github.com/TruStacks/...]`,
+that's the casing problem. Swap the org segment to uppercase and
+re-run.
+
+## Reading the SBOM
+
+Each image ships an SBOM attached to its manifest via buildx's
+`sbom: true` output. Read it with `docker buildx imagetools
+inspect`:
+
+```bash
+docker buildx imagetools inspect \
+  ghcr.io/trustacks/runner:0.1.2 \
+  --format '{{ json .SBOM }}'
+```
+
+The SBOM enumerates the vendored libraries inside the image with
+their upstream licenses; pipe to `jq` to ingest into Wiz, Snyk,
+Anchore, Trivy, or whatever scanner your security team standardizes
+on. Both SPDX and CycloneDX consumers can work from the same
+manifest attachment.
+
+## Rekor transparency log
+
+Every signed release lands an entry in the public Rekor transparency
+log. The signing event is pinned in time and publicly auditable; you
+can confirm the workflow ran when claimed and the digest matches the
+one your `docker pull` resolves to.
+
+Search for any TruStacks release at
+[search.sigstore.dev](https://search.sigstore.dev/) by signing
+certificate identity or by image digest. Rekor entry IDs are also
+attached to each Sigstore bundle and surface in `cosign verify`
+output when run with `--rekor-url https://rekor.sigstore.dev` (the
+default).
+
+## Admission-controller integration
+
+For Kyverno, Gatekeeper-Ratify, or Connaisseur, the two strings to
+plug into your policy are:
+
+- **certificate-identity-regex**:
+  `https://github.com/TruStacks/trustacks-mvp/.github/workflows/publish-images.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$`
+  (use `publish-policy.yml` for the policy-bundle reference)
+- **oidc-issuer**: `https://token.actions.githubusercontent.com`
+
+No static public key to provision. No key rotation schedule to plan
+for. Sigstore keyless OIDC delegates the identity binding to GitHub
+Actions; your admission policy only needs to know which workflow file
+in which repo is allowed to sign artifacts that pass.
+
+If your admission stack speaks Sigstore policy natively, the same two
+strings are the inputs.
+
+## Two signing paths
+
+TruStacks signs through two distinct identities, for two distinct
+audiences. Don't mix them up.
+
+**Customer flow (this page).** Published images and the constitution
+bundle on `ghcr.io/trustacks/*`. Signed via Sigstore keyless OIDC
+against the publishing workflows' GitHub Actions identities. Rekor
+transparency log entry per release. This is what
+[the quickstart](/getting-started/quickstart) pulls and what an
+admission controller verifies.
+
+**Contributor flow.** Locally-built tarballs distributed for
+contributor-IP review (`runner-image-<sha>.tar` plus a detached
+`runner-sig-<sha>.bundle`). Signed offline with the project-local
+`.runner-image-keys/` cosign keypair. No Rekor, no Fulcio, no OIDC,
+no public CA chain. Documented at
+<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/docs/runner-image-verification.md" target="_blank" rel="noopener noreferrer">trustacks-mvp/docs/runner-image-verification.md</a>
+and motivated in
+<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/docs/decisions/0019-runner-image-supply-chain.md" target="_blank" rel="noopener noreferrer">ADR-0019</a>
+(amended 2026-05-18). That path is for contributors verifying their
+own builds; it's not the path your security team uses to verify the
+images your workshop cluster pulls.
+
+The architectural rationale for keeping them separate: a leaked
+contributor-flow key compromises one developer's locally-published
+tarball; a leaked customer-flow key would have to compromise Sigstore
+keyless OIDC itself, which has no long-lived key to leak. Different
+blast radius, different lifecycle, different trust story.
+
+## If verification fails
+
+Don't run the artifact. A failed signature verification means one of
+three things:
+
+- **Wrong identity.** Most often the org-casing gotcha above.
+  Lowercase `trustacks/trustacks-mvp` in the regex won't match
+  Fulcio's recorded subject.
+- **Wrong artifact reference.** The version tag you pulled doesn't
+  match the one in the signature. Confirm you resolved a tag
+  (`0.1.2`), not `latest` against a moving target.
+- **Genuine tampering.** Rare but possible. The image you pulled
+  was modified between TruStacks's publish and your pull.
+
+Report any case-3 finding to `security@trustacks.com`. We'll
+investigate and, if confirmed, pull the affected tags and issue an
+advisory.
+
+## Where this fits in the SDD ecosystem
+
+Signed images with SBOMs and Rekor transparency log entries are not
+how the rest of the spec-driven development space ships. Spec Kit,
+Kiro, and Cursor distribute as plain binaries or VS Code extensions
+without a verifiable signing identity; security teams can't
+admission-gate them by signature, audit by SBOM, or replay the
+publishing event from a public transparency log.
+
+That's a real difference for a security-conscious customer evaluating
+TruStacks for production-adjacent use. See the
+[spec-driven development](/concepts/spec-driven-development) concept
+page for the broader positioning.
+
+## Versioning
+
+The four artifacts version together on every release. All four pull
+the same tag.
+
+```bash
+# Reproducible pinned install
+TRUSTACKS_VERSION=0.1.2 \
+  curl -fsSL https://trustacks.com/install | bash
+```
+
+The full version policy (semver applied, pre-release tag handling,
+the `:latest`-on-prerelease guard) lives in
+<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/docs/versioning.md" target="_blank" rel="noopener noreferrer">trustacks-mvp's docs/versioning.md</a>.
+Until that customer-facing translation lands here, the upstream doc
+is the canonical reference.
+
+## Where to go next
+
+- [Quickstart](/getting-started/quickstart) · run the `curl-pipe-bash`
+  install against signed images
+- [License and the bright line](/reference/license) · Apache scripts
+  vs EULA images, what the Beta license permits
+- [Constitution](/reference/constitution) · the Rego rules the runner
+  evaluates after extracting the signed bundle
+- [Architecture](/reference/architecture) · where the runner sits in
+  the three-plane model
+- <a href="https://trustacks.com/eula" target="_blank" rel="noopener noreferrer">TruStacks EULA (Beta)</a> · the binding text for the signed images
+- <a href="https://search.sigstore.dev/" target="_blank" rel="noopener noreferrer">Rekor public search</a> · look up any TruStacks release by identity or digest
