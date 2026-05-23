@@ -5,5 +5,6 @@ export default {
   'runner-cli': 'Runner CLI',
   'mcp-server': 'MCP server',
   'policy-linter': 'Policy linter',
+  'supply-chain': 'Supply-chain verification',
   license: 'License'
 }
