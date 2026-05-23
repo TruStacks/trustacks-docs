@@ -1,6 +1,6 @@
 ---
 title: Local development
-description: Spin up TruStacks end-to-end on a local k3d cluster for evaluation, workshops, and contributor development. Targets the Helm-based eval install; customer production is moving to the Cluster Operator post-Beta.
+description: Build and run TruStacks from source on a local k3d cluster. The contributor path; clones trustacks-mvp, runs make up + make seed, and brings the platform up end-to-end against sample repositories. Evaluators and workshop attendees should use the quickstart instead.
 ---
 
 import { Callout } from 'nextra/components'
@@ -8,19 +8,23 @@ import { Callout } from 'nextra/components'
 # Local development
 
 This guide brings the full TruStacks platform up on a local Kubernetes
-cluster: k3d running on your laptop, Gitea as the in-cluster Git server,
-ArgoCD watching a sample platform repo, Zot as the OCI registry for
-signed policy bundles, the Control Plane, the Runner, and the UI.
+cluster from source: k3d running on your laptop, Gitea as the in-cluster
+Git server, ArgoCD watching a sample platform repo, Zot as the OCI
+registry for signed policy bundles, the Control Plane, the Runner, and
+the UI.
 
-The intended audience is evaluators, workshop attendees, and contributors
-who want the agent crew running end-to-end against sample repositories
-before connecting anything in their own environment.
+The intended audience is **contributors** with `trustacks-mvp`
+repository access who want to build TruStacks from source and iterate
+on it. For evaluators and workshop attendees, the
+[quickstart](/getting-started/quickstart) is the right path; it pulls
+signed images from `ghcr.io/trustacks/*` and doesn't need repository
+access.
 
 <Callout type="info">
-  **Scoped to local dev and eval.** Customer production installation is
-  moving to the Cluster Operator (post-Beta). The procedure on this page
-  is the right path for laptops, workshop machines, and dedicated eval
-  clusters today. For production deploys, see
+  **Scoped to contributor development.** The procedure on this page
+  builds images locally and runs against the source tree. Customer
+  production installation is moving to the Cluster Operator (post-Beta);
+  for production deploys today, see
   [the cluster install guide](/installation/cluster).
 </Callout>
 
@@ -311,7 +315,7 @@ what each rule checks.
   pattern the Runner needs
 - [GitOps integration](/installation/gitops) · how ArgoCD picks up the
   PRs the DevOps Engineer ships
-- [Quickstart](/getting-started/quickstart) · the stripped-down
-  first-PR-in-30-minutes path
+- [Quickstart](/getting-started/quickstart) · the customer workshop
+  path: `curl | bash`, signed images, no repository access required
 - [Policy authoring workshop](/workshops/policy-authoring) · write
   your first overlay rule

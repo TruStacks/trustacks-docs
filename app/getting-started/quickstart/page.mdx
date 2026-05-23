@@ -1,131 +1,242 @@
 ---
 title: Quickstart
-description: From a clean machine to the agent crew opening its first pull request in under thirty minutes. Local k3d evaluation path.
+description: A working TruStacks sandbox on your laptop in fifteen minutes. One curl-pipe-bash, four pre-seeded sample apps, the agent crew opening its first pull request. The customer-facing workshop quickstart for evaluators, design partners, and workshop attendees.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Quickstart
 
-From a clean machine to the agent crew opening its first pull request
-against a platform repository, in under thirty minutes. This walkthrough
-uses the local k3d evaluation path; for the full reference, see
+A working TruStacks sandbox on your laptop in fifteen minutes. One
+curl-pipe-bash, four sample apps already in your local Gitea, the agent
+crew running `/audit` and `/plan` against them, and a real pull request
+open in local Gitea ready for you to merge.
+
+This is the **workshop quickstart** for evaluators, design partners,
+and workshop attendees. No private repository access required; the
+install pulls signed images from `ghcr.io/trustacks/*`. If you have
+`trustacks-mvp` access and want the contributor build path, see
 [local development](/installation/local-dev).
 
 <Callout type="info">
-  **Eval scope.** This quickstart spins up the full platform on your
-  laptop. Customer production installs are moving to the Cluster
-  Operator (post-Beta). For staging or production cluster installs
-  today, see [the cluster install guide](/installation/cluster).
+  **Scope.** This brings the full platform up on your laptop in a
+  single k3d cluster (all-in-one workshop topology). Production
+  hosting is the GKE-hosted SaaS, separate, post-Beta.
 </Callout>
+
+## What you'll see in fifteen minutes
+
+You will run one install command, paste an Anthropic key into the UI,
+pick a sample app, and watch the agent crew open a pull request against
+the platform repo. The PR is real (CI workflow, Helm chart, ArgoCD
+Application), evaluated against the constitution by OPA, and
+mergeable. When you merge, ArgoCD picks up the change and deploys the
+sample to the same local cluster.
+
+That's the whole demo loop. Agents propose. Policy decides. Humans
+approve.
 
 ## Prerequisites
 
-You need:
+A Mac or Linux box with:
 
-- Docker Desktop (running)
-- An Anthropic API key from
+- **Docker Desktop** (running)
+- **k3d** ≥ 5.8
+- **kubectl** (latest)
+- **helm** ≥ 3.14
+- An **Anthropic API key** from
   [console.anthropic.com](https://console.anthropic.com/settings/keys)
-- Access to `github.com/TruStacks/trustacks-mvp` (private during Beta)
 
-Install the CLI tools:
+On macOS, Homebrew has everything except Docker (install Docker Desktop
+separately):
 
 ```bash
 brew install --cask docker
-brew install k3d helm kubectl uv node opa oras
+brew install k3d kubectl helm
 ```
 
-Then verify with `make doctor` after cloning the repo (next step).
+You do not need the API key at install time. The UI prompts you for it
+once the cluster is up.
 
-## The thirty-minute path
+## The install
 
-### 1. Clone and configure
+One command:
 
 ```bash
-git clone https://github.com/TruStacks/trustacks-mvp.git
-cd trustacks-mvp
-cp .env.example .env
+curl -fsSL https://trustacks.com/install | bash
 ```
 
-Edit `.env` and set `ANTHROPIC_API_KEY=<your-key>`. Without it, the
-Runner cannot start.
+The bootstrap script pulls the quickstart repository, validates your
+CLI versions, creates a k3d cluster named `trustacks`, installs the
+TruStacks umbrella Helm chart (Control Plane, Runner, UI, Gitea,
+ArgoCD in one namespace), seeds four sample app repositories into the
+local Gitea, and prints the URLs.
 
-### 2. Bring up the cluster
+Two to five minutes on first run. Subsequent runs reuse the cached
+images and complete faster.
+
+### Pinning a version
+
+`latest` floats with each release. For reproducible workshop runs or
+procurement-friendly pinned installs, set `TRUSTACKS_VERSION` to a
+specific semver:
 
 ```bash
-make install   # Python venvs + UI deps; about 1 minute
-make up        # k3d + all services; about 5 minutes
-make seed      # signed policy bundle + demo repos + ArgoCD; about 2 minutes
+TRUSTACKS_VERSION=0.1.2 \
+  curl -fsSL https://trustacks.com/install | bash
 ```
 
-`make seed` is idempotent and re-runs cleanly. See [the local-dev
-guide](/installation/local-dev#bring-up) for the full sequence.
+The version refers to the tag at `ghcr.io/trustacks/*`. The Runner,
+Control Plane, UI, and constitution policy bundle all version together.
+See [supply-chain verification](/reference/supply-chain) for how to
+verify the signed images and bundle before they run.
 
-### 3. Confirm everything is reachable
+## What got installed
+
+| Surface | URL | What it is |
+|---|---|---|
+| TruStacks UI | `http://ui.localtest.me:8080` | The web app: agent activity, `/audit`, `/plan`, `/stack` |
+| Gitea | `http://gitea.localtest.me:8080` | In-cluster Git host with the four pre-seeded sample repos and the platform repo |
+| ArgoCD | `http://argocd.localtest.me:8080` | Watches the platform repo, syncs Applications you merge |
+
+`localtest.me` resolves to `127.0.0.1` automatically, so no
+`/etc/hosts` edits are needed.
+
+The four sample app repos pre-seeded in Gitea cover four common
+runtimes:
+
+- `fastapi-hello` · Python + FastAPI
+- `spring-boot-hello` · Java + Spring Boot
+- `dotnet-hello` · C# + ASP.NET Core
+- `go-hello` · Go + stdlib HTTP
+
+Each is a minimal "hello world" service the agent crew can analyze.
+Pick any one for the walkthrough below.
+
+## The walkthrough
+
+### 1. Open the UI
+
+Browse to `http://ui.localtest.me:8080`. You'll see the chat-first
+landing page with the sidebar nav (**Activity**, **Applications**,
+**Services**, **Gaps**, **Rules**, **Settings**).
+
+### 2. Paste your Anthropic key
+
+Click **Settings → LLM Provider**. Paste the API key, confirm. The
+Control Plane runs a live ping against the provider, rewrites the
+Runner's secret, and rolls the Runner pod. Without a key, the agents
+cannot run.
+
+OpenRouter is supported as a BYO escape hatch; both providers route to
+Claude Sonnet 4.5+.
+
+### 3. Run an audit
+
+Navigate to **/audit** and click *Run gap analysis*. The Coordinator
+delegates to the Baseline Security specialist, which streams its work
+as a multi-speaker conversation: tool calls, findings, recommendations.
+
+The output is a gap report ending with a deterministic maturity tier
+(bronze / silver / gold) computed from the OPA evaluation, not
+authored by the LLM. The tier is what you'd show a board.
+
+### 4. Pick a sample service
+
+Navigate to **Services**. Pick `sample-app-fastapi-hello` (or any of
+the four). The Code Reviewer agent has already analyzed it during
+install; click into its Analysis to see the event log replayed as a
+timeline. Each tool call is a node; the agent's reasoning between
+calls is rendered as activity, not as a fake-typing animation.
+
+### 5. Promote the analysis to a proposal
+
+Click *Promote to proposal* on the Analysis. The DevOps Engineer agent
+takes over: it reads the analysis and the Environment Profile, emits
+a CI workflow + a Helm chart + an ArgoCD Application, runs the
+proposal through the OPA policy gate against the signed constitution
+bundle, and on `allow` opens a pull request in the local Gitea.
+
+The Coordinator prints the PR URL when it's done. Under a minute,
+end-to-end.
+
+### 6. Read the PR
+
+Open the PR URL in Gitea. The body is structured:
+
+- **Summary** · what the DevOps Engineer proposed.
+- **Rule citations** · the constitution rule IDs that motivated each
+  artifact. The CI workflow is motivated by `proposal.has_workflow`,
+  the Helm chart by `proposal.has_helm_chart`, and so on.
+- **Environment Profile inputs** · which Profile entries informed
+  which tool choice.
+- **Blast radius** · Applications and Services this change affects.
+- **Rollback** · how to revert if the deploy goes sideways.
+
+Review like any code review. The structure exists so you can answer
+*why was this proposed and what does it touch?* without reading the
+diff first.
+
+### 7. Merge
+
+Merge the PR in Gitea. ArgoCD picks up the change in the platform
+repo, syncs the new Application, and deploys the sample to your
+cluster. Watch the sync land in the ArgoCD UI.
+
+That's the loop. Real PRs. Real policy gate. Real signed artifacts.
+
+## What to try next
+
+The platform now remembers your stack in the Environment Profile.
+Iterate.
+
+- Edit the sample's Profile (in the overlay repo on Gitea) and re-run
+  `/audit`. The maturity score changes to reflect the new declaration.
+- Re-run `/plan` and watch the DevOps Engineer make a different
+  proposal that respects the updated Profile.
+- Connect a real repository via the UI's **+ Connect repo** wizard.
+  The same loop runs against your code.
+
+For the deeper walkthrough of one full crew run, narrated at the
+tool-call level, see [the CI/CD generation workshop](/workshops/ci-cd-generation).
+
+## Cleanup
 
 ```bash
-make urls
+k3d cluster delete trustacks
 ```
 
-The output table includes URLs and credentials for the UI, Gitea, and
-ArgoCD. The UI lives at `http://ui.localtest.me:8080`.
+The cluster goes away. Cached images stay on your Docker host (re-runs
+are faster). Your Anthropic billing relationship is unaffected.
 
-### 4. Run your first analysis
+## Trouble?
 
-```bash
-cd runner && uv sync
-uv run trustacks review sample-app-gitea
-```
+| Symptom | Try |
+|---|---|
+| `k3d: command not found` | `brew install k3d`, or see [k3d.io](https://k3d.io/#installation) |
+| `docker: daemon not running` | Start Docker Desktop |
+| `Permission denied` on port 8080 | Another service is bound there. Set `K3D_PORT=8081` and re-run. |
+| UI loads but agent calls hang | Anthropic key not yet pasted. **Settings → LLM Provider**. |
+| ArgoCD doesn't sync | Check `kubectl -n argocd get applications`. Sync policy is manual in the quickstart. |
 
-The Code Reviewer streams events live: `started → cloned → tool_call /
-tool_result / finding ×N → done`. Copy the analysis ID from the top of
-the output.
-
-### 5. Promote the analysis to a pull request
-
-```bash
-uv run trustacks plan <analysis-id>
-```
-
-The DevOps Engineer agent reads your analysis and the Environment
-Profile, generates a CI workflow + Helm chart + ArgoCD Application,
-runs the proposal through the OPA policy gate, and on `allow` opens
-the PR on the platform repository.
-
-The Coordinator finishes by printing the PR URL. Open it in your browser.
-
-### 6. Review and merge
-
-The PR body explains:
-
-- **What** the DevOps Engineer proposed (file diff + summary).
-- **Why** (which rule from the constitution motivated each artifact).
-- **Blast radius** (which Applications and Services are affected).
-- **Rollback** (how to revert if the deploy goes sideways).
-
-Review like any other PR. When you merge, ArgoCD picks up the change
-and deploys it to your local cluster the way it always has.
-
-## What just happened
-
-In thirty minutes, you brought up a full local TruStacks platform,
-ran the Code Reviewer against a sample app, watched the DevOps Engineer
-emit policy-checked artifacts, and merged the agent crew's first
-proposal. The pattern scales: connect a real repo through the UI's
-**+ Connect repo** wizard (see [local-dev](/installation/local-dev#connect-your-own-repo))
-and the same loop runs against your code.
-
-The platform now remembers your stack via the Environment Profile.
-Future analyses respect what is already declared (your CI platform,
-scanner, registry, GitOps controller). No re-explaining every session.
+File an issue at
+<a href="https://github.com/TruStacks/trustacks-quickstart/issues" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart/issues</a>
+with the output of `kubectl -n trustacks-system get pods` and your
+k3d version.
 
 ## Where to go next
 
-- [Local development install](/installation/local-dev) · the full
-  reference, including troubleshooting and re-seeding patterns
+- [Policy authoring workshop](/workshops/policy-authoring) · write
+  your first overlay rule with the Coordinator's help
+- [CI/CD generation workshop](/workshops/ci-cd-generation) · the same
+  loop in slower motion, narrated at the tool-call level
 - [Architecture](/reference/architecture) · how the three planes fit
   together
-- [Policy authoring workshop](/workshops/policy-authoring) · write
-  your first overlay rule
-- [Credentials and secrets](/installation/secrets) · the four secrets
-  the Runner needs
+- [Constitution reference](/reference/constitution) · the rules the
+  OPA gate evaluated against
+- [Supply-chain verification](/reference/supply-chain) · `cosign
+  verify` the signed images and policy bundle before you run them
+- [License and the bright line](/reference/license) · Apache scripts
+  vs EULA images, what the Beta license permits
+- [Local development](/installation/local-dev) · the contributor path
+  if you have `trustacks-mvp` repository access
