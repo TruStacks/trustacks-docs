@@ -9,21 +9,22 @@ import { Callout } from 'nextra/components'
 
 Every `rule_id` in a TruStacks customer overlay follows the same
 naming standard. The standard is enforced by the
-[Constitution](/reference/constitution) at bundle-sign time — no
-bundle ships with a malformed slug — and validated at every authoring
+[Constitution](/reference/constitution) at bundle-sign time (no
+bundle ships with a malformed slug) and validated at every authoring
 surface so you get friendly feedback long before you hit the gate.
 
 <Callout type="info">
-  The full specification, examples table, and contribution guide live
-  in the open-source policy repo. This page is a reference summary
-  for daily use.
+  The full specification and examples table live in the
+  `trustacks-policy` repository (Apache 2.0; flips public at Beta
+  launch on 2026-07-27). This page is a reference summary for daily
+  use.
 </Callout>
 
 ## The shape
 
 A `rule_id` looks like this:
 
-```
+```text
 <namespace>.<name>
 ```
 
@@ -40,7 +41,7 @@ A `rule_id` looks like this:
 
 Valid:
 
-```
+```text
 acme.requires_runbook_link
 acme.requires_approvers_group
 contoso.denies_public_ingress
@@ -48,7 +49,7 @@ contoso.denies_public_ingress
 
 Invalid:
 
-```
+```text
 Acme.RequiresRunbookLink           # uppercase
 acme-corp.requires_runbook         # hyphen
 acme.security.requires_runbook     # nested namespace
@@ -65,10 +66,10 @@ they grow:
   your workspace name by default.
 - **Name = `<verb>_<noun>`** in present tense. Common verbs that read
   naturally:
-  - `requires_<thing>` — fails when the thing is missing
-  - `denies_<thing>` — fails when the thing is present
-  - `mandates_<thing>` — same shape as `requires_`, for process rules
-  - `forbids_<thing>` — same shape as `denies_`, for strong
+  - `requires_<thing>`: fails when the thing is missing
+  - `denies_<thing>`: fails when the thing is present
+  - `mandates_<thing>`: same shape as `requires_`, for process rules
+  - `forbids_<thing>`: same shape as `denies_`, for strong
     prohibitions
 
 These conventions are recommended, not enforced; reviewers will likely
@@ -88,7 +89,7 @@ A CI lockstep test in the product repo asserts they stay byte-identical
 across the canonical Python module + each consumer's mirror.
 
 <Callout type="info">
-  The Constitution check is the load-bearing gate — even a hand-edited
+  The Constitution check is the load-bearing gate. Even a hand-edited
   `rule_metadata.yaml` file that bypasses the CLI cannot ship in a
   signed bundle.
 </Callout>
@@ -97,24 +98,27 @@ across the canonical Python module + each consumer's mirror.
 
 The canonical standard, including the auditor-readable rationale,
 examples table, description-style conventions, and the versioning
-plan, lives in the open-source TruStacks policy repository at
-[`standards/rule-naming.md`](https://github.com/TruStacks/trustacks-policy/blob/main/standards/rule-naming.md).
+plan, lives at `standards/rule-naming.md` in the `trustacks-policy`
+repository. That repository is Apache 2.0 and flips public at Beta
+launch on 2026-07-27; until then, this page is the accessible
+reference.
 
 That document is the source of truth. This reference page is a
-short summary maintained in lockstep with the policy repo.
+short summary maintained in lockstep with it.
 
 ## Versioning
 
-This is version 1 of the standard — the baseline. Future revisions
+This is version 1 of the standard, the baseline. Future revisions
 will declare a version number in the constitution bundle's
 `data.naming.json` sidecar so existing signed bundles continue to
 verify against the version they were signed under.
 
 ## Related
 
-- [Constitution](/reference/constitution) — what the constitution is,
+- [Constitution](/reference/constitution): what the constitution is,
   how it's signed, and where the rule-naming check fits.
-- [Runner CLI](/reference/runner-cli) — the `trustacks rule new` /
+- [Runner CLI](/reference/runner-cli): the `trustacks rule new` /
   `test` / `lint` / `sign` flow.
-- [Open-source policy repository](https://github.com/TruStacks/trustacks-policy) —
-  full standard + community-contributed framework packs.
+- `trustacks-policy` repository: the full standard plus
+  community-contributed framework packs. Apache 2.0; flips public at
+  Beta launch on 2026-07-27.
