@@ -7,5 +7,6 @@ export default {
   'mcp-server': 'MCP server',
   'policy-linter': 'Policy linter',
   'supply-chain': 'Supply-chain verification',
+  versioning: 'Versioning and releases',
   license: 'License'
 }
