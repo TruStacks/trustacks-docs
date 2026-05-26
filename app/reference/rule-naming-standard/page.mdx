@@ -1,0 +1,120 @@
+---
+title: Rule-naming standard
+description: The grammar, reserved namespaces, and length cap that govern every rule_id in a TruStacks customer overlay. Enforced by the Constitution at sign time; validated at every authoring surface.
+---
+
+import { Callout } from 'nextra/components'
+
+# Rule-naming standard
+
+Every `rule_id` in a TruStacks customer overlay follows the same
+naming standard. The standard is enforced by the
+[Constitution](/reference/constitution) at bundle-sign time — no
+bundle ships with a malformed slug — and validated at every authoring
+surface so you get friendly feedback long before you hit the gate.
+
+<Callout type="info">
+  The full specification, examples table, and contribution guide live
+  in the open-source policy repo. This page is a reference summary
+  for daily use.
+</Callout>
+
+## The shape
+
+A `rule_id` looks like this:
+
+```
+<namespace>.<name>
+```
+
+- **Lowercase letters, digits, and underscores.** No hyphens, no
+  uppercase, no spaces.
+- **Exactly one dot** separating namespace and name.
+- **Leading character of each part is a letter.** `9foo.bar` is
+  rejected; `foo9.bar` is fine.
+- **64 characters total or fewer.**
+- **Reserved namespaces** are off-limits to customer overlays:
+  `proposal`, `argocd`, `constitution`, `trustacks`.
+
+## Quick examples
+
+Valid:
+
+```
+acme.requires_runbook_link
+acme.requires_approvers_group
+contoso.denies_public_ingress
+```
+
+Invalid:
+
+```
+Acme.RequiresRunbookLink           # uppercase
+acme-corp.requires_runbook         # hyphen
+acme.security.requires_runbook     # nested namespace
+proposal.requires_runbook_link     # reserved namespace
+```
+
+## Recommended conventions
+
+Beyond the grammar above, two conventions keep overlays readable as
+they grow:
+
+- **Namespace = your workspace slug.** Use one prefix across every
+  rule in your overlay. The TruStacks UI proposes a namespace from
+  your workspace name by default.
+- **Name = `<verb>_<noun>`** in present tense. Common verbs that read
+  naturally:
+  - `requires_<thing>` — fails when the thing is missing
+  - `denies_<thing>` — fails when the thing is present
+  - `mandates_<thing>` — same shape as `requires_`, for process rules
+  - `forbids_<thing>` — same shape as `denies_`, for strong
+    prohibitions
+
+These conventions are recommended, not enforced; reviewers will likely
+ask you to rename if you stray far from them.
+
+## Where it's enforced
+
+| Surface                                | When it fires                                          | What you see on failure                                |
+| -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| `trustacks rule new <id>` (CLI)        | When you scaffold a new rule                           | Rich-printed error; CLI exits non-zero                 |
+| `/rule new` (TruStacks UI)             | When you type a command                                | Chat-turn hint with example slug                       |
+| `POST /api/rule-drafts` (Control Plane)| Direct-API + UI dispatch                               | HTTP 422 with structured error detail                  |
+| [Constitution](/reference/constitution)| At `trustacks rule sign` time                          | Sign aborts; no signed bundle leaves the registry      |
+
+All four surfaces read the same regex + reserved set + length cap.
+A CI lockstep test in the product repo asserts they stay byte-identical
+across the canonical Python module + each consumer's mirror.
+
+<Callout type="info">
+  The Constitution check is the load-bearing gate — even a hand-edited
+  `rule_metadata.yaml` file that bypasses the CLI cannot ship in a
+  signed bundle.
+</Callout>
+
+## Full specification
+
+The canonical standard, including the auditor-readable rationale,
+examples table, description-style conventions, and the versioning
+plan, lives in the open-source TruStacks policy repository at
+[`standards/rule-naming.md`](https://github.com/TruStacks/trustacks-policy/blob/main/standards/rule-naming.md).
+
+That document is the source of truth. This reference page is a
+short summary maintained in lockstep with the policy repo.
+
+## Versioning
+
+This is version 1 of the standard — the baseline. Future revisions
+will declare a version number in the constitution bundle's
+`data.naming.json` sidecar so existing signed bundles continue to
+verify against the version they were signed under.
+
+## Related
+
+- [Constitution](/reference/constitution) — what the constitution is,
+  how it's signed, and where the rule-naming check fits.
+- [Runner CLI](/reference/runner-cli) — the `trustacks rule new` /
+  `test` / `lint` / `sign` flow.
+- [Open-source policy repository](https://github.com/TruStacks/trustacks-policy) —
+  full standard + community-contributed framework packs.
