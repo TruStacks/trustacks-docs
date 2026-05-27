@@ -1,0 +1,132 @@
+---
+title: Versioning and releases
+description: How TruStacks versions its public images and constitution bundle, how to pin a release with TRUSTACKS_VERSION, and what each semver bump means for you.
+---
+
+import { Callout } from 'nextra/components'
+
+# Versioning and releases
+
+TruStacks publishes four public artifacts on every release: the
+control-plane image, the runner image, the UI image, and the
+constitution Rego bundle. They all carry the same version, so you only
+ever track one number.
+
+<Callout type="info">
+  One release, one tag. `TRUSTACKS_VERSION=0.1.2` pins all four
+  artifacts to the same coherent set. There is no compatibility matrix
+  to manage and no risk of mixing a new runner with an old policy
+  bundle.
+</Callout>
+
+## The four artifacts move together
+
+A maintainer cuts a single semver tag and two workflows publish in
+parallel against it. The images and the constitution bundle ship as a
+set, every time:
+
+| Artifact | OCI reference |
+|---|---|
+| Control-plane image | `ghcr.io/trustacks/control-plane:<version>` |
+| Runner image | `ghcr.io/trustacks/runner:<version>` |
+| UI image | `ghcr.io/trustacks/ui:<version>` |
+| Constitution Rego bundle | `ghcr.io/trustacks/policy/constitution:<version>` |
+
+Because they share a tag, pinning one version pins all four. The
+runner you run, the UI you see, and the policy bundle the runner
+evaluates are always from the same release. For how each artifact is
+signed and how to verify it, see
+[Supply-chain verification](/reference/supply-chain).
+
+## What each version bump means for you
+
+The public artifacts follow [Semantic Versioning
+2.0.0](https://semver.org/spec/v2.0.0.html) (`MAJOR.MINOR.PATCH`),
+starting at `0.1.0`. During the Beta, read the parts like this:
+
+| Bump | What it means for you | How often during Beta |
+|---|---|---|
+| **MAJOR** | A breaking change to something customer-visible: an HTTP route rename, an Environment Profile schema change without a migration path, a constitution `rule_id` rename, or a removed agent crew member. | Not during Beta. The line stays on `0.x` until GA. |
+| **MINOR** | A new capability you can adopt: a new CLI subcommand, a new constitution rule, a new agent specialist, a new UI feature. Backward-compatible with the prior minor. | Roughly every 2 to 4 weeks. |
+| **PATCH** | Bug fixes, prompt refinements, and internal changes with no customer-visible API change. | As needed; more than once a week is normal. |
+
+<Callout type="warning">
+  Pre-1.0 caveat. Until the line reaches `1.0.0` at GA, a MINOR release
+  may carry a small breaking change when a customer-facing artifact (a
+  Profile schema, a route shape) has to evolve. When that happens, the
+  release notes call it out explicitly. You will not be surprised.
+</Callout>
+
+## Pinning a version
+
+By default the installer pulls `:latest`, which always points at the
+most recent stable release across all four artifacts. That is the
+right choice for workshops and evaluation, where you want the newest
+build.
+
+When you need a reproducible install, for example to match a
+procurement record or to keep an environment fixed, set
+`TRUSTACKS_VERSION` to the exact tag:
+
+```bash
+# Reproducible, pinned install
+TRUSTACKS_VERSION=0.1.2 \
+  curl -fsSL https://trustacks.com/install | bash
+```
+
+The value is the OCI tag (`0.1.2`), with no `v` prefix. A pinned
+install resolves the same four image and bundle digests every time, so
+two runs of the same `TRUSTACKS_VERSION` give you byte-identical
+artifacts.
+
+<Callout type="info">
+  Pre-release tags (for example `0.2.0-rc1`) publish the versioned tag
+  only. They never move `:latest`, so an early look never lands on an
+  evaluator who did not ask for it.
+</Callout>
+
+## Release cadence
+
+- **Minor releases** land roughly every 2 to 4 weeks during the Beta,
+  as new capabilities clear their gates.
+- **Patch releases** ship as needed, often more than once a week.
+- **Out-of-band patches** cover security fixes you should pull right
+  away. When one ships, a plain-language advisory is posted to the
+  public
+  <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">trustacks-quickstart</a>
+  repository.
+
+Internal sprint cadence does not gate version bumps. Test-only
+changes, CI fixes, and internal refactors do not cut a release; the
+next scheduled release picks them up.
+
+## Reading what changed
+
+Every published version is available from the public
+`ghcr.io/trustacks/*` registry, so you can always see which tags
+exist. Notable changes and security advisories are posted to the
+public
+<a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">trustacks-quickstart</a>
+repository. Richer per-version release notes will grow as the Beta
+program matures.
+
+## Constitution versioning
+
+The constitution bundle is one of the four artifacts, so it ships at
+the release tag like everything else. It also carries its own internal
+semantic version for the rule set it contains, and the runner pins that
+constitution version per release. The rule-level meaning of a
+constitution patch, minor, or major bump (and what a major bump asks of
+your overlay) lives on the
+[Constitution](/reference/constitution#versioning) page.
+
+## Where to go next
+
+- [Supply-chain verification](/reference/supply-chain) · how each
+  artifact is signed and how to verify it before you run it
+- [Constitution](/reference/constitution) · the rules the runner
+  evaluates, and how the rule set itself is versioned
+- [Quickstart](/getting-started/quickstart) · run the
+  `curl-pipe-bash` install, pinned or on `:latest`
+- [License and the bright line](/reference/license) · what the Beta
+  license permits for the images and the bundle
