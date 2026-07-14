@@ -122,10 +122,14 @@ Control Plane endpoint:
 helm upgrade runner ./charts/runner \
   --namespace trustacks-system \
   --reuse-values \
-  --set env.TRUSTACKS_RUNNER_CONTROL_PLANE_URL=https://cp.your-trustacks.io
+  --set env.TRUSTACKS_RUNNER_CONTROL_PLANE_URL=https://api.trustacks.com
 ```
 
-The Control Plane URL is provisioned per-customer during onboarding.
+`api.trustacks.com` is the single shared hosted Control Plane; there
+are no per-customer subdomains. Pointing a Runner at the hosted
+Control Plane is the hosted-control-plane track, which also needs a
+Beta enrollment token provisioned during assisted onboarding. The full
+hosted-track setup steps land here as that track settles.
 
 ### 5. Verify the install
 
