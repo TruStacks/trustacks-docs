@@ -38,10 +38,10 @@ workflow identities.
 
 | Artifact | OCI reference | Signing workflow |
 |---|---|---|
-| Control-plane image | `ghcr.io/trustacks/control-plane:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-images.yml" target="_blank" rel="noopener noreferrer">`publish-images.yml`</a> |
-| Runner image | `ghcr.io/trustacks/runner:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-images.yml" target="_blank" rel="noopener noreferrer">`publish-images.yml`</a> |
-| UI image | `ghcr.io/trustacks/ui:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-images.yml" target="_blank" rel="noopener noreferrer">`publish-images.yml`</a> |
-| Constitution Rego bundle | `ghcr.io/trustacks/policy/constitution:<version>` | <a href="https://github.com/TruStacks/trustacks-mvp/blob/main/.github/workflows/publish-policy.yml" target="_blank" rel="noopener noreferrer">`publish-policy.yml`</a> |
+| Control-plane image | `ghcr.io/trustacks/control-plane:<version>` | `publish-images.yml` |
+| Runner image | `ghcr.io/trustacks/runner:<version>` | `publish-images.yml` |
+| UI image | `ghcr.io/trustacks/ui:<version>` | `publish-images.yml` |
+| Constitution Rego bundle | `ghcr.io/trustacks/policy/constitution:<version>` | `publish-policy.yml` |
 
 All four share a single tag on every release. A `git tag v0.2.0 &&
 git push origin v0.2.0` fires both workflows in parallel; the images
@@ -90,10 +90,9 @@ argument to `control-plane:<version>` or `ui:<version>`. Successful
 output ends with `The code-signing certificate was verified using
 trusted certificate authority certificates`.
 
-The canonical commands live at the top of
-<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/NOTICE" target="_blank" rel="noopener noreferrer">trustacks-mvp's NOTICE file</a>;
-if the regex on this page ever drifts from NOTICE, NOTICE is the
-source of truth.
+The canonical commands live at the top of trustacks-mvp's `NOTICE`
+file; if the regex on this page ever drifts from `NOTICE`, `NOTICE`
+is the source of truth.
 
 ## Verifying the policy bundle
 
@@ -215,11 +214,10 @@ admission controller verifies.
 contributor-IP review (`runner-image-<sha>.tar` plus a detached
 `runner-sig-<sha>.bundle`). Signed offline with the project-local
 `.runner-image-keys/` cosign keypair. No Rekor, no Fulcio, no OIDC,
-no public CA chain. Documented at
-<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/docs/runner-image-verification.md" target="_blank" rel="noopener noreferrer">trustacks-mvp/docs/runner-image-verification.md</a>
-and motivated in
-<a href="https://github.com/TruStacks/trustacks-mvp/blob/main/docs/decisions/0019-runner-image-supply-chain.md" target="_blank" rel="noopener noreferrer">ADR-0019</a>
-(amended 2026-05-18). That path is for contributors verifying their
+no public CA chain. Documented in
+`trustacks-mvp/docs/runner-image-verification.md` and motivated in
+ADR-0019 (`docs/decisions/0019-runner-image-supply-chain.md`, amended
+2026-05-18). That path is for contributors verifying their
 own builds; it's not the path your security team uses to verify the
 images your workshop cluster pulls.
 
