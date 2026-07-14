@@ -1,0 +1,84 @@
+---
+title: Ways to run TruStacks
+description: Two ways to run TruStacks during Beta. Self-hosted eval runs the whole platform on infrastructure you control. Hosted control plane (early access) lets TruStacks run the control plane while you run only the lightweight runner in your own cluster. Pick the track that fits, then follow its path.
+---
+
+import { Callout } from 'nextra/components'
+
+# Ways to run TruStacks
+
+There are two ways to run TruStacks during Beta. They share the same
+agent crew, the same constitution, and the same pull-request workflow.
+They differ in one thing: who operates the control plane. Pick the
+track that fits how you want to evaluate, then follow its path.
+
+**Agents propose. Policy decides. Humans approve.** Both tracks.
+
+## The two tracks at a glance
+
+| | Self-hosted eval | Hosted control plane (early access) |
+|---|---|---|
+| **You operate** | The whole platform | Only the runner, in your cluster |
+| **TruStacks operates** | Nothing | The control plane at `api.trustacks.com` |
+| **Where your source lives** | Your environment | Your environment (runner is outbound-only) |
+| **Best for** | Offline evaluation, workshops, air-gapped design partners | Teams who want the managed audit and rule-distribution surface without running the control plane |
+| **Onboarding** | Self-serve, right now | Assisted (we provision your workspace) |
+| **Start here** | [Quickstart](/getting-started/quickstart) | [Contact us](#hosted-control-plane-early-access) |
+
+## Self-hosted eval
+
+You run everything. The control plane, the runner, the UI, and a local
+Git provider all come up together on infrastructure you control. Nothing
+phones home except the call to your LLM provider. This is the track the
+[quickstart](/getting-started/quickstart) and the
+[installation guides](/installation/local-dev) document today.
+
+Two shapes, same track:
+
+- **Laptop sandbox.** One `curl`-pipe-`bash` brings the full platform up
+  in a single k3d cluster with four sample apps already seeded. Fifteen
+  minutes, no private-repo access required. This is the
+  [quickstart](/getting-started/quickstart), and it is where evaluators,
+  design partners, and workshop attendees should start.
+- **Your own cluster.** Install the runner into a real Kubernetes or
+  OpenShift cluster for staging-shaped evaluation. See
+  [cluster deploy](/installation/cluster).
+
+Choose this track if you want to see the whole loop end to end on your
+own infrastructure, or if your evaluation has to run offline.
+
+## Hosted control plane (early access)
+
+TruStacks runs the control plane at `api.trustacks.com`. You run only the
+lightweight runner, in your own cluster, behind your own firewall. The
+runner reaches out; nothing reaches in. Your source code and your
+production credentials never leave your network. The control plane holds
+the audit trail, distributes signed rule bundles, and serves the web UI.
+This is the same Data Plane / Control Plane split described in
+[the architecture reference](/reference/architecture), with the control
+plane hosted for you instead of run by you.
+
+<Callout type="info">
+  **Early access.** The hosted control plane is live for Beta, but
+  onboarding is assisted rather than self-serve during early access:
+  we provision your workspace and hand you a one-line runner install.
+  The self-serve signup flow and its step-by-step guide land as the
+  hosted track settles. Deeper hosted-track documentation follows here
+  as it does.
+</Callout>
+
+Choose this track if you want the managed control-plane surface (audit,
+rule distribution, the web UI) without operating it yourself, and you are
+comfortable running one outbound-only runner in your cluster.
+
+To get started, reach out at
+[hello@trustacks.com](mailto:hello@trustacks.com) and we will provision
+your Beta workspace.
+
+## Not sure which one
+
+Start with the [quickstart](/getting-started/quickstart). It is the
+fastest way to see the crew open a real, policy-checked pull request, and
+nothing you learn there is wasted if you later move to the hosted control
+plane. The agent crew, the constitution, the Environment Profile, and the
+review workflow are identical across both tracks.
