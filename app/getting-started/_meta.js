@@ -1,4 +1,5 @@
 export default {
   'ways-to-run': 'Ways to run TruStacks',
-  quickstart: 'Quickstart'
+  quickstart: 'Quickstart (self-hosted)',
+  'hosted-quickstart': 'Hosted quickstart'
 }

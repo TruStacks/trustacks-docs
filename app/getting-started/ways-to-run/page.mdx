@@ -22,8 +22,8 @@ track that fits how you want to evaluate, then follow its path.
 | **TruStacks operates** | Nothing | The control plane at `api.trustacks.com` |
 | **Where your source lives** | Your environment | Your environment (runner is outbound-only) |
 | **Best for** | Offline evaluation, workshops, air-gapped design partners | Teams who want the managed audit and rule-distribution surface without running the control plane |
-| **Onboarding** | Self-serve, right now | Assisted (we provision your workspace) |
-| **Start here** | [Quickstart](/getting-started/quickstart) | [Contact us](#hosted-control-plane-early-access) |
+| **Onboarding** | Self-serve, right now | Self-serve, right now |
+| **Start here** | [Quickstart](/getting-started/quickstart) | [Hosted quickstart](/getting-started/hosted-quickstart) |
 
 ## Self-hosted eval
 
@@ -59,21 +59,22 @@ This is the same Data Plane / Control Plane split described in
 plane hosted for you instead of run by you.
 
 <Callout type="info">
-  **Early access.** The hosted control plane is live for Beta, but
-  onboarding is assisted rather than self-serve during early access:
-  we provision your workspace and hand you a one-line runner install.
-  The self-serve signup flow and its step-by-step guide land as the
-  hosted track settles. Deeper hosted-track documentation follows here
-  as it does.
+  **Self-serve, Beta early access.** Signup is open: you create your own
+  trial workspace, enroll one runner in your cluster, and connect your
+  repos, all self-serve. The [hosted quickstart](/getting-started/hosted-quickstart)
+  walks every step. Some edges are still being exercised live during Beta
+  (deploy validation, billing, SSO); the guide flags each one inline.
 </Callout>
 
 Choose this track if you want the managed control-plane surface (audit,
 rule distribution, the web UI) without operating it yourself, and you are
 comfortable running one outbound-only runner in your cluster.
 
-To get started, reach out at
-[hello@trustacks.com](mailto:hello@trustacks.com) and we will provision
-your Beta workspace.
+To get started, follow the [hosted quickstart](/getting-started/hosted-quickstart):
+create your trial, enroll a runner on your own Docker Desktop, wire up a
+pair of repos, and watch the crew open its first policy-checked pull
+request. Questions during Beta go to
+[hello@trustacks.com](mailto:hello@trustacks.com).
 
 ## Not sure which one
 
