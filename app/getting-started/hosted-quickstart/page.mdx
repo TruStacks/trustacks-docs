@@ -62,6 +62,11 @@ the end.
 - **kubectl** (latest) and **helm** ≥ 3.14.
 - A **GitHub organization** (or your personal account) where you can install
   a GitHub App and create repositories.
+- **`git`**, and (for the starter-clone path in
+  [step 5](#step-5-connect-your-repos)) the **GitHub CLI (`gh`)**, signed in
+  with `gh auth login` under an account that can create repositories in your
+  org. You can skip `gh` if you use GitHub's **Use this template** button
+  instead.
 - An **Anthropic API key** from
   [console.anthropic.com](https://console.anthropic.com/settings/keys), or an
   OpenRouter key. You paste it into the UI later; you do not need it at
@@ -71,7 +76,7 @@ On macOS, Homebrew has the CLIs (install Docker Desktop separately):
 
 ```bash
 brew install --cask docker
-brew install kubectl helm
+brew install kubectl helm git gh
 ```
 
 ## Step 1. Create your account and start your trial
