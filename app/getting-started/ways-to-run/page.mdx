@@ -9,9 +9,11 @@ import { Callout } from 'nextra/components'
 
 TruStacks is a hosted service. **We run the control plane; you run one
 lightweight component, the runner, inside your own Kubernetes cluster.**
-The runner is outbound-only, so your source code and your API keys never
-leave your cluster. Only findings, audit events, and pull requests flow
-back to us.
+The runner is outbound-only, so your source code never leaves your cluster.
+Only findings, audit events, and pull requests flow back to us. The one
+thing you hand us is your model provider key: the control plane holds it in
+memory just long enough to seal it to your runner, which writes its own
+in-cluster Secret. We never store the raw key.
 
 There are two ways to get started, and they differ only in how you onboard.
 Both are the same hosted track, the same agent crew, the same constitution,

@@ -1,6 +1,6 @@
 ---
 title: Getting started (Beta · concierge)
-description: The concierge Beta walkthrough for hosted TruStacks. We provision your workspace and send you a sign-in link, then you install one outbound-only runner in your own cluster, connect a repo, and watch the agent crew open a policy-gated pull request. Billing off, SOC2 included. Your code and API keys never leave your cluster.
+description: The concierge Beta walkthrough for hosted TruStacks. We provision your workspace and send you a sign-in link, then you install one outbound-only runner in your own cluster, connect a repo, and watch the agent crew open a policy-gated pull request. Billing off, SOC2 included. Your code never leaves your cluster, and we never store your raw model provider key.
 ---
 
 import { Callout } from 'nextra/components'
@@ -29,10 +29,12 @@ cluster you control.
 
 TruStacks is a hosted service. **We run the control plane.** **You run one
 lightweight component, the runner, inside your own Kubernetes cluster.**
-The agents execute in that runner, so **your source code and your API keys
-never leave your cluster.** Only findings, audit events, and pull requests
-flow back to us. The runner is **outbound-only**: nothing from us reaches
-into your cluster.
+The agents execute in that runner, so **your source code never leaves your
+cluster.** Only findings, audit events, and pull requests flow back to us.
+Your model provider key passes through the control plane once, held in
+memory only long enough to seal it to your runner. We never store the raw
+key. The runner is **outbound-only**: nothing from us reaches into your
+cluster.
 
 <Callout type="info">
   **Onboarding here is concierge.** We provision your workspace and send
