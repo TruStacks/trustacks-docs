@@ -1,0 +1,264 @@
+---
+title: Getting started (Beta · concierge)
+description: The concierge Beta walkthrough for hosted TruStacks. We provision your workspace and send you a sign-in link, then you install one outbound-only runner in your own cluster, connect a repo, and watch the agent crew open a policy-gated pull request. Billing off, SOC2 included. Your code and API keys never leave your cluster.
+---
+
+import { Callout } from 'nextra/components'
+
+# Getting started (Beta · concierge)
+
+This is the **concierge** entry to the hosted control plane track: the
+white-glove path for design partners and the Beta cohort, where we
+provision your workspace for you, billing is off, and the SOC2 and
+Baseline Security specialists are included. You use the TruStacks SaaS,
+and the only thing you install is one lightweight runner in a Kubernetes
+cluster you control.
+
+<Callout type="info">
+  **Want to sign up yourself instead?** The hosted control plane also has
+  an open, self-serve trial: sign in and you're in, no invite required.
+  Follow the [hosted quickstart](/getting-started/hosted-quickstart) for
+  that path. This page is the concierge variant. If you would rather run
+  the whole platform yourself, that is the self-hosted track: start from
+  [Ways to run TruStacks](/getting-started/ways-to-run) to compare, or the
+  [self-hosted quickstart](/getting-started/quickstart).
+</Callout>
+
+**Agents propose. Policy decides. Humans approve.**
+
+## The mental model (read this first)
+
+TruStacks is a hosted service. **We run the control plane.** **You run one
+lightweight component, the runner, inside your own Kubernetes cluster.**
+The agents execute in that runner, so **your source code and your API keys
+never leave your cluster.** Only findings, audit events, and pull requests
+flow back to us. The runner is **outbound-only**: nothing from us reaches
+into your cluster.
+
+<Callout type="info">
+  **Onboarding here is concierge.** We provision your workspace and send
+  you a sign-in link, rather than you self-registering. (The self-serve
+  trial is the [hosted quickstart](/getting-started/hosted-quickstart).)
+  On the concierge path, billing is off for the whole Beta: everything is
+  unmetered, no card required, and the **SOC2 and Baseline Security
+  specialists are included** at no cost.
+</Callout>
+
+**What you'll do (about 30 minutes):** connect a repo, run an analysis
+(Code Reviewer, Baseline Security, and SOC2), get a policy-gated PR into
+your platform repo, approve it, then watch it deploy and validate.
+
+## Prerequisites
+
+- A **Kubernetes cluster you control** for the runner. For testing, a
+  local **k3d** or **kind** on your laptop is perfect. Apple Silicon
+  (arm64) is fine.
+- **kubectl** and **Helm** installed and pointed at that cluster.
+- A **GitHub org** with two repos: a small **service repo** (the app to
+  analyze) and a **platform / GitOps repo** (where the agent opens PRs).
+  You'll install the TruStacks GitHub App on them.
+- An **Anthropic or OpenRouter API key** (bring your own), or ask us to
+  enable a TruStacks-managed Workspace.
+- *(Optional, for the closed-loop step)* **ArgoCD** in your cluster
+  watching your platform repo.
+- **An invite from us.** During Beta we set your workspace up with you.
+
+## The walkthrough
+
+### 1. Sign in
+
+We provision your workspace and send you a sign-in link. Set your password
+from the email, then sign in at
+<a href="https://app.trustacks.com" target="_blank" rel="noopener noreferrer">app.trustacks.com</a>.
+You land in your own isolated workspace.
+
+{/* asset: public/screenshots/getting-started/01-sign-in.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 1 · The sign-in screen at app.trustacks.com after you set your password from our invite email.</figcaption>
+</figure>
+
+### 2. Follow "Get set up"
+
+The onboarding wizard walks you through the rest: LLM key, then runner,
+then connect a repo. You can also reach each step from the sidebar.
+
+{/* asset: public/screenshots/getting-started/02-get-set-up.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 2 · The onboarding wizard's "Get set up" checklist: LLM key, runner, connect a repo.</figcaption>
+</figure>
+
+### 3. Add your LLM key
+
+Go to **Settings → LLM Provider** and paste your Anthropic or OpenRouter
+key. We validate it with a live ping and deliver it **sealed** to your
+runner, which writes it into a Secret **inside your own cluster**. We hold
+it in memory only, in transit, never at rest. (Or ask us for a managed
+Workspace instead.)
+
+{/* asset: public/screenshots/getting-started/03-llm-provider.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 3 · Settings → LLM Provider with a validated Anthropic or OpenRouter key.</figcaption>
+</figure>
+
+### 4. Install the runner in your cluster
+
+Go to **Runners → Connect a runner**, copy the one-liner (your enrollment
+token is already in it), and run it:
+
+```bash
+helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version 0.2.0 \
+  -n trustacks-system --create-namespace \
+  --set saas.enrollmentToken=<your-token>
+```
+
+The control-plane URL is baked into the signed chart, so the token is the
+only thing you set. The runner pod comes up `1/1`, enrolls, and starts
+polling, and the UI flips to **"runner connected."** **This is the only
+thing you install.** No control plane, nothing inbound.
+
+<Callout type="info">
+  **Verify before you run it.** The runner image and the constitution
+  policy bundle are Sigstore-signed. Your security team can `cosign
+  verify` both against the publishing identity before the runner starts.
+  See [supply-chain verification](/reference/supply-chain).
+</Callout>
+
+{/* asset: public/screenshots/getting-started/04-connect-runner.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 4 · Runners → Connect a runner, showing the copyable one-line install with your enrollment token.</figcaption>
+</figure>
+
+### 5. Connect a repo
+
+Go to **Services → Connect a repo**, install the **TruStacks GitHub App**
+on your org, then bind two repos: your **service repo** (the app to
+analyze) and your **platform repo** (where PRs land).
+
+{/* asset: public/screenshots/getting-started/05-connect-repo.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 5 · Services → Connect a repo, binding your service repo and platform repo after installing the GitHub App.</figcaption>
+</figure>
+
+### 6. Run an analysis
+
+On your service, click **Run analysis**. Your runner pulls the job and runs
+the crew **in your cluster**: Code Reviewer (which detects the framework,
+language, and runtime), **Baseline Security**, and **SOC2**. Watch the live
+event stream.
+
+{/* asset: public/screenshots/getting-started/06-run-analysis.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 6 · The live event stream during Run analysis: Code Reviewer, Baseline Security, and SOC2.</figcaption>
+</figure>
+
+### 7. Read the gap report
+
+Open **Compliance**. The report leads with a maturity tier
+(**bronze / silver / gold**) and a coverage percentage, then breaks down
+per category and per practice, and lists SOC2 findings across control
+families CC1 through CC9. Export the auditor PDF if you like.
+
+{/* asset: public/screenshots/getting-started/07-gap-report.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 7 · The Compliance gap report: maturity tier, coverage %, and SOC2 findings across CC1–CC9.</figcaption>
+</figure>
+
+### 8. Promote to a proposal
+
+On the finished analysis, click **Promote to proposal**. The **DevOps
+Engineer** authors the delivery artifacts (a CI workflow, a Dockerfile, and
+Helm/ArgoCD config) and opens a **real PR into your platform repo**, but
+only after it passes the TruStacks policy gate (the constitution). Agents
+propose, policy decides, you approve.
+
+{/* asset: public/screenshots/getting-started/08-promote-proposal.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 8 · Promote to proposal, with the policy gate showing "allow" before the PR opens.</figcaption>
+</figure>
+
+### 9. Review and approve the PR
+
+Open the PR in GitHub. It carries a **"Preservation notes"** section
+showing exactly what it kept from your repo. Merge when you're happy.
+**A human always approves.**
+
+{/* asset: public/screenshots/getting-started/09-review-pr.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 9 · The pull request in GitHub with its "Preservation notes" section.</figcaption>
+</figure>
+
+### 10. Watch it validated *(optional; needs ArgoCD)*
+
+When ArgoCD syncs the merged change and the workload is healthy, the
+runner's **read-only** observer reports back and the item advances
+**shipping → validated**, hands-off. TruStacks only *reads* your ArgoCD.
+It never operates it.
+
+{/* asset: public/screenshots/getting-started/10-validated.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 10 · The item advancing shipping → validated after ArgoCD syncs the merged change.</figcaption>
+</figure>
+
+### 11. Get help
+
+In the sidebar, click **Join our Discord** for the Beta cohort support
+channel:
+<a href="https://discord.gg/2ZkskxGPGy" target="_blank" rel="noopener noreferrer">discord.gg/2ZkskxGPGy</a>.
+
+{/* asset: public/screenshots/getting-started/11-discord.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 11 · The "Join our Discord" link in the sidebar.</figcaption>
+</figure>
+
+## What good looks like
+
+Quick checks that each key step worked:
+
+| Step | Confirms it worked |
+|---|---|
+| 4 · runner | `kubectl -n trustacks-system get pods` shows `trustacks-runner-*` at `1/1`; the UI shows the runner connected |
+| 6 · analysis | Live events stream; the analysis reaches **done**; the framework is detected correctly |
+| 8 · proposal | A PR appears in your **platform** repo; the policy gate shows **allow** |
+| 10 · validated | The item moves to **validated** after you merge and ArgoCD syncs |
+
+## Beta notes (we're upfront about these)
+
+- **Your code stays in your cluster.** The runner clones and analyzes there;
+  only findings, audit events, and PRs cross to us. No repo content, and no
+  LLM traffic, routes through our control plane.
+- **Billing is off during Beta.** Everything is unmetered, no card required.
+  The **SOC2** and **Baseline Security** specialists are **included**.
+- **Support is best-effort via Discord.**
+- **You install only the runner.** Any instruction to `helm install` the
+  control plane or run `make up` is the *developer* setup, not this track.
+  That path is the [self-hosted eval track](/getting-started/ways-to-run);
+  its walkthrough is the [Quickstart](/getting-started/quickstart).
+
+## Troubleshooting
+
+- **Runner won't connect** · check the logs with
+  `kubectl -n trustacks-system logs deploy/trustacks-runner`. Enrollment
+  tokens are single-use and time-boxed, so mint a fresh one from **Runners**
+  if it expired.
+- **Analysis errors on the LLM key** · re-enter it in **Settings → LLM
+  Provider** (the live ping validates it). The runner picks up the new key
+  without a reinstall.
+- **No PR after Promote** · the crew runs a Code Reviewer pass first (a few
+  minutes). Confirm your **platform repo** is bound and the GitHub App has
+  access.
+
+## Where to go next
+
+- [Ways to run TruStacks](/getting-started/ways-to-run) · compare the
+  hosted and self-hosted tracks
+- [Hosted quickstart](/getting-started/hosted-quickstart) · the same hosted
+  track, self-serve: sign up yourself, no invite required
+- [Supply-chain verification](/reference/supply-chain) · `cosign verify`
+  the signed runner image and policy bundle before they run
+- [Architecture](/reference/architecture) · where the runner sits in the
+  Data Plane / Control Plane split
+- [Specialist Packs](/reference/specialist-packs) · what the SOC2 pack
+  covers, plus HIPAA, PCI, FedRAMP, and ITIL
+- [Constitution](/reference/constitution) · the rules the policy gate
+  evaluated your proposal against
