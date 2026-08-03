@@ -5,6 +5,10 @@ export default {
   workshops: 'Workshops',
   reference: 'Reference',
   concepts: 'Concepts',
+  contributing: {
+    title: 'Contributing',
+    display: 'hidden'
+  },
   'trustacks-com': {
     title: 'trustacks.com',
     type: 'page',

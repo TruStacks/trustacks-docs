@@ -1,27 +1,35 @@
 ---
-title: Quickstart
-description: A working TruStacks sandbox on your laptop in fifteen minutes. One curl-pipe-bash, four pre-seeded sample apps, the agent crew opening its first pull request. The customer-facing workshop quickstart for evaluators, design partners, and workshop attendees.
+title: Self-hosted quickstart
+description: Bring the whole TruStacks platform up on your laptop in fifteen minutes. One curl-pipe-bash, four pre-seeded sample apps, the agent crew opening its first pull request. The self-hosted, run-it-all-locally path for internal developers and design partners doing offline or air-gapped evaluation.
 ---
 
 import { Callout } from 'nextra/components'
 
-# Quickstart
+# Self-hosted quickstart
 
 A working TruStacks sandbox on your laptop in fifteen minutes. One
 curl-pipe-bash, four sample apps already in your local Gitea, the agent
 crew running `/audit` and `/plan` against them, and a real pull request
 open in local Gitea ready for you to merge.
 
-This is the **workshop quickstart** for evaluators, design partners,
-and workshop attendees. No private repository access required; the
-install pulls signed images from `ghcr.io/trustacks/*`. If you have
-`trustacks-mvp` access and want the contributor build path, see
-[local development](/installation/local-dev).
+<Callout type="warning">
+  **This is the self-hosted path.** It runs the whole platform (Control
+  Plane, Runner, UI, Gitea, ArgoCD) on your own laptop. It is for internal
+  developers and design partners who need offline or air-gapped evaluation.
+  If you are a customer, use the hosted flow instead: you install only the
+  runner. See the [hosted quickstart](/getting-started/hosted-quickstart) or
+  the concierge [Getting started (Beta)](/getting-started/beta).
+</Callout>
+
+No private repository access required; the install pulls signed images from
+`ghcr.io/trustacks/*`. If you have `trustacks-mvp` access and want the
+contributor build-from-source path, see
+[local development](/contributing/local-dev).
 
 <Callout type="info">
   **Scope.** This brings the full platform up on your laptop in a
-  single k3d cluster (all-in-one workshop topology). Production
-  hosting is the GKE-hosted SaaS, separate, post-Beta.
+  single k3d cluster (all-in-one topology). Production hosting is the
+  GKE-hosted SaaS, separate, post-Beta.
 </Callout>
 
 ## What you'll see in fifteen minutes
@@ -238,5 +246,5 @@ k3d version.
   verify` the signed images and policy bundle before you run them
 - [License and the bright line](/reference/license) · Apache scripts
   vs EULA images, what the Beta license permits
-- [Local development](/installation/local-dev) · the contributor path
+- [Local development](/contributing/local-dev) · the contributor path
   if you have `trustacks-mvp` repository access
