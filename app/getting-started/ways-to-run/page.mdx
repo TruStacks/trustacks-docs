@@ -1,89 +1,69 @@
 ---
 title: Ways to run TruStacks
-description: Two ways to run TruStacks during Beta. Self-hosted eval runs the whole platform on infrastructure you control. Hosted control plane (early access) lets TruStacks run the control plane while you run only the lightweight runner in your own cluster. Pick the track that fits, then follow its path.
+description: How to get started with TruStacks during Beta. TruStacks is a hosted service; you install only the lightweight runner in your own cluster. Two ways in, both hosted. An open self-serve trial, or concierge onboarding for the Beta cohort. Pick the door that fits, then follow its path.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Ways to run TruStacks
 
-There are two ways to run TruStacks during Beta. They share the same
-agent crew, the same constitution, and the same pull-request workflow.
-They differ in one thing: who operates the control plane. Pick the
-track that fits how you want to evaluate, then follow its path.
+TruStacks is a hosted service. **We run the control plane; you run one
+lightweight component, the runner, inside your own Kubernetes cluster.**
+The runner is outbound-only, so your source code never leaves your cluster.
+Only findings, audit events, and pull requests flow back to us. The one
+thing you hand us is your model provider key: the control plane holds it in
+memory just long enough to seal it to your runner, which writes its own
+in-cluster Secret. We never store the raw key.
 
-**Agents propose. Policy decides. Humans approve.** Both tracks.
+There are two ways to get started, and they differ only in how you onboard.
+Both are the same hosted track, the same agent crew, the same constitution,
+and the same pull-request workflow.
 
-## The two tracks at a glance
+**Agents propose. Policy decides. Humans approve.**
 
-| | Self-hosted eval | Hosted control plane (early access) |
+## The two doors at a glance
+
+| | Self-serve trial | Concierge (Beta cohort) |
 |---|---|---|
-| **You operate** | The whole platform | Only the runner, in your cluster |
-| **TruStacks operates** | Nothing | The control plane at `api.trustacks.com` |
-| **Where your source lives** | Your environment | Your environment (runner is outbound-only) |
-| **Best for** | Offline evaluation, workshops, air-gapped design partners | Teams who want the managed audit and rule-distribution surface without running the control plane |
-| **Onboarding** | Self-serve, right now | Self-serve trial, or concierge for the Beta cohort |
-| **Start here** | [Quickstart](/getting-started/quickstart) | [Hosted quickstart](/getting-started/hosted-quickstart) (self-serve) · [Getting started (Beta)](/getting-started/beta) (concierge) |
+| **Onboarding** | Sign in and you're in, no invite | We provision your workspace and send you a sign-in link |
+| **Best for** | Trying it yourself, right now | Design partners and guided Beta onboarding |
+| **Billing** | 30-day trial, no card | Off during Beta, unmetered |
+| **Specialists** | Baseline Security · SOC2 self-serve | Baseline Security and SOC2 included |
+| **You install** | Only the runner, in your cluster | Only the runner, in your cluster |
+| **Start here** | [Hosted quickstart](/getting-started/hosted-quickstart) | [Getting started (Beta)](/getting-started/beta) |
 
-## Self-hosted eval
+## Self-serve trial
 
-You run everything. The control plane, the runner, the UI, and a local
-Git provider all come up together on infrastructure you control. Nothing
-phones home except the call to your LLM provider. This is the track the
-[quickstart](/getting-started/quickstart) and the
-[installation guides](/installation/local-dev) document today.
+Sign up yourself and you land in your own isolated workspace with a 30-day
+trial, no credit card. Enroll one runner in your cluster, connect a service
+repo and a platform repo, and watch the crew open a real, policy-checked
+pull request. This is the fastest way in.
 
-Two shapes, same track:
+Follow the [hosted quickstart](/getting-started/hosted-quickstart).
 
-- **Laptop sandbox.** One `curl`-pipe-`bash` brings the full platform up
-  in a single k3d cluster with four sample apps already seeded. Fifteen
-  minutes, no private-repo access required. This is the
-  [quickstart](/getting-started/quickstart), and it is where evaluators,
-  design partners, and workshop attendees should start.
-- **Your own cluster.** Install the runner into a real Kubernetes or
-  OpenShift cluster for staging-shaped evaluation. See
-  [cluster deploy](/installation/cluster).
+## Concierge (Beta cohort)
 
-Choose this track if you want to see the whole loop end to end on your
-own infrastructure, or if your evaluation has to run offline.
+The white-glove path for design partners and the Beta cohort. We provision
+your workspace and hand you a sign-in link, billing is off for the whole
+Beta, and the Baseline Security and SOC2 specialists are included at no
+cost. Everything else, from the runner install to the first PR, is identical
+to the self-serve path.
 
-## Hosted control plane (early access)
-
-TruStacks runs the control plane at `api.trustacks.com`. You run only the
-lightweight runner, in your own cluster, behind your own firewall. The
-runner reaches out; nothing reaches in. Your source code and your
-production credentials never leave your network. The control plane holds
-the audit trail, distributes signed rule bundles, and serves the web UI.
-This is the same Data Plane / Control Plane split described in
-[the architecture reference](/reference/architecture), with the control
-plane hosted for you instead of run by you.
-
-<Callout type="info">
-  **Two ways in, same hosted track.** Self-serve is open: you create your
-  own trial workspace, enroll one runner in your cluster, and connect your
-  repos, all self-serve. The [hosted quickstart](/getting-started/hosted-quickstart)
-  walks every step. Prefer white-glove onboarding? Design partners and the
-  Beta cohort can go [concierge](/getting-started/beta): we provision your
-  workspace, billing is off, and the SOC2 and Baseline Security specialists
-  are included. Some edges are still being exercised live during Beta
-  (deploy validation, billing, SSO); the guides flag each one inline.
-</Callout>
-
-Choose this track if you want the managed control-plane surface (audit,
-rule distribution, the web UI) without operating it yourself, and you are
-comfortable running one outbound-only runner in your cluster.
-
-To get started self-serve, follow the
-[hosted quickstart](/getting-started/hosted-quickstart): create your trial,
-enroll a runner on your own Docker Desktop, wire up a pair of repos, and
-watch the crew open its first policy-checked pull request. For the concierge
-path, see [Getting started (Beta)](/getting-started/beta). Questions during
-Beta go to [hello@trustacks.com](mailto:hello@trustacks.com).
+Follow [Getting started (Beta)](/getting-started/beta).
 
 ## Not sure which one
 
-Start with the [quickstart](/getting-started/quickstart). It is the
-fastest way to see the crew open a real, policy-checked pull request, and
-nothing you learn there is wasted if you later move to the hosted control
-plane. The agent crew, the constitution, the Environment Profile, and the
-review workflow are identical across both tracks.
+Start with the [hosted quickstart](/getting-started/hosted-quickstart). It is
+the fastest way to see the crew open a real, policy-checked pull request, and
+nothing you learn there is wasted if we later move you onto the concierge
+path. The runner install, the constitution, the Environment Profile, and the
+review workflow are identical.
+
+<Callout type="info">
+  **Running the whole platform yourself?** That is a self-hosted, contributor
+  path, not the customer track. It runs the full control plane locally and is
+  kept out of the main docs. If you are an internal developer or a design
+  partner who needs offline or air-gapped evaluation, see the
+  [self-hosted quickstart](/contributing/self-hosted-quickstart) or
+  [local development](/contributing/local-dev) under Contributing.
+</Callout>
