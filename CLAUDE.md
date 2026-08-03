@@ -105,7 +105,10 @@
   - **Deployment:** Vercel auto-deploy on `main` push to `docs.trustacks.com`; 
   preview URL per PR.                                                             
   - **Search:** Pagefind via Nextra's built-in integration (`postbuild: pagefind  
-  --site .next/server/app`).                                                     
+  --site .next/server/app --output-path public/_pagefind`). The
+  `--output-path` is load-bearing: Nextra's search client fetches
+  `/_pagefind/pagefind.js`, so the index has to land in `public/`, not in the
+  `.next/server/app` build directory (which is never served).                   
   - **Analytics:** Vercel Analytics. No third-party trackers.                     
                                                              
   ## Repo layout (target)                                                         
