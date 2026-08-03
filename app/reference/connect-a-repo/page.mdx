@@ -1,0 +1,117 @@
+---
+title: Connect a repo
+description: How TruStacks connects to your repositories. The two-repo model (a read-only service repo and a pull-request platform repo), the shared GitHub App, the access each role gets, and the trust boundary. The canonical reference both hosted walkthroughs link to.
+---
+
+import { Callout } from 'nextra/components'
+
+# Connect a repo
+
+TruStacks works against two of your repositories: it **reads** your
+application code and **opens pull requests** into a separate GitOps repo. This
+page is the canonical model behind the **Services → Connect a repo** step in
+both hosted walkthroughs. For the click-through, see step 5 of the
+[hosted quickstart](/getting-started/hosted-quickstart#step-5-connect-your-repos)
+or the [concierge Beta walkthrough](/getting-started/beta); this page explains
+what you are actually granting and why.
+
+**Agents propose. Policy decides. Humans approve.**
+
+## The two-repo model
+
+You connect two repositories, in two distinct roles:
+
+| Role | What it holds | What TruStacks does with it | Access |
+|---|---|---|---|
+| **Service repo** | Your application code | The crew reads it to analyze framework, language, runtime, and security posture | Read-only |
+| **Platform repo** | Your GitOps tree (`gitops/`, `argo-apps/`, `.github/workflows/`) | The crew opens pull requests here: the CI workflow, Helm chart, and ArgoCD Application it proposes | Pull-request write |
+
+The split is deliberate. TruStacks **never writes generated delivery files
+into your application repo.** Proposals land as pull requests in the platform
+repo, where your existing GitOps controller already watches for change. Your
+application repo stays exactly as your engineers left it.
+
+You can point both roles at the same starter pair to try it, or bring your
+own. The [hosted quickstart](/getting-started/hosted-quickstart#step-5-connect-your-repos)
+documents the TruStacks starter service and platform repos and the
+`gh repo create` commands to fork them into your org; bring-your-own works
+too, with any GitHub application repo as the service repo and any GitHub repo
+carrying the platform layout as the platform repo.
+
+## The GitHub App
+
+TruStacks connects through a **single shared GitHub App**. You do not register
+your own app or manage OAuth credentials.
+
+1. In the app, go to **Services** and click **+ Connect repo**, choose
+   **GitHub**, then **Install on GitHub**. This installs the TruStacks GitHub
+   App on your org.
+2. Grant it access to your two repositories. Choose **Only select
+   repositories** and pick the service repo and the platform repo. That is the
+   grant TruStacks needs. **All repositories** also works, but it hands the app
+   access to every repo in the org, present and future, so treat it as a
+   deliberate exception rather than the default. You can narrow or widen the
+   grant later from your org's **Settings → Third-party Access → GitHub Apps →
+   Configure**.
+3. Back in the app, bind each repo to its role: the **service repo**
+   (read-only) and the **platform repo** (pull-request write).
+
+The crew opens pull requests rather than pushing to a branch directly, and
+**TruStacks never merges them.** The GitHub App's write access is the access
+needed to open a PR, and merging stays with you. Whether an approval is
+*required* before that merge is your repository's setting, not ours: enforce it
+with branch protection or a ruleset on the platform repo, and leave the
+TruStacks GitHub App out of the bypass-actor list so the requirement holds for
+its pull requests too.
+
+<Callout type="info">
+  **Provider support.** GitHub, via the GitHub App, is the supported provider
+  for real repositories today. The bundled
+  [self-hosted quickstart](/getting-started/quickstart) uses an in-cluster
+  Gitea instead. GitLab and Azure DevOps are on the roadmap and not
+  connectable yet.
+</Callout>
+
+## The trust boundary
+
+On the hosted track, the analysis runs in **your runner, in your cluster**.
+That shapes what actually crosses the network when you connect a repo:
+
+- **Your source is cloned and read inside your cluster.** The runner does the
+  clone and the analysis locally. Your application code does not transit the
+  TruStacks control plane.
+- **Only findings, audit events, and pull requests flow back.** The control
+  plane records the audit trail and shows you the results; it does not hold
+  your repo contents.
+- **The pull request is opened through your git provider,** carrying the
+  proposed artifacts and the constitution rule citations that motivated them.
+
+This is the same outbound-only posture described on the
+[architecture reference](/reference/architecture). Before you install the
+runner that does this work, you can verify its signed image and policy bundle:
+see [supply-chain verification](/reference/supply-chain).
+
+## Troubleshooting
+
+- **No pull request after you promote a proposal** · confirm your **platform**
+  repo is bound (with the pull-request write role) and that the TruStacks
+  GitHub App still has access to it. The crew also runs a Code Reviewer pass
+  first, which takes a few minutes, so a proposal is not instant.
+- **The GitHub App can't see a repo** · re-open the installation from your
+  org's **Settings → Third-party Access → GitHub Apps**, click **Configure**
+  on TruStacks, and add the repo to the grant. A newly created platform repo
+  is a common miss.
+- **Analysis runs but finds nothing to read** · confirm the **service** repo
+  is the one bound in the read-only role, not the empty platform repo.
+
+## Where to go next
+
+- [Hosted quickstart](/getting-started/hosted-quickstart) · the self-serve
+  walkthrough, with the connect step inline
+- [Getting started (Beta)](/getting-started/beta) · the concierge walkthrough
+- [GitOps integration](/installation/gitops) · how your controller deploys the
+  merged pull request
+- [Architecture](/reference/architecture) · the outbound-only runner and the
+  Data Plane / Control Plane split
+- [Supply-chain verification](/reference/supply-chain) · verify the signed
+  runner image and policy bundle before they run
