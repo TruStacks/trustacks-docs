@@ -35,8 +35,8 @@ You can point both roles at the same starter pair to try it, or bring your
 own. The [hosted quickstart](/getting-started/hosted-quickstart#step-5-connect-your-repos)
 documents the TruStacks starter service and platform repos and the
 `gh repo create` commands to fork them into your org; bring-your-own works
-too, with any application repo as the service repo and any repo carrying the
-platform layout as the platform repo.
+too, with any GitHub application repo as the service repo and any GitHub repo
+carrying the platform layout as the platform repo.
 
 ## The GitHub App
 
@@ -46,15 +46,23 @@ your own app or manage OAuth credentials.
 1. In the app, go to **Services** and click **+ Connect repo**, choose
    **GitHub**, then **Install on GitHub**. This installs the TruStacks GitHub
    App on your org.
-2. Grant it access to your two repositories. Scope it to just those repos, or
-   to the whole org if you prefer; GitHub lets you narrow or widen the grant
-   later from your org's **Settings → GitHub Apps**.
+2. Grant it access to your two repositories. Choose **Only select
+   repositories** and pick the service repo and the platform repo. That is the
+   grant TruStacks needs. **All repositories** also works, but it hands the app
+   access to every repo in the org, present and future, so treat it as a
+   deliberate exception rather than the default. You can narrow or widen the
+   grant later from your org's **Settings → Third-party Access → GitHub Apps →
+   Configure**.
 3. Back in the app, bind each repo to its role: the **service repo**
    (read-only) and the **platform repo** (pull-request write).
 
-Because the crew opens pull requests rather than pushing to a branch directly,
-**a human always reviews and merges.** The GitHub App's write access is the
-access needed to open a PR, not to bypass your review.
+The crew opens pull requests rather than pushing to a branch directly, and
+**TruStacks never merges them.** The GitHub App's write access is the access
+needed to open a PR, and merging stays with you. Whether an approval is
+*required* before that merge is your repository's setting, not ours: enforce it
+with branch protection or a ruleset on the platform repo, and leave the
+TruStacks GitHub App out of the bypass-actor list so the requirement holds for
+its pull requests too.
 
 <Callout type="info">
   **Provider support.** GitHub, via the GitHub App, is the supported provider
@@ -86,12 +94,13 @@ see [supply-chain verification](/reference/supply-chain).
 ## Troubleshooting
 
 - **No pull request after you promote a proposal** · confirm your **platform**
-  repo is bound (with the pull-request-write role) and that the TruStacks
+  repo is bound (with the pull-request write role) and that the TruStacks
   GitHub App still has access to it. The crew also runs a Code Reviewer pass
   first, which takes a few minutes, so a proposal is not instant.
 - **The GitHub App can't see a repo** · re-open the installation from your
-  org's **Settings → GitHub Apps → TruStacks** and add the repo to the grant.
-  A newly created platform repo is a common miss.
+  org's **Settings → Third-party Access → GitHub Apps**, click **Configure**
+  on TruStacks, and add the repo to the grant. A newly created platform repo
+  is a common miss.
 - **Analysis runs but finds nothing to read** · confirm the **service** repo
   is the one bound in the read-only role, not the empty platform repo.
 
