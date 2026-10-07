@@ -1,78 +1,118 @@
 ---
 title: GitOps integration
-description: Wire ArgoCD or Flux to deploy merged TruStacks pull requests. The DevOps Engineer agent emits artifacts; your existing GitOps controller deploys them.
+description: How TruStacks output reaches your cluster. The platform repo layout the DevOps Engineer writes, the reusable CI workflow and the caller in your service repo, the root ArgoCD Application you apply, manual sync, image tag promotion, and the optional read-only deploy observer.
 ---
 
 import { Callout } from 'nextra/components'
 
 # GitOps integration
 
-TruStacks does not replace your GitOps controller. The DevOps Engineer
-agent emits CI workflows, Helm charts, and ArgoCD Application manifests
-into your platform repository. Your existing ArgoCD or Flux
-installation deploys merged PRs the way it always has.
+TruStacks writes delivery config into your **platform repo** as pull
+requests. Your CI runs the pipeline, and your ArgoCD deploys what you merge.
+TruStacks does not install, configure, or operate either one. This page
+covers what lands where in the platform repo, how the CI workflow is wired to
+your service repo, and how to point ArgoCD at the result.
 
-This page covers the repository layout the agent emits, the root
-Application pattern that picks up new services automatically, and the
-credentials your GitOps controller needs (separate from the Runner's
-credentials).
+## Who owns what
 
-## Supported controllers
+| File | Lives in | Written by |
+|---|---|---|
+| `environment-profile.yaml` | Platform repo root | You |
+| Reusable CI workflow, `.github/workflows/ci-<service>.yaml` | Platform repo | TruStacks, through pull requests you merge |
+| Helm chart or Kustomize base and overlays, under `gitops/` | Platform repo | TruStacks, through pull requests |
+| ArgoCD Applications, under `argo-apps/` | Platform repo | TruStacks, through pull requests |
+| Caller workflow, `.github/workflows/ci.yaml` | Service repo | You, once per service |
+| Root ArgoCD Application watching `argo-apps/` | Your cluster | You, once |
 
-- **ArgoCD** 2.10+
-- **Flux v2** (alpha support; ships with full coverage post-Beta)
+TruStacks never writes to your service repos. The constitution also rejects
+any proposal that writes outside `gitops/`, `argo-apps/`, or
+`.github/workflows/` in the platform repo.
 
-The local-dev install uses ArgoCD. Production customers can run either.
+## Platform repo layout
 
-## Repository layout
-
-The DevOps Engineer agent organizes the platform repository as:
+With the default **Helm** renderer:
 
 ```text
 platform-repo/
-├── argo-apps/                                          # App-of-Apps tree, watched by your root Application
-│   └── argo-apps-<cluster>/                            # One subdirectory per cluster
-│       └── <service>-application.yaml                  # Per-service ArgoCD Application manifests
-├── gitops/                                             # Helm charts the per-service Applications source
+├── environment-profile.yaml                     # yours: what you run
+├── .github/workflows/
+│   └── ci-<service>.yaml                        # reusable workflow (on: workflow_call)
+├── gitops/
 │   └── <application>/
 │       └── <cluster>/
-│           └── <service>/
+│           └── <service>/                       # one chart per service per cluster
 │               ├── Chart.yaml
-│               ├── values.yaml
+│               ├── values.yaml                  # image.tag lives here
 │               └── templates/
-└── .github/workflows/                                  # CI workflows for the platform repo itself
+└── argo-apps/
+    └── argo-apps-<cluster>/
+        └── <service>-application.yaml           # points at gitops/<application>/<cluster>/<service>
 ```
 
-The root Application that watches `argo-apps/` recursively is applied to
-your cluster with `kubectl` and is *not* committed to the repository
-(see [the root Application pattern](#the-root-application-pattern)
-below).
+With the **Kustomize** renderer (Beta), each service gets one base and one
+overlay per cluster, and ArgoCD syncs the overlay:
 
-Two important properties:
+```text
+gitops/
+└── <application>/
+    └── <service>/
+        ├── base/
+        └── overlays/
+            └── <cluster>/                       # the image tag is pinned here
+```
 
-- **One Application per service per cluster.** Each child Application
-  lives at `argo-apps/argo-apps-<cluster>/<service>-application.yaml`
-  and points at `gitops/<application>/<cluster>/<service>/` for its
-  Helm chart source. ArgoCD's view of *what is deployed where*
-  matches your mental model of services and clusters.
-- **Helm is the renderer today.** The DevOps Engineer agent emits
-  Helm charts. Kustomize alongside Helm ships in the Phase 4
-  multi-service Application model; until then, Helm is the only
-  supported renderer for newly-emitted services.
+<Callout type="warning">
+  **Kustomize is Beta.** It is generated and validated with
+  `kustomize build` before every pull request, but it has had far less
+  real-world use than Helm.
+</Callout>
 
-## The root Application pattern
+`<application>`, `<cluster>`, and `<service>` come from your Application's
+name, its target clusters, and the service name in TruStacks. You can change
+the service root per Application (for example to `gitops/apps/{service}`) on
+the Application's renderer card; `argo-apps/argo-apps-<cluster>/` is fixed.
 
-You install one ArgoCD Application (the App-of-Apps root) by hand at
-provisioning time and apply it directly to your cluster. The root
-Application is *not* committed to your platform repo; only the children
-it watches are.
+## The CI workflow: reusable, plus a caller
 
-The root watches `argo-apps/` in your platform repo recursively.
-Anything the DevOps Engineer commits under
-`argo-apps/argo-apps-<cluster>/<service>-application.yaml` becomes a
-child Application on the next sync.
+The pipeline has to test and build your **service** code, but TruStacks can
+only write to the **platform** repo. So the workflow it writes is a
+**reusable workflow** (`on: workflow_call`, with no other triggers). Your
+service repo calls it, and because a called workflow runs in the caller's
+context, it checks out and builds the service.
 
-### Example root Application
+Add this to each service repo, once:
+
+```yaml
+# .github/workflows/ci.yaml in the SERVICE repo
+name: ci
+on: [push, pull_request]
+jobs:
+  trustacks:
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@main
+    permissions: {contents: read, packages: write}
+```
+
+The workflow runs your tests and linter, builds the image from the
+`Dockerfile` in the service repo, and pushes it to GitHub Container Registry
+tagged with the commit SHA. The tools it runs come from your Environment
+Profile; a tool you have not declared gets no step.
+
+**Private platform repo:** allow other repos to use its workflows, once, or
+the caller fails with `workflow was not found`:
+
+```bash
+gh api --method PUT repos/<owner>/<platform-repo>/actions/permissions/access \
+  -f access_level=organization   # or access_level=user for a personal account
+```
+
+Why no trigger in the platform repo: a workflow that ran on its own there
+would build the GitOps repo, which has no service code, and a `push` trigger
+there would let changes bypass the policy gate.
+
+## The root Application
+
+Apply one Application by hand that watches `argo-apps/` recursively. It is
+not committed to the platform repo; everything it watches is.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -80,12 +120,10 @@ kind: Application
 metadata:
   name: trustacks-platform-root
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://github.com/<your-org>/<your-platform-repo>
+    repoURL: https://github.com/<owner>/<platform-repo>
     targetRevision: main
     path: argo-apps
     directory:
@@ -96,107 +134,85 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=false
 ```
-
-Apply it once:
 
 ```bash
 kubectl apply -f trustacks-platform-root.yaml
 ```
 
-After that, when the DevOps Engineer ships a new
-`argo-apps/argo-apps-<cluster>/<service>-application.yaml` and you
-merge the PR, ArgoCD creates the corresponding child Application
-automatically.
+Automated sync on the **root** only creates and removes the child Application
+objects as pull requests merge. It does not deploy workloads; see below.
+Whether the root syncs automatically is your choice.
 
-## How a proposal flows through Argo
+ArgoCD needs **read access** to the platform repo. For a private repo, add it
+to ArgoCD with a deploy key or token the way you add any private repo. These
+credentials are ArgoCD's own; the runner never sees them.
 
-End-to-end timeline of a typical proposal merge:
+## Sync is manual
 
-1. **Coordinator routes work.** Engineer asks for a new service deploy
-   pipeline.
-2. **DevOps Engineer reads the platform repo first** (the
-   read-and-preserve protocol). Inspects existing
-   `argo-apps/argo-apps-<cluster>/` and `gitops/<app>/<cluster>/<service>/`
-   for prior customizations.
-3. **DevOps Engineer emits artifacts** onto a feature branch:
-   - The CI workflow under `.github/workflows/`
-   - The service Helm chart under
-     `gitops/<app>/<cluster>/<service>/` (`Chart.yaml`, `values.yaml`,
-     `templates/`)
-   - The per-service ArgoCD Application manifest at
-     `argo-apps/argo-apps-<cluster>/<service>-application.yaml`,
-     pointing its `spec.source.path` at the matching `gitops/`
-     directory
-4. **OPA policy gate runs** against the constitution and any active
-   Specialist Packs. On allow, the PR opens. On deny, no PR; the
-   denial reasons are surfaced in the UI.
-5. **Human reviews and merges.** The PR body includes the rule
-   citations, blast radius, and rollback steps the agent generated.
-6. **ArgoCD detects the merge.** The root Application's recursive sync
-   on `argo-apps/` picks up the new
-   `argo-apps/argo-apps-<cluster>/<service>-application.yaml` and
-   creates the child Application.
-7. **The child Application syncs.** ArgoCD pulls the Helm chart from
-   the `gitops/` path the new Application points at; the service
-   deploys.
+Every ArgoCD Application TruStacks writes uses **manual sync**, with
+`CreateNamespace=true` so the first sync can create the target namespace.
+Merging a pull request updates Git; it does not change what is running until
+someone syncs.
 
-**Agents propose. Policy decides. Humans approve.** The Runner is not
-in the deploy path; only your existing GitOps controller writes to the
-cluster.
+For production this is policy, not just a default: the constitution denies a
+proposal that sets automated sync on an Application under
+`argo-apps/argo-apps-prod/`. Enabling automated sync on non-production
+Applications is your decision, made in your own reviewed change.
 
-## Permissions
+## How a change reaches the cluster
 
-ArgoCD needs read access to the platform repository to pull manifests
-and apply them. The Runner does NOT have cluster-admin permissions
-and cannot apply manifests directly.
+1. **Promote to proposal.** The DevOps Engineer reads your platform repo
+   first and keeps anything you have customized, noting it in the pull
+   request as preservation notes.
+2. **Validation and policy.** The chart is rendered and the workflow parsed,
+   then the proposal is evaluated against the constitution. A deny or a
+   failed check stops it; no pull request opens.
+3. **You review and merge** the pull request in the platform repo.
+4. **The root Application** picks up any new child Application.
+5. **Someone syncs** the child Application, and ArgoCD deploys.
 
-### Platform repo access for ArgoCD
+## Image tag promotion
 
-A deploy key or PAT on the platform repo, configured per your standard
-ArgoCD setup. ArgoCD's read access is independent of the Runner's pull-request
-write access; the two never share credentials.
+The tag in `values.yaml` (or the Kustomize overlay) only changes through a
+pull request.
 
-### Cluster permissions for ArgoCD
+When your service repo's default branch moves, the hosted control plane
+notices and your runner opens a proposal against the platform repo that sets
+the new commit SHA as the image tag. It goes through the same validation,
+policy gate, and human review as any proposal.
 
-Standard ArgoCD ClusterRole bindings (`argocd-application-controller`
-and friends). Nothing TruStacks-specific is required.
+- **CI never writes to the platform repo.** The build's token is scoped to
+  the service repo, and a build that repointed production would skip policy
+  and review.
+- **"Deployed is behind newest" is normal.** It means a tag bump is waiting
+  for review.
+- **A quick approval can land before the image exists.** The pod retries the
+  pull and starts once CI pushes the image.
 
-## Flux
+## Deploy status (optional)
 
-<Callout type="warning">
-  **Flux v2 support is alpha during Beta.** Full coverage ships
-  post-Beta. The repository layout the DevOps Engineer agent emits is
-  the same; the difference is in how the root resource is
-  bootstrapped. If you are evaluating with Flux today, file an issue
-  on `trustacks-mvp` and we can confirm the current state.
-</Callout>
+Install the runner with:
 
-## Coexistence with existing GitOps
+```bash
+--set observer.enabled=true --set observer.argocdNamespace=argocd
+```
 
-The DevOps Engineer reads your platform repo before it writes
-(see the [architecture page](/reference/architecture#baseline-crew) for
-the read-and-preserve protocol). Pre-existing Applications,
-non-standard directory layouts, custom Kustomize patches, and your
-team's tribal directory conventions are all preserved.
+and it watches ArgoCD Applications in that namespace, read-only (`get`,
+`list`, `watch`; it cannot sync, roll back, or delete), and reports sync and
+health status back. Applications in the app then show deploy status. The
+control plane separately checks whether proposal pull requests have merged.
 
-The agent surfaces preservation notes in the PR body when it
-encounters customizations it wants to preserve verbatim. If the agent
-cannot reconcile its planned output with the existing layout, the
-proposal halts and the Coordinator asks a clarifying question rather
-than overwriting your work.
+## Other GitOps controllers
+
+Proposals always include an ArgoCD Application; the constitution requires
+one. Flux and other controllers are not supported today.
 
 ## Where to go next
 
-- [Cluster deploy](/installation/cluster) · install the Runner that
-  produces the manifests
-- [Credentials and secrets](/installation/secrets) · the four-secrets
-  pattern (separate from your ArgoCD credentials)
-- [Architecture · Three planes](/reference/architecture#three-planes) ·
-  why the Runner and your GitOps controller are deliberately separate
-- [CI/CD generation workshop](/workshops/ci-cd-generation) · a worked
-  walkthrough of the DevOps Engineer producing artifacts your ArgoCD
-  picks up
+- [Platform repo layout reference](/reference/platform-repo-layout)
+- [Proposal lifecycle](/reference/proposal-lifecycle) · every stage a
+  proposal passes through
+- [Credentials and trust boundary](/installation/secrets)
+- [Quickstart](/getting-started/hosted-quickstart) · the whole flow, end to
+  end
