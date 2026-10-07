@@ -1,0 +1,126 @@
+---
+title: Verified, claimed and disputed
+description: How TruStacks scores maturity. A declaration is a claim, not a score. Coverage is earned from evidence, and TruStacks never fills in an attestation for you.
+---
+
+import { Callout } from 'nextra/components'
+
+# Verified, claimed and disputed
+
+The maturity score is the number customers show other people: their
+leadership, their auditors, their own teams. So it has to be a number
+TruStacks can stand behind. That rules out the easy design, where you list
+your tools in a YAML file and get a gold badge.
+
+This page explains the design TruStacks uses instead.
+
+## A declaration is a claim, not a score
+
+You describe your delivery stack in `environment-profile.yaml`, in your
+platform repo. Two kinds of thing go in it:
+
+- **Tooling categories**: *do you have the tool?* For example `trivy`
+  under `image_scanning`.
+- **Behaviors**: *do you use it correctly?* Five keys under `practices:`,
+  such as `tests_in_ci: true`.
+
+Both are statements you make about your own pipeline. A statement is
+useful: the agents read it and build what you declared. But writing
+`tests_in_ci: true` does not make your CI run tests. So TruStacks treats
+every declaration as a **claim**, and gives full credit only when it has
+**evidence**.
+
+## Four states
+
+| State | What it means | Credit |
+|---|---|---|
+| **verified** | You declared it, and TruStacks observed it. | full |
+| **claimed** | You declared it, and TruStacks has no evidence either way. | half |
+| **disputed** | You declared it, and what TruStacks observed contradicts it. | none |
+| **missing** | You have not declared it. | none |
+
+Three properties follow from these weights, and each is deliberate:
+
+- **Gold cannot be reached on claims alone.** Gold is 90%; all-claimed is
+  50%.
+- **Saying so still beats silence.** A claim outranks a missing row, because
+  an honest declaration is information.
+- **A disproved claim earns nothing.** Half credit for something the
+  evidence contradicts would reward the claim TruStacks just refuted.
+
+And one asymmetry: **missing evidence never demotes you.** If TruStacks
+cannot look, the row stays claimed. Only contrary evidence makes a row
+disputed.
+
+## Where evidence comes from
+
+TruStacks verifies what it can observe in the delivery path, not what it is
+told:
+
+- **Pipeline content.** A declared scanner counts as verified when its step
+  is actually in your pipeline. The pinned actions in TruStacks' curated
+  tool packs are how a step is recognized.
+- **Policy verdicts.** The constitution's behavior rules inspect the
+  artifacts on your latest judged proposal: does the workflow have a test
+  step and a lint step, do prod ArgoCD Applications use manual sync, do
+  containers run as non-root, are actions pinned to SHAs?
+- **The Code Reviewer's analysis**, for example whether the service has
+  tests at all.
+
+Some rows have no evidence source yet. Those can only ever count half. The
+[Maturity](/guide/maturity) screen names them and calculates the highest
+score you can actually reach (the *ceiling*), so it never promises a gold
+you cannot get. Closing that gap is TruStacks' job, not yours, and the
+screen says so.
+
+## Never pre-fill an attestation
+
+TruStacks hands you files: a starter environment profile, generated
+workflows, proposals. None of them will ever contain a claim about your
+practice already set to `true`.
+
+**Configuration may have opinionated defaults; claims may not.** The
+starter profile fills in `github_actions` as your CI platform and `argocd`
+as your GitOps controller, because those configure what the agents build.
+It ships every `practices:` line commented out, because each one is an
+attestation the score counts. Uncomment a line when it is true of you.
+
+The same rule holds for the agents. When Maturity offers **Draft pipeline
+PR** for a missing scanner, the crew adds the step to your pipeline but does
+not declare the tool in your profile. The PR closes the pipeline half; the
+declaration is yours to make, and your score moves when you make it.
+
+Why so strict? An understated score annoys you. An overstated one misleads
+whoever you show it to. On a product whose promise is *agents propose,
+policy decides, humans approve*, manufacturing the human's claim is the one
+thing an artifact must not do.
+
+## Scores can fall, and that is fine
+
+When TruStacks learns to verify a new row, or a new rule adds a row, a
+score can drop with nothing in your setup changing. The app shows a drop in
+amber, not red, and the change line says how much. Treat the **verified**
+segment of the bar as the part you can repeat to an auditor.
+
+## One score per Application
+
+A score is computed from one environment profile, which belongs to one
+Application (it lives in that Application's platform repo). Two
+Applications are scored separately and never averaged together: an average
+that hides one bronze among four golds is the same false reassurance this
+whole design exists to avoid. See
+[Applications, repositories and services](/concepts/applications-repositories-services).
+
+## Read next
+
+- [Maturity](/guide/maturity): the screen that shows all of this.
+- [Maturity scoring reference](/reference/maturity-scoring): rows, weights,
+  tiers and the ceiling in detail.
+- [Environment profile reference](/reference/environment-profile): every
+  category and the five behavior keys.
+
+<Callout type="info">
+  These decisions are recorded in TruStacks' architecture decision records
+  ADR-0046 (maturity is per Application and must be earned) and ADR-0050
+  (one scoring vocabulary, and a declared tool must be observed).
+</Callout>

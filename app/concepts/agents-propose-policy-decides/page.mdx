@@ -1,0 +1,125 @@
+---
+title: Agents propose, policy decides, humans approve
+description: The crew of named agents, what each one may and may not do, how the policy gate decides, and why a human always approves. Includes read-and-preserve and how agents retire files they supersede.
+---
+
+import { Callout } from 'nextra/components'
+
+# Agents propose. Policy decides. Humans approve.
+
+That sentence is the architecture, not a slogan. Each clause is a separate
+part of the system with a separate job, and none of them can do another's.
+
+- **Agents propose.** Named agents read your repos and your declared stack,
+  and draft delivery artifacts. They are coworkers who do the syntax.
+- **Policy decides.** A signed set of Rego rules, evaluated by OPA, decides
+  whether a proposal may become a pull request. The decision is
+  deterministic and cites the rule.
+- **Humans approve.** A person on your team reviews and merges the pull
+  request. Nothing merges itself, and no agent can approve its own work.
+
+## The crew
+
+| Agent | What it does | Where you see it |
+|---|---|---|
+| **Code Reviewer** | Reads a service repo and produces a typed analysis: framework, language, package manager, runtime, entrypoints, whether there are tests, a Dockerfile, CI. A deterministic detector runs first, so known frameworks (FastAPI, Spring Boot, .NET, Go) are facts, not guesses. Changes nothing. | Analyses |
+| **DevOps Engineer** | Turns an analysis plus your environment profile into a proposal: a reusable CI workflow, a Helm chart or Kustomize base and overlays, and ArgoCD Applications, each with an explanation and rule citations. Only builds what your profile declares. | Proposals |
+| **Coordinator** | The conversational lead. Runs gap analyses, consults specialists, drafts Rego rules with you in chat, and narrates runs. Does not write delivery artifacts. | Activity chat, gap analyses |
+| **Baseline Security** | A specialist the Coordinator consults on image scanning, SAST / SCA, secret scanning and SBOM + signing. Returns typed findings grounded in your stack. | Gap analyses |
+| **SOC2** | A specialist the Coordinator consults for SOC2 control-family findings (CC1 to CC9) and the evidence an auditor would ask for. Paid add-on once billing is live. | Gap analyses |
+
+The **Constitution** also appears in the app as a speaker. It is not an
+agent: it is the policy, and it speaks when a verdict is given.
+
+Each agent has a typed contract and an explicit, minimal set of tools. Every
+tool call, result and event is recorded and visible on the run, which is
+what makes the work auditable.
+
+## What policy decides
+
+Before a proposal can become a pull request, two checks run, in order:
+
+1. **Validation.** Do the emitted artifacts actually work? Helm or
+   Kustomize must render, workflows must parse, names must be legal
+   Kubernetes names. A check that could not run counts as a failure,
+   because a thing nobody verified must not pass as verified.
+2. **The policy gate.** OPA evaluates the proposal against the
+   **constitution**, TruStacks' signed, public rules, plus any **overlay**
+   rules you add. The constitution checks that the proposal only touches
+   allowed paths, has the artifacts it needs, points ArgoCD at your real
+   platform repo, and behaves well: tests and lint in CI, manual sync for
+   production, non-root containers, actions pinned to commit SHAs.
+
+A deny stops the run and cites each violated rule. No pull request opens.
+An allow opens one. Overlay rules can only add denies, so your overlay can
+make the gate stricter but never looser.
+
+The language model never decides. It drafts; OPA judges what it drafted.
+
+See [Rules](/guide/rules) and the [constitution reference](/reference/constitution).
+
+## What humans approve
+
+The pull request is the contract hand-off. It lands in your platform repo
+with everything a reviewer needs to answer *why was this proposed, and what
+does it touch?* without reading the diff first: a summary, blast radius,
+rollback, the rules cited, the profile entries used, preservation notes,
+and any files removed. Your reviewer merges or closes it, under your
+repository's own protections.
+
+Deploying is a second human step. Every ArgoCD Application TruStacks emits
+uses manual sync, so merging does not deploy; someone presses Sync. For a
+cluster named `prod` the constitution also denies a proposal that turns
+automated sync on.
+
+## Read-and-preserve
+
+Proposals are not one-shot. You will re-run them when your profile changes,
+a framework pack improves, or an image tag moves. Meanwhile your platform
+team will have edited the files TruStacks generated: an extra deploy step, a
+renamed job.
+
+So before emitting a file, the DevOps Engineer **reads the current version
+in your platform repo** and keeps what your team added. Every decision it
+makes about existing content is written into the pull request as a
+**Preservation notes** section, so the reviewer can confirm their changes
+were honoured.
+
+The default is preserve. If a rule requires removing something, the
+removal is cited. Two backstops cover the rest: the policy gate judges the
+merged result, and a person reviews the diff.
+
+## Retiring files it superseded
+
+Sometimes a generated file moves. For example, the CI workflow became a
+per-service reusable workflow (`ci-<service>.yaml`) instead of a single
+`ci.yaml`. Without a way to remove the old one, it kept running and
+failing.
+
+Agents can now **retire a file, but only as part of replacing it.** A
+removal must name the file in the same proposal that supersedes it, and give
+a reason. There is no way for an agent to delete something on its own, so
+content your team wrote cannot be targeted. Removals appear at the top of the
+PR body, under **Files removed**, naming what replaced each one. As always,
+nothing happens until a person merges.
+
+## What agents cannot do
+
+- Merge, approve or sync anything.
+- Bypass the policy gate or validation.
+- Write outside the paths the constitution allows.
+- Add tools to your pipeline that your profile does not declare (they
+  record a recommendation instead).
+- Invent action versions: every `uses:` must come from a curated pack, or
+  the step is omitted and flagged.
+- Fill in an attestation for you (see
+  [Verified, claimed and disputed](/concepts/verified-claimed-disputed)).
+- Operate your tools. TruStacks emits configuration; you run it on your
+  stack.
+
+<Callout type="info">
+  The decisions behind this page are recorded in TruStacks' architecture
+  decision records: ADR-0011 (specialists and delegation), ADR-0017
+  (read-and-preserve), ADR-0038 (validation before the gate) and ADR-0045
+  (agents may retire only what they supersede).
+</Callout>

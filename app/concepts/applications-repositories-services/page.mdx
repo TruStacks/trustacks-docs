@@ -1,0 +1,110 @@
+---
+title: Applications, repositories and services
+description: How TruStacks models what you deliver. An Application owns its service repos and a platform repo; a service is a connected repo; every service repo belongs to exactly one Application.
+---
+
+import { Callout } from 'nextra/components'
+
+# Applications, repositories and services
+
+TruStacks models your delivery with three nouns. Getting them straight
+makes every screen in the product easier to read.
+
+```text
+Application  1 ──── N  repositories  ──── a service repo is a Service
+     │
+     ├── one platform repo  (where PRs land; holds environment-profile.yaml)
+     └── target clusters    (each tagged dev, uat or prod)
+```
+
+## Application
+
+An **Application** is a set of services promoted together across tiers. It
+is the unit that owns delivery decisions:
+
+- **one platform repo**, the GitOps repository where TruStacks opens pull
+  requests and where your `environment-profile.yaml` lives;
+- **target clusters**, each with a tier (`dev`, `uat`, `prod`), which shape
+  tier-scoped policy such as manual sync for production;
+- **a renderer**, Helm or Kustomize, and optionally a GitOps root template
+  that says where in the platform repo its artifacts go;
+- **its member services**.
+
+The Application name becomes a directory (`gitops/<name>/`) and a Kubernetes
+namespace, so it cannot be renamed. Pick something durable, like
+`checkout-system`.
+
+**Why the Application is the unit.** Tooling decisions are made per
+delivery system, not per company and not per repo. You pick one platform
+repo, one GitOps layout and one set of clusters for a group of services
+that ship together. So maturity is scored per Application, the environment
+profile is read per Application (from its platform repo), and future
+access control is per Application.
+
+## Repositories and services
+
+A connected repo is a record of a Git repository TruStacks can reach
+through the TruStacks GitHub App. It becomes a **service** when it is bound
+to an Application as a service repo.
+
+**Today, a service is a repo.** TruStacks models one connected service repo
+as one service, however many deployables it contains. If your repo is a
+monorepo with several deployables in subdirectories, it connects as one
+service; modeling services at a path inside a repo is
+planned but not built.
+
+The platform repo is also a connected repo, bound to the Application in the
+platform role rather than as a member service. The one-owner rule below
+applies to service repos; two Applications can currently point at the same
+platform repo, in which case they also share one environment profile.
+
+## Every service repo belongs to exactly one Application
+
+A service repo cannot be shared between two Applications, and a service
+cannot exist outside one. The connect wizard always asks which Application a repo
+belongs to, and refuses to start if you have none.
+
+The reason is access, not tidiness. As permissions become per Application,
+a service owned by nobody has no answer to *who may see this?*, and a
+service owned by two Applications with different teams has two answers.
+Both are defects, so the model makes them impossible: membership is a
+single parent on the repo record, not a many-to-many table with rules on
+top. (This is recorded in TruStacks' architecture decisions ADR-0047,
+ADR-0049 and ADR-0051.)
+
+What this rules out today: one service repo serving two Applications, such
+as a shared library or gateway. If you need that, tell us; the constraint is
+reversible and was chosen because nobody had asked for the shared case yet.
+
+## How the nouns show up in the product
+
+| You want to… | Go to |
+|---|---|
+| Create an Application, set its clusters, renderer and platform repo | [Applications](/guide/applications) |
+| Connect a repo as a service or platform repo | [Connecting repos](/guide/applications#connecting-repos) |
+| Find which Application owns a repo | [The services list](/guide/applications#the-services-list) |
+| See the score for one Application | [Maturity](/guide/maturity) |
+| See what an Application's profile declares | [Stack](/guide/stack) |
+
+## Where proposals land
+
+Every proposal for a service in an Application opens a pull request against
+that Application's platform repo. The paths depend on the renderer and the
+GitOps root; the defaults are:
+
+- Helm: `gitops/<application>/<cluster>/<service>/`
+- Kustomize: `gitops/<application>/<service>/base/` and
+  `gitops/<application>/<service>/overlays/<cluster>/`
+- ArgoCD Applications: under `argo-apps/`
+- The CI workflow: `.github/workflows/ci-<service>.yaml` in the platform
+  repo, as a reusable workflow your service repo calls
+
+The full layout is in the
+[platform repo layout reference](/reference/platform-repo-layout).
+
+<Callout type="info">
+  **Deleting an Application** removes the TruStacks grouping and its
+  bindings only. Your repos and anything already merged into the platform
+  repo are untouched, and your ArgoCD keeps syncing what is there until you
+  remove it.
+</Callout>
