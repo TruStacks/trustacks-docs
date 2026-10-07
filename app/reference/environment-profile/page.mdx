@@ -1,0 +1,146 @@
+---
+title: Environment profile
+description: Reference for environment-profile.yaml. Where it lives, the twelve tooling categories and their provider values, the practices you attest to, and how agents and scoring use it.
+---
+
+import { Callout } from 'nextra/components'
+
+# Environment profile
+
+`environment-profile.yaml` is your declaration of what you run. It lists your
+tools by category and the delivery practices you attest to. The DevOps
+Engineer reads it before generating anything, gap analysis compares the
+constitution against it, and the maturity score is built from it.
+
+## Where it lives
+
+At the **root of your platform repo**, the repo your Application's proposals
+land in. The control plane reads it from there through the GitHub App, and the
+runner reads it from its clone. Edit it like any other file: commit, review,
+merge.
+
+If the Stack page says the profile could not be read, the message names the
+reason: no platform repo connected, no file at the root, or a file that does
+not parse (with the line). An empty file counts as a parse error, not as an
+empty profile.
+
+## A starting point
+
+```yaml
+schema_version: "1"
+name: acme
+
+ci_cd_platform:
+  - provider: github_actions
+    primary: true
+container_registry:
+  - provider: ghcr
+    config:
+      url: ghcr.io
+gitops_controller:
+  - provider: argocd
+image_scanning: []
+sast_sca: []
+secret_scanning: []
+sbom_signing: []
+
+# Claims about your practice. Add a key yourself, only when it is true:
+#   tests_in_ci, linting_in_ci, manual_promotion_to_prod,
+#   non_root_containers, supply_chain_pinning
+# for example `practices: {tests_in_ci: true}`.
+practices: {}
+```
+
+Keep `practices: {}` rather than a bare `practices:` with every key commented
+out. A bare key with nothing under it is YAML `null`, and the file fails to
+parse.
+
+<Callout type="warning">
+  **Practices ship blank, and should stay blank until they are true.** A
+  practice set to `true` is your claim, and the maturity score counts it. No
+  TruStacks file, template, or agent fills one in for you. Setting a value you
+  have not checked misleads whoever you show the score to.
+</Callout>
+
+Tool entries are different: they are configuration, not claims. Declare the
+tools you run.
+
+## Top-level fields
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `schema_version` | `"1"` | `"1"` | The only version. |
+| `name` | string | `default` | A label for this profile. |
+| One field per category | list of entries | `[]` | See below. |
+| `practices` | map of key to `true`/`false` | `{}` | Your attestations. See below. |
+
+Unknown top-level fields are rejected.
+
+## Category entries
+
+Each category is a list. Each entry:
+
+| Field | Required | Meaning |
+|---|---|---|
+| `provider` | Yes | One of the values for that category, below. |
+| `primary` | No, default `false` | When a category lists several tools, the one agents use. Otherwise the first entry is used. |
+| `config` | No | Free-form provider settings, for example a registry URL. |
+| `notes` | No | Free text. |
+
+Unknown fields in an entry are rejected.
+
+## Categories and providers
+
+| Category | Accepted `provider` values |
+|---|---|
+| `ci_cd_platform` | `github_actions`, `azure_devops`, `gitlab_ci`, `tekton`, `jenkins` |
+| `container_registry` | `ecr`, `acr`, `gcr`, `quay`, `harbor`, `artifactory`, `docker_hub`, `ghcr` |
+| `image_scanning` | `trivy`, `clair`, `snyk_container`, `anchore`, `aqua` |
+| `sast_sca` | `sonarqube`, `snyk_code`, `checkmarx`, `semgrep`, `github_advanced_security` |
+| `secret_scanning` | `trufflehog`, `gitguardian`, `github_secret_scanning`, `gitleaks` |
+| `sbom_signing` | `syft`, `cosign`, `sigstore`, `in_toto`, `notation` |
+| `gitops_controller` | `argocd`, `flux` |
+| `service_mesh_ingress` | `istio`, `linkerd`, `traefik`, `nginx`, `envoy_gateway` |
+| `secrets_management` | `vault`, `external_secrets_operator`, `sealed_secrets`, `aws_secrets_manager`, `azure_key_vault`, `gcp_secret_manager` |
+| `observability` | `prometheus_grafana`, `datadog`, `new_relic`, `splunk`, `dynatrace`, `elastic` |
+| `ticketing_change_mgmt` | `jira`, `servicenow`, `linear`, `azure_boards`, `github_issues` |
+| `compliance_evidence` | `drata`, `vanta`, `hyperproof`, `secureframe`, `custom` |
+
+A value outside the list fails validation.
+
+### What declaring a tool does
+
+- **The DevOps Engineer emits pipeline steps only for tools you declared.**
+  It never adds a scanner you did not list. Missing tools show up in your gap
+  report instead.
+- **A declared tool needs a curated pack to get a pipeline step.** Today that
+  is `trivy`, `semgrep`, `gitleaks`, `syft`, and `cosign`. A declared tool with
+  no pack produces no step; the proposal records a TODO instead of guessing an
+  action. See [Knowledge packs](/reference/knowledge-packs).
+- **Six categories are scored:** `ci_cd_platform`, `gitops_controller`,
+  `image_scanning`, `sast_sca`, `secret_scanning`, and `sbom_signing`. An
+  undeclared one counts as missing. The other six tell agents about your stack
+  but do not move your score.
+
+## Practices
+
+| Key | Meaning | Rule that can confirm or dispute it |
+|---|---|---|
+| `tests_in_ci` | CI runs your tests | `practice.workflow_has_test_step` |
+| `linting_in_ci` | CI runs a linter or static analysis | `practice.workflow_has_lint_step` |
+| `manual_promotion_to_prod` | Production deploys need a human to sync | `practice.argocd_prod_requires_manual_sync` |
+| `non_root_containers` | Containers run as a non-root user | `practice.dockerfile_runs_as_nonroot` |
+| `supply_chain_pinning` | Third-party CI actions are pinned to a commit SHA | `practice.workflow_pins_action_versions` |
+
+`true` is a claim. `false` or absent is not a claim. A key that matches no rule
+is listed on the score as unrecognized, so a typo is visible rather than
+silently ignored.
+
+See [Maturity scoring](/reference/maturity-scoring) for how a claim becomes
+verified, stays claimed, or is disputed.
+
+## Where to go next
+
+- [Maturity scoring](/reference/maturity-scoring) · how this file becomes a score
+- [Platform repo layout](/reference/platform-repo-layout) · what else lives in the platform repo
+- [Constitution](/reference/constitution) · the rules that name categories and practices

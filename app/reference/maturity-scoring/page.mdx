@@ -1,0 +1,123 @@
+---
+title: Maturity scoring
+description: How TruStacks scores delivery maturity per Application. The eleven rows, the four states and their weights, the bronze, silver, and gold tiers, and what verified, coverage, potential, and ceiling each mean.
+---
+
+import { Callout } from 'nextra/components'
+
+# Maturity scoring
+
+Every gap analysis produces a maturity score for one Application. The
+runner computes it from your [environment profile](/reference/environment-profile),
+the rules in force, and what TruStacks has observed. It is arithmetic, not an
+LLM's opinion: the same inputs give the same score.
+
+Open **Maturity** in the sidebar and pick an Application.
+
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Maturity page for one Application, showing the tier badge, the verified and potential bar, and the row breakdown</figcaption>
+</figure>
+
+## Per Application
+
+Each Application has its own score, read from the environment profile in its
+platform repo. Two Applications in one workspace can sit at different tiers.
+
+## The rows
+
+The score has eleven rows today. Each comes from a field on a constitution
+rule, so the rows follow the rules in force.
+
+**Six tooling categories** (from `required_tooling_categories`):
+`ci_cd_platform`, `gitops_controller`, `image_scanning`, `sast_sca`,
+`secret_scanning`, `sbom_signing`.
+
+**Five practices** (from `practice_dimensions`): `tests_in_ci`,
+`linting_in_ci`, `manual_promotion_to_prod`, `non_root_containers`,
+`supply_chain_pinning`.
+
+Every row counts equally. Overlay rules that declare categories or practices
+add rows on runners that load them.
+
+## States and weights
+
+| State | Means | Weight |
+|---|---|---|
+| **Verified** | You declared it and TruStacks observed it | 1.0 |
+| **Claimed** | You declared it and TruStacks has no evidence either way | 0.5 |
+| **Disputed** | You declared it and TruStacks observed the opposite | 0 |
+| **Missing** | Not declared | 0 |
+
+Two rules keep this fair in both directions:
+
+- **Absent evidence never demotes.** If we could not look, your claim stays
+  claimed, at half credit. A gap in our observation should not cost you the
+  full row.
+- **Contrary evidence does.** If we looked and it is not there, the row is
+  disputed and earns nothing. Each disputed row says what we saw.
+
+Half credit for a claim means **gold cannot be reached on attestation alone**.
+
+## The four numbers
+
+| Number | What it is |
+|---|---|
+| **Coverage** | The weighted score: sum of row weights ÷ rows. This is the headline and sets the tier. |
+| **Verified** | Rows verified ÷ rows. What TruStacks has confirmed. The solid part of the bar. |
+| **Potential** | What coverage becomes if every claim we *can* check turns out true. A claim nothing can verify stays at half. The translucent part of the bar. |
+| **Ceiling** | The best coverage you can reach by closing every gap: verifiable rows at full credit, the rest at half. "Path to gold" reads this. |
+
+A row is **verifiable** when some evidence source exists that could move it
+to verified. The ceiling depends on which evidence sources exist, not on what
+you declared today.
+
+Reports from before the ceiling existed show none, rather than a guess.
+Runners older than `0.2.14-rc21` do not report their rule inventory, and
+without it some rows cannot be verified: the ceiling there is 82%, below gold.
+From `0.2.14-rc21` on, every row today is verifiable and the ceiling is 100%.
+Those versions are pre-releases; no stable release reports the inventory
+yet.
+
+## Tiers
+
+| Tier | Coverage |
+|---|---|
+| Gold | 90% and above |
+| Silver | 60% to 89% |
+| Bronze | Below 60% |
+
+If the runner loaded no rules at all, the score is 0 and bronze. That means
+the policy failed to load, not that you did well or badly.
+
+## Where evidence comes from
+
+**Tooling categories** are verified from your pipeline: a declared tool is
+verified when TruStacks sees it running in a workflow, using the
+[tool-action packs](/reference/knowledge-packs#tool-action-packs) and known
+platform signatures to recognize it.
+
+**Practices** are verified from:
+
+- **The latest judged proposal for the Application.** The constitution's
+  verdict on each behavior rule confirms or disputes the practice it maps to.
+- **The Code Reviewer's analysis.** A service with no tests disputes
+  `tests_in_ci`.
+
+## Unrecognized practices
+
+A key under `practices` that no rule scores is listed on the score as
+unrecognized. It earns nothing, and you can see that it earns nothing, so a
+typo does not disappear.
+
+## What the score is not
+
+- **Not a compliance attestation.** SOC 2 evidence lives on the Compliance
+  page, as counts, with no pass or fail.
+- **Not a statement about what we did not check.** The score covers the rows
+  above. A list of what TruStacks did not check is not built yet.
+
+## Where to go next
+
+- [Environment profile](/reference/environment-profile) · declare tools and practices
+- [Constitution](/reference/constitution) · the rules that define the rows
+- [Specialist Packs](/reference/specialist-packs) · what gap analyses consult

@@ -1,0 +1,147 @@
+---
+title: Proposal lifecycle
+description: How a proposal moves from an analysis to a running deploy, through validation, the policy gate, the pull request, merge, and image tag promotion.
+---
+
+import { Callout } from 'nextra/components'
+
+# Proposal lifecycle
+
+A proposal is the DevOps Engineer's answer to "how should this service be
+built and deployed?", turned into files for your platform repo. This page
+follows one from the button to a running pod.
+
+```text
+Analysis ──▶ Promote to proposal ──▶ DevOps Engineer emits files
+                                         │
+                                         ▼
+                          1. Pre-emit validation ── fail ──▶ stop, no PR
+                                         │
+                                         ▼
+                          2. Constitution gate (OPA) ── deny ──▶ stop, no PR
+                                         │
+                                         ▼
+                          3. Advisory gap check (never blocks)
+                                         │
+                                         ▼
+                          4. Pull request on your platform repo
+                                         │  you review and merge
+                                         ▼
+                          5. Merge detected
+                                         │  you sync in ArgoCD
+                                         ▼
+                          6. Deploy observed (optional)
+                                         │
+                                         ▼
+                          7. Next commit: tag promotion proposal
+```
+
+Every step appears on the proposal's timeline (`#/proposals/<id>`).
+
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>proposal detail timeline showing artifact validation, policy check, gap check, and pull request opened</figcaption>
+</figure>
+
+## Before: analysis
+
+On a service, **Run analysis** starts the Code Reviewer. It clones the
+service repo in your runner and reports framework, language, runtime,
+dependencies, entrypoints, and whether the repo has tests, a Dockerfile, and
+CI. When it finishes, **Promote to proposal** starts the DevOps Engineer.
+
+The service must belong to an Application with at least one target cluster.
+
+## The DevOps Engineer emits
+
+Grounded in the matching [framework pack](/reference/knowledge-packs), your
+[environment profile](/reference/environment-profile), and what is already in
+your platform repo, it emits the files described in
+[Platform repo layout](/reference/platform-repo-layout). The image reference
+and tag are supplied to it (your registry, your repo name, the commit it
+analyzed); it does not invent them.
+
+## 1. Pre-emit validation
+
+Does the output actually work? Each check, by name on the timeline:
+
+| Check | Fails when |
+|---|---|
+| `chart_renders` | `helm template` fails on the chart |
+| `overlay_builds` | `kustomize build` fails on an overlay |
+| `workflow_parses` | A workflow or ArgoCD Application is not valid YAML |
+| `action_sourced` | A `uses:` action is not pinned to a full commit SHA, or does not come from a curated pack |
+| `k8s_identifier` | A name or label breaks Kubernetes naming rules (RFC 1123), or a Helm release name is too long |
+| `image_reference` | The image repository is not the one TruStacks supplied |
+
+**A check that could not run counts as a failure.** If a tool is missing or a
+pack did not load, the proposal stops as unverified rather than passing
+unchecked. On failure no pull request is opened, and the timeline shows the
+exact error.
+
+## 2. Constitution gate
+
+The runner evaluates the [constitution](/reference/constitution) (and any
+overlay it loaded) against the files with OPA, inside your cluster. Any deny
+stops the proposal. The timeline lists each rule that fired and why. Nothing
+is written to your platform repo.
+
+Denials count toward **Policy in force** on the Overview: how many proposals
+were checked and which rules refused work, over a window.
+
+## 3. Advisory gap check
+
+The runner runs the constitution's gap query against your environment
+profile and lists tooling categories you have not declared. Advisory only: it
+never blocks the pull request.
+
+## 4. Pull request
+
+The runner pushes a branch to your platform repo and opens a pull request.
+The body explains what changed and why, cites the rules and profile entries
+behind each choice, and lists preservation notes for anything of yours it
+kept.
+
+**TruStacks never merges.** You review and merge, under your branch
+protection.
+
+## 5. Merge detection
+
+Hosted TruStacks polls GitHub for the pull request's state. No webhook to
+configure. On merge it records the merge commit, which is what ArgoCD will
+sync. The proposal shows open, merged, or closed.
+
+## 6. Deploy observed (optional)
+
+Applications are emitted with manual sync, so someone syncs in ArgoCD after
+the merge. If the runner's observer is on
+(`observer.enabled=true`, see [Runner Helm chart](/reference/runner-helm-chart)),
+the runner watches the ArgoCD Application read-only and reports when it is
+Synced and Healthy at the merged commit. The Application's deploy-status chip
+shows the result.
+
+## 7. Image tag promotion
+
+Once your service builds images, each new commit on the service repo's
+default branch needs to reach the platform repo as a new `image.tag`. Hosted
+TruStacks polls the service repo's default branch; when it moves, the runner
+opens a new proposal that bumps the tag. It goes through steps 1 to 4 like any
+other proposal, so every tag change in production has a pull request, a
+verdict, and an approver.
+
+<Callout type="warning">
+  **The tag can be proposed before the image exists.** If you merge before CI
+  finishes pushing the image, the pod waits in `ImagePullBackOff` until the
+  image lands, then starts. If the image never lands (CI broken, registry
+  credentials revoked), it waits indefinitely. The deploy-status chip shows
+  it; nothing alerts you yet.
+</Callout>
+
+The tag is the service commit SHA. If the deployed tag is older than the
+newest commit, that is usually an open promotion pull request waiting for
+review.
+
+## Where to go next
+
+- [Platform repo layout](/reference/platform-repo-layout) · what the files look like
+- [Constitution](/reference/constitution) · the rules at step 2
+- [Policy in force](/reference/policy-in-force) · which policy your runner enforced

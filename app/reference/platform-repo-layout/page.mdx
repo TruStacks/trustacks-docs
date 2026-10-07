@@ -1,0 +1,171 @@
+---
+title: Platform repo layout
+description: Where TruStacks writes in your platform repo. The three allowed paths, Helm and Kustomize layouts, argo-apps per cluster, the reusable CI workflow and the caller you add to each service repo, and the one-time Actions access grant for private platform repos.
+---
+
+import { Callout } from 'nextra/components'
+
+# Platform repo layout
+
+Your platform repo is the GitOps repo your ArgoCD watches. TruStacks proposes
+changes to it as pull requests. This page shows what lands where.
+
+## Allowed paths
+
+Every file in a proposal must live under one of three prefixes. The
+constitution rule `proposal.allowed_paths` refuses anything else, and
+`proposal.no_path_traversal` refuses absolute paths and `..`.
+
+```text
+gitops/              deploy artifacts (Helm chart or Kustomize base + overlays)
+argo-apps/           ArgoCD Application manifests, one directory per cluster
+.github/workflows/   the reusable CI workflow, one per service
+```
+
+`environment-profile.yaml` also lives at the repo root. TruStacks reads it but
+never proposes changes to it. That file is yours.
+
+## Helm layout
+
+One complete chart per cluster per service:
+
+```text
+gitops/<application>/<cluster>/<service>/
+├── Chart.yaml
+├── values.yaml              # image.repository and image.tag
+└── templates/
+    ├── deployment.yaml
+    └── service.yaml
+```
+
+There is no `_helpers.tpl`. Charts use built-ins (`.Release.Name`,
+`.Chart.Name`, `.Values`) so they render with only these four files.
+
+## Kustomize layout
+
+One shared base and one overlay per cluster:
+
+```text
+gitops/<application>/<service>/
+├── base/
+│   ├── kustomization.yaml
+│   ├── deployment.yaml
+│   └── service.yaml
+└── overlays/<cluster>/
+    └── kustomization.yaml   # namespace, and the image tag via images:
+```
+
+The image tag appears only in the overlay. ArgoCD points at the overlay, not
+the base.
+
+<Callout type="info">
+  **Kustomize is in Beta.** It is checked by `kustomize build` before every
+  proposal, but it has not yet run end to end against a customer platform
+  repo. Tell us what you find.
+</Callout>
+
+The renderer is set per Application (**Applications → your Application →
+Renderer**). An Application can also override the root path template; the
+defaults above apply otherwise.
+
+## ArgoCD Applications
+
+```text
+argo-apps/argo-apps-<cluster>/<service>-application.yaml
+```
+
+Each Application:
+
+- points `spec.source.repoURL` at your platform repo, exactly (rule
+  `argocd.repoURL_is_canonical`);
+- points `spec.source.path` at the chart (Helm) or the cluster's overlay
+  (Kustomize);
+- sets `syncOptions: [CreateNamespace=true]`;
+- has **no automated sync**. Merging a pull request does not deploy; someone
+  syncs in ArgoCD. For `argo-apps/argo-apps-prod/` (a target cluster named
+  `prod`), the constitution enforces this
+  (`practice.argocd_prod_requires_manual_sync`). The rule matches that
+  directory, not the cluster's tier.
+
+To have ArgoCD pick these up, apply one root Application of your own that
+points at `argo-apps/`. If the platform repo is private, ArgoCD needs read
+credentials for it. See [GitOps integration](/installation/gitops).
+
+## The CI workflow
+
+The pipeline is a **reusable workflow** in the platform repo, one per service:
+
+```text
+.github/workflows/ci-<service>.yaml     # on: workflow_call, nothing else
+```
+
+It has two jobs, `test` and `build`. `build` pushes the image the chart
+references. It triggers only through `workflow_call`, never on push or pull
+request, because it builds your service, not the GitOps repo it is stored in.
+
+### The caller in your service repo
+
+Add this once to each service repo. It is the only pipeline file you write.
+
+```yaml
+# .github/workflows/ci.yaml in the SERVICE repo
+name: ci
+on:
+  push:
+    branches: [main]   # your default branch
+  pull_request:
+jobs:
+  trustacks:
+    # The called workflow pushes an image. Pull requests from forks get a
+    # read-only token and cannot push, so skip them instead of failing.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@<commit-sha>
+    permissions:
+      contents: read
+      packages: write
+```
+
+Pin `<commit-sha>` to a platform-repo commit you have reviewed, such as the
+merge commit of the TruStacks pull request that added the workflow, and move
+the pin when you merge a change to it. `@main` also works and follows every
+merge, at the cost of trusting whoever can push to that branch. The
+proposal's summary includes the snippet with your names filled in, in the
+shorter `@main` and `on: [push, pull_request]` form; prefer the one above.
+
+### Private platform repos
+
+A private repo shares its reusable workflows with nothing by default. The
+caller then fails before running a step, with an error saying the workflow
+**was not found**, which points away from the real cause. Grant access once:
+
+```bash
+PLATFORM_REPO=your-org/your-platform-repo   # owner/name of your platform repo
+
+# Platform repo owned by an organization:
+gh api --method PUT \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
+  -f access_level=organization
+
+# Platform repo owned by a personal account:
+gh api --method PUT \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
+  -f access_level=user
+```
+
+Public platform repos need nothing.
+
+## Your edits are kept
+
+Before writing any file, the DevOps Engineer reads the existing version from
+your platform repo and keeps what you added: an extra job, a tuned value, a
+patch. Each pull request lists what was kept, replaced, or removed under
+**Preservation notes**.
+
+An agent may delete a file only when the same proposal adds its replacement,
+and the pull request says so.
+
+## Where to go next
+
+- [Proposal lifecycle](/reference/proposal-lifecycle) · what checks run before a PR opens
+- [Connect a repo](/reference/connect-a-repo) · binding the platform repo
+- [Knowledge packs](/reference/knowledge-packs) · where the layouts are defined
