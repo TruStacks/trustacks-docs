@@ -1,0 +1,114 @@
+---
+title: Knowledge packs
+description: The curated YAML the agents read. Framework packs for Dockerfile and CI shape, tool-action packs that pin each tool's GitHub Action to a commit SHA, and renderer packs that define Helm and Kustomize layouts. All Apache 2.0 in trustacks-policy.
+---
+
+import { Callout } from 'nextra/components'
+
+# Knowledge packs
+
+Packs are curated YAML that ground the agents in known-good shapes instead of
+whatever a model remembers. There are three families. All of them are Apache
+2.0 and public in
+[`trustacks-policy`](https://github.com/TruStacks/trustacks-policy).
+
+| Family | Directory | Answers | If one is missing |
+|---|---|---|---|
+| Framework | `frameworks/` | What should a Dockerfile and CI workflow look like for this stack? | Analysis still runs; the proposal has no reference shape and usually stops at validation |
+| Tool-action | `tool-actions/` | Which GitHub Action, at which exact commit, runs this tool? | No pipeline step for that tool |
+| Renderer | `renderers/` | Which files go where for Helm or Kustomize, and how is that checked? | The proposal stops; there is no fallback layout |
+
+<Callout type="info">
+  **Packs ship inside the runner image today.** The copies in
+  `trustacks-policy` are the public source, but a pack change reaches you in a
+  runner release, not on its own. Moving packs to the same signed pull as the
+  constitution is planned.
+</Callout>
+
+## Framework packs
+
+The Code Reviewer's detection runs before any agent: a deterministic match on
+files in your repo, not a model guess. The matched pack goes to both the Code
+Reviewer and the DevOps Engineer.
+
+| Pack | Detects | Grounds |
+|---|---|---|
+| `python_fastapi` | `fastapi` in `pyproject.toml` or `requirements.txt` | `python:3.12-slim` image, `ruff check` and `pytest` |
+| `spring_boot` | Spring Boot in `pom.xml`, `build.gradle`, or `build.gradle.kts` | Maven build to `eclipse-temurin:21-jre`, `mvn -B verify -Dlint=true` |
+| `dotnet` | `*.csproj`, `*.fsproj`, `*.vbproj`, or `global.json` | `dotnet/sdk:8.0` to `dotnet/aspnet:8.0`, `dotnet format --verify-no-changes`, `dotnet test` |
+| `go` | `go.mod` | `golang:1.23` to `distroless/static:nonroot`, `go vet` and `go test -race` |
+
+Each pack carries detection rules, a prompt addendum, a reference Dockerfile,
+and a reference CI workflow. The DevOps Engineer may adapt within the shape
+(entrypoint, runtime version, build arguments) but not restructure it: the
+packs ship two jobs, `test` and `build`, and so does the emitted workflow,
+plus any jobs you added yourself.
+
+A repo that matches no pack is still analysed. Proposals for it are another
+matter: the framework pack is also where pinned foundational actions such as
+`actions/checkout` come from, so without one, expect the proposal to stop at
+pre-emit validation. In practice, proposals today cover the four frameworks
+above.
+
+## Tool-action packs
+
+One file per tool. Each maps a tool you declare in your
+[environment profile](/reference/environment-profile) to its GitHub Action,
+pinned to a full commit SHA, with default inputs.
+
+| Pack | Profile category |
+|---|---|
+| `trivy` | `image_scanning` |
+| `semgrep` | `sast_sca` |
+| `gitleaks` | `secret_scanning` |
+| `syft` | `sbom_signing` |
+| `cosign` | `sbom_signing` |
+
+```yaml
+tool_name: trivy
+profile_categories: [image_scanning]
+action: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5
+action_version_label: 0.28.0
+inputs:
+  scan-type: image
+  severity: HIGH,CRITICAL
+last_verified: "2026-05-05"
+```
+
+The DevOps Engineer may only use an action whose SHA comes from a pack. If
+you declare a tool with no pack (for example `snyk_container`), the proposal
+gets **no step** for it and records a TODO, rather than a guessed SHA that
+would pass the pinning rule and fail at run time.
+
+These packs are also how maturity scoring recognises your tools running in
+CI. See [Maturity scoring](/reference/maturity-scoring#where-evidence-comes-from).
+
+SHAs are reviewed on a quarterly cadence, recorded in `last_verified`. See
+`tool-actions/CURATION.md` in `trustacks-policy`.
+
+## Renderer packs
+
+One file per renderer: which files to emit, where they go, what the ArgoCD
+Application points at, and the command that proves they render.
+
+| Pack | Root | ArgoCD points at | Checked with |
+|---|---|---|---|
+| `helm` | `gitops/{application}/{cluster}/{service}` | The chart | `helm template` |
+| `kustomize` | `gitops/{application}/{service}` | `overlays/{cluster}` | `kustomize build` |
+
+See [Platform repo layout](/reference/platform-repo-layout) for the full trees.
+
+## Contributing a pack
+
+Fork `trustacks-policy`, add or edit a YAML file, sign off each commit
+(`git commit -s`), and open a pull request. CI runs the constitution tests,
+checks that the packs and the constitution agree, and rejects commits without
+a sign-off. Until
+packs move to the signed pull, an accepted pack also needs a runner release
+before it reaches you.
+
+## Where to go next
+
+- [Environment profile](/reference/environment-profile) · declare the tools packs map
+- [Proposal lifecycle](/reference/proposal-lifecycle) · where packs are enforced
+- [Constitution](/reference/constitution) · the rules the packs are written to pass

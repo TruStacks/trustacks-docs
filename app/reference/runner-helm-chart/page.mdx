@@ -1,0 +1,225 @@
+---
+title: Runner Helm chart
+description: Reference for the TruStacks runner chart at oci://ghcr.io/trustacks/charts/runner. Install, values (saas, observer, policyBundle), the RBAC it creates, the egress it needs, upgrades with --reset-then-reuse-values, uninstall, and verification.
+---
+
+import { Callout } from 'nextra/components'
+
+# Runner Helm chart
+
+The runner is the part of TruStacks that runs in your cluster. You install it
+from a signed OCI Helm chart:
+
+```text
+oci://ghcr.io/trustacks/charts/runner
+```
+
+The published chart has the hosted defaults baked in: SaaS mode on, the
+control plane at `https://api.trustacks.com`, and the runner image of the same
+version pinned. You add one value, your enrollment token.
+
+**Requirements:** Kubernetes 1.28 or later, Helm 3.14 or later (for
+`--reset-then-reuse-values`), and outbound HTTPS from the runner's namespace.
+
+## Install
+
+Generate an enrollment token under **Settings → Runners** and copy the
+command the page shows. It looks like this:
+
+```bash
+helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version <version> \
+  -n "<your-namespace>" --create-namespace \
+  --set saas.enrollmentToken=<token>
+```
+
+<Callout type="info">
+  **Copy the command from the app rather than from this page.** The app fills
+  in the version the hosted control plane currently advertises. See
+  [Versioning](/reference/versioning#which-runner-version-to-install).
+</Callout>
+
+Then watch it start and enroll. With the release name `trustacks-runner`, the
+deployment is `trustacks-runner-runner`:
+
+```bash
+kubectl -n <your-namespace> rollout status deploy/trustacks-runner-runner
+kubectl -n <your-namespace> logs deploy/trustacks-runner-runner | grep -i enroll
+```
+
+The Runners page shows the runner as connected once it has enrolled.
+
+[Screenshot placeholder: Settings → Runners, showing a connected runner with its running and published versions]
+
+### The enrollment token
+
+- **Reusable, does not expire.** The runner presents it again whenever it
+  re-enrolls. Treat it like a password. To retire it, delete the runner on the
+  Runners page and enroll a new one.
+- **Where it lives.** With `--set saas.enrollmentToken=...` the chart creates
+  the Secret `trustacks-runner-enrollment` for you, and the token is also
+  stored in the Helm release. To keep it out of the release, create the Secret
+  yourself and leave `saas.enrollmentToken` empty:
+
+  ```bash
+  kubectl -n <your-namespace> create secret generic trustacks-runner-enrollment \
+    --from-literal=enrollment-token=<token>
+  ```
+
+## Values
+
+The values you are likely to set. Everything else has a working default.
+
+### `saas.*`
+
+| Value | Published default | Meaning |
+|---|---|---|
+| `saas.enabled` | `true` | Pull mode: enroll with the hosted control plane and long-poll for work. |
+| `saas.enrollmentToken` | `""` | Your token. When set, the chart creates the token Secret. |
+| `saas.enrollmentTokenSecret.name` | `trustacks-runner-enrollment` | Secret holding the token. |
+| `saas.enrollmentTokenSecret.key` | `enrollment-token` | Key inside that Secret. |
+| `env.TRUSTACKS_RUNNER_CONTROL_PLANE_URL` | `https://api.trustacks.com` | Control plane the runner calls. |
+
+### `observer.*`
+
+Optional. When on, the runner watches your ArgoCD Applications read-only and
+reports deploy status, so TruStacks can tell you whether a merged change came
+up healthy.
+
+| Value | Default | Meaning |
+|---|---|---|
+| `observer.enabled` | `false` | Turn on the read-only ArgoCD watch. |
+| `observer.argocdNamespace` | `argocd` | Namespace where your ArgoCD `Application` resources live. |
+
+```bash
+--set observer.enabled=true --set observer.argocdNamespace=argocd
+```
+
+### `policyBundle.*`
+
+Where the runner gets the constitution, and how it verifies it. See
+[Policy in force](/reference/policy-in-force) for what happens at start.
+
+| Value | Published default (0.2.14-rc24 and later) | Meaning |
+|---|---|---|
+| `policyBundle.bundleRef` | `ghcr.io/trustacks/policy/constitution:1` | The signed constitution to pull. |
+| `policyBundle.verify` | `true` | Verify the signature before loading. Turning this off loads the bundle unverified and the runner reports it as unverified. |
+| `policyBundle.insecure` | `false` | Plain HTTP to the registry. Local development only. |
+| `policyBundle.keyless.certificateIdentityRegexp` | Both policy publishing identities (see [Supply-chain verification](/reference/supply-chain#one-cycle-overlap-on-the-policy-identity)) | Which workflow may have signed the bundle. |
+| `policyBundle.keyless.certificateOidcIssuer` | `https://token.actions.githubusercontent.com` | OIDC issuer for the signing certificate. |
+| `policyBundle.overlayRef` | `""` | Overlay bundle. Not supported on hosted yet. |
+
+<Callout type="warning">
+  Runner charts before `0.2.14-rc24` have no `keyless` block and point
+  `bundleRef` at a development registry that does not exist in your cluster.
+  Those runners fall back to the policy baked into the image.
+</Callout>
+
+### Pod settings
+
+| Value | Default |
+|---|---|
+| `image.repository`, `image.tag` | `ghcr.io/trustacks/runner`, the chart's version |
+| `deployKeyLoader.image` | `alpine/k8s:1.31.4` (from Docker Hub) |
+| `imagePullSecrets` | Empty. Set if you mirror the images to a private registry. |
+| `resources.requests` | `cpu: 50m`, `memory: 128Mi` |
+| `resources.limits` | `cpu: 500m`, `memory: 512Mi` |
+| `podSecurityContext` | `runAsNonRoot: true`, `runAsUser: 10001`, `fsGroup: 10001` |
+| `securityContext` | No privilege escalation, read-only root filesystem, all capabilities dropped |
+| `nodeSelector`, `tolerations`, `affinity` | Empty |
+
+## What the chart creates
+
+| Resource | Name (release `trustacks-runner`) |
+|---|---|
+| Deployment, Service (ClusterIP, port 8000), ServiceAccount | `trustacks-runner-runner` |
+| Secret, when you pass the token | `trustacks-runner-enrollment` |
+| Role and RoleBinding | `trustacks-runner-runner-deploy-keys`, `trustacks-runner-runner-secret-writer` |
+| ClusterRole and RoleBinding, when the observer is on | `trustacks-runner-runner-argocd-observer` |
+
+The runner writes two Secrets of its own at runtime. Helm does not manage them:
+
+- `trustacks-runner-identity` · the runner's keypair and ID, so a replaced pod
+  re-enrolls as the same runner.
+- `trustacks-runner-llm` · your LLM key, unsealed from what the control plane
+  delivered.
+
+### Permissions
+
+All namespace-scoped to the runner's namespace unless stated.
+
+| Grant | Verbs | Why |
+|---|---|---|
+| Secrets | `get`, `list` | An init container loads git deploy keys labelled `trustacks.io/role=git-deploy-key` (used by local development) |
+| Secrets | `get`, `create`, `update` | The runner writes its identity and LLM Secrets |
+| `applications.argoproj.io` in `observer.argocdNamespace` | `get`, `list`, `watch` | Observer only. Read-only: the runner cannot sync, roll back, or delete. |
+
+No cluster-wide grants. The observer's ClusterRole is bound with a RoleBinding
+in your ArgoCD namespace only.
+
+## Network
+
+The runner opens no inbound ports to the internet; the ClusterIP Service is
+reachable only inside your cluster. It needs outbound HTTPS to:
+
+| Destination | Why |
+|---|---|
+| `api.trustacks.com` | Enrollment, job polling, results |
+| `ghcr.io` (and its blob storage) | Runner image, chart, policy bundle |
+| `docker.io` | The `alpine/k8s` image used by the deploy-key init container |
+| `api.anthropic.com` or `openrouter.ai` | Your LLM provider |
+| `github.com`, `api.github.com` | Clone your repos, push the proposal branch, open the PR |
+| Sigstore's TUF and Rekor endpoints (`tuf-repo-cdn.sigstore.dev`, `rekor.sigstore.dev`) | Keyless signature verification of the policy bundle |
+
+There is no mTLS tunnel and nothing to allow inbound.
+
+## Upgrade
+
+The Runners page shows the published version and the version your runner is
+running, and generates the upgrade command:
+
+```bash
+helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version <version> \
+  -n "<your-namespace>" --reset-then-reuse-values
+```
+
+`--reset-then-reuse-values` takes the new chart's defaults, including the new
+runner image, then reapplies the values you set (your enrollment token and any
+observer settings).
+
+<Callout type="error">
+  **Never upgrade with `--reuse-values`.** It reuses every value from the
+  previous release, including the old image tag baked into the old chart. The
+  upgrade reports success and the old runner keeps running. Confirm the running
+  version on the Runners page after every upgrade.
+</Callout>
+
+## Uninstall
+
+```bash
+helm uninstall trustacks-runner -n <your-namespace>
+kubectl -n <your-namespace> delete secret trustacks-runner-identity trustacks-runner-llm
+```
+
+The second command removes the Secrets the runner wrote itself, which Helm
+does not track. Then delete the runner on **Settings → Runners**. Removing the
+TruStacks GitHub App from your org is separate, in your GitHub settings.
+
+## Verify before you install
+
+```bash
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-mvp/\.github/workflows/publish-images\.yml@refs/tags/v.*$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/trustacks/charts/runner:<version>
+```
+
+The same identity signs the runner image. See
+[Supply-chain verification](/reference/supply-chain).
+
+## Where to go next
+
+- [Policy in force](/reference/policy-in-force) · what the runner is enforcing and how to check
+- [LLM provider](/reference/llm-provider) · the key the runner uses
+- [Architecture](/reference/architecture) · what the runner does and what leaves your cluster

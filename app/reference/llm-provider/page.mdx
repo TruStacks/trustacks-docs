@@ -1,0 +1,80 @@
+---
+title: LLM provider (BYO key)
+description: How TruStacks uses your Anthropic or OpenRouter API key. Claude Sonnet 4.5 or later only, validated with a live call, delivered sealed to your runner, never stored in the TruStacks database.
+---
+
+import { Callout } from 'nextra/components'
+
+# LLM provider (BYO key)
+
+The agents run on Claude. You bring the API key, so model usage is billed to
+your own account with Anthropic or OpenRouter. Set it under
+**Settings → LLM** (`#/settings/llm`).
+
+## Providers
+
+| Provider | Key looks like | Model |
+|---|---|---|
+| **Anthropic** | `sk-ant-…` | Runner default. Optional override, for pinning during a Claude model rollover. |
+| **OpenRouter** | `sk-or-v1-…` | Required, and must start with `anthropic/` (for example `anthropic/claude-sonnet-4-5`). |
+
+Both run Claude Sonnet 4.5 or later. The choice is about who bills you, not
+which model runs.
+
+<Callout type="info">
+  **There is no model picker, by design.** The agents and their prompts are
+  tuned and tested on Claude. Tool use on other models is unmeasured, and a
+  governance product should not ship an unmeasured path. OpenRouter models
+  that do not start with `anthropic/` are refused.
+</Callout>
+
+## What happens when you save
+
+1. **Shape check.** The key and model are checked before anything else; a
+   non-Anthropic OpenRouter model is rejected here.
+2. **Sealed delivery.** The control plane holds the key in memory for up to
+   five minutes. When your runner collects it, the key is sealed to that
+   runner's public key. It is never written to the TruStacks database.
+3. **Runner writes it.** Your runner unseals it and writes the Kubernetes
+   Secret `trustacks-runner-llm` in its own namespace.
+4. **Live test call.** The runner makes a one-token request to the provider
+   to prove the key works.
+5. **Status.** The page shows **pending** until the runner reports back, then
+   **configured** or **invalid**. If no runner collects the key within five
+   minutes, it shows **expired**: check that your runner is connected, then save again.
+
+The page shows only the first six characters of the key afterwards. To
+rotate, save a new key the same way.
+
+[Screenshot placeholder: Settings → LLM with OpenRouter selected and status configured]
+
+## Where your key goes
+
+| Place | Holds the key? |
+|---|---|
+| TruStacks database | No. Only the provider, the model override, the first six characters, and status. |
+| TruStacks control plane memory | Up to five minutes, until your runner collects it |
+| Your cluster | Yes, in the Secret `trustacks-runner-llm` in the runner's namespace |
+| Your LLM provider | Receives it on every call, as usual |
+
+## What the provider sees
+
+Every agent call goes from your runner directly to Anthropic or OpenRouter.
+Those calls include the instructions, your environment profile, and the file
+contents the agents read from your repos. Review your provider's data terms
+with that in mind.
+
+## Troubleshooting
+
+- **Invalid** · the provider rejected the test call. Check the key, that the
+  account has credit, and (OpenRouter) that the model name starts with
+  `anthropic/`.
+- **Expired** · no runner collected the key. Check **Settings → Runners** and
+  your runner's logs, then save again.
+- **Agents fail with a configuration error** · no key is configured, or the
+  runner has not picked it up yet.
+
+## Where to go next
+
+- [Runner Helm chart](/reference/runner-helm-chart) · the Secret the runner writes, and egress to your provider
+- [Architecture](/reference/architecture#what-leaves-your-cluster) · what leaves your cluster, and to where

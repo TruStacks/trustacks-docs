@@ -1,0 +1,120 @@
+---
+title: Policy in force
+description: Which policy your runner is actually enforcing, where it came from, and whether its signature was checked. What source=bundle and source=image mean, what verified means, every reason code, and how to read them.
+---
+
+import { Callout } from 'nextra/components'
+
+# Policy in force
+
+A rule set you cannot see the provenance of is a claim, not a control. Your
+runner records exactly which constitution it loaded, from where, and whether
+it checked the signature, and reports that to the control plane when it
+starts.
+
+## What happens at start
+
+The runner pod's `load-policy-bundle` init container runs before the runner:
+
+1. **Resolve.** It resolves `policyBundle.bundleRef` (on hosted,
+   `ghcr.io/trustacks/policy/constitution:1`) to a digest, once.
+2. **Pull.** It pulls that exact digest, so a tag that moves mid-start cannot
+   swap in different bytes.
+3. **Verify.** It runs `cosign verify` against the publishing workflow's
+   Sigstore identity. See [Supply-chain verification](/reference/supply-chain).
+4. **Load or fall back.** On success the runner loads the pulled bundle. On
+   any failure it deletes what it pulled and the runner loads the copy of the
+   constitution baked into the runner image.
+5. **Record.** It writes the outcome, which the runner reports to the control
+   plane after enrolling.
+
+<Callout type="warning">
+  **Runner versions.** Steps 1 to 3 run on hosted runners from `0.2.14-rc24`.
+  Earlier runners, including `0.2.13`, try to pull from a development registry
+  that does not exist in your cluster, fall back, and enforce the baked copy
+  without a signature check.
+</Callout>
+
+The fallback keeps proposals flowing when the registry is unreachable. It is
+never silent: the runner reports that it fell back, and why.
+
+## Reading the state
+
+Each of the constitution and the overlay gets three fields.
+
+### `source`
+
+| Value | Means |
+|---|---|
+| `bundle` | The runner loaded the bundle it pulled at start. |
+| `image` | The runner is enforcing the copy baked into its image. For the constitution, that is the version current when the runner image was built. |
+| `none` | Overlay only: no overlay is configured. |
+
+### `verified`
+
+`true` only when a signature was checked **and** passed. A bundle loaded with
+verification switched off reports `verified: false`. A bundle that was simply
+present is not reported as verified.
+
+### `reason`
+
+| Reason | Means | What to do |
+|---|---|---|
+| `ok` | Pulled and verified | Nothing |
+| `pull_failed` | The reference did not resolve, or the pull failed | Check egress to `ghcr.io`; check `policyBundle.bundleRef` |
+| `verify_failed` | Pulled, but the signature did not match the expected identity | Check egress to Sigstore; check the identity values. If both are right, treat it as a possible tampering event and report it to `security@trustacks.com` |
+| `pubkey_missing` | Key-based verification, but no public key was mounted | Local development setups only |
+| `verification_disabled` | `policyBundle.verify` is `false` | Turn it back on unless you have a reason |
+| `not_configured` | Overlay only: no overlay reference | Nothing |
+| `unknown` | The runner's chart predates this reporting, or the record was unreadable | Upgrade the runner |
+
+`unknown` is never read as success or as failure. It means the runner cannot
+tell us.
+
+## Where to see it
+
+**In your cluster.** The init container prints its decision and a status
+line:
+
+```bash
+kubectl -n <your-namespace> logs deploy/trustacks-runner-runner -c load-policy-bundle
+```
+
+```text
+[load-policy-bundle] constitution cosign keyless verify OK (ghcr.io/trustacks/policy/constitution@sha256:…)
+[load-policy-bundle] status: {"constitution":{"source":"bundle","verified":true,"reason":"ok",...},"overlay":{"source":"none",...}}
+```
+
+The runner logs what it reported, once per start:
+
+```bash
+kubectl -n <your-namespace> logs deploy/trustacks-runner-runner | grep policy_state.reported
+```
+
+which includes `rules`, `constitution_source`, `constitution_verified`, and
+`constitution_reason`.
+
+**In the app.** The **Rules** page lists the rules your runner reports,
+including Rego source from `0.2.14-rc24`. Runners from `rc21` to `rc23` report
+rule IDs and descriptions without source, and the page says so.
+
+<Callout type="info">
+  A card on the Overview showing constitution source and verification is
+  planned, not built. Today the Overview's **Policy in force** section shows
+  how many proposals were checked and which rules refused work over a window.
+</Callout>
+
+## The rules in force
+
+Whatever the source, the runner reports the full rule inventory it loaded:
+each rule's ID, description, package, tooling categories, practice
+dimensions, and kind. That inventory drives the Rules page and makes every
+row of the [maturity score](/reference/maturity-scoring) verifiable. If you
+run several runners on different versions, each one's report is kept, so a
+disagreement is visible rather than averaged away.
+
+## Where to go next
+
+- [Constitution](/reference/constitution) · the rules themselves
+- [Runner Helm chart](/reference/runner-helm-chart) · the `policyBundle.*` values
+- [Supply-chain verification](/reference/supply-chain) · verify the bundle yourself
