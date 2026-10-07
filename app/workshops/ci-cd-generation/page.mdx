@@ -23,9 +23,13 @@ decides, humans approve.
   credentials, so it cannot drive the hosted service). Set up with
   [Local development](/contributing/local-dev) first.
 
-  **On the hosted product?** You can follow the same steps in the app
-  against your own repos: steps 2, 3, 5, 6 and 8 below are all UI steps.
-  The [product guide](/guide) covers each screen.
+  **On the hosted product?** You can follow most of it in the app against
+  your own repos. Steps 2, 3 and 5 are app screens; for steps 1 and 4 use
+  **Run analysis** and **Promote to proposal** on the service; for step 6,
+  promote without dry run and the pull request opens in your GitHub platform
+  repo; for step 8, merge there and sync in your own ArgoCD; step 9 is in
+  the app. Step 7 needs an overlay bundle, which hosted runners cannot load
+  yet. The [product guide](/guide) covers each screen.
 </Callout>
 
 ## What you will learn
@@ -87,7 +91,12 @@ not guess. It then reads files with a small, explicit set of tools, and
 submits a typed `RepositoryAnalysis`. Each `tool_call` is the agent asking
 to read something; each `tool_result` is the answer.
 
-Note the analysis id at the top of the output.
+Note the analysis id at the top of the output, and keep it in a shell
+variable for the next steps:
+
+```bash
+read -r -p "Analysis id printed above: " ANALYSIS_ID
+```
 
 ### Step 2. See the same run in the app
 
@@ -115,7 +124,7 @@ gap analysis instead.
 From the CLI, with a dry run first:
 
 ```bash
-uv run trustacks plan <analysis-id> --dry-run
+uv run trustacks plan "$ANALYSIS_ID" --dry-run
 ```
 
 Or in the app: on the service's **Analyses** tab, **promote →**, tick
@@ -170,7 +179,7 @@ pack is left out and recorded as a TODO, never guessed.
 Run it again without dry run:
 
 ```bash
-uv run trustacks plan <analysis-id>
+uv run trustacks plan "$ANALYSIS_ID"
 ```
 
 The run ends with `pr_opened` and a link to the PR in Gitea. The PR body
@@ -192,6 +201,15 @@ a rule requiring top-level `permissions:` on every workflow. After landing it,
 re-run Step 4. `policy_check` reports **denied**, cites your rule id, and no
 PR opens. The [Overview](/guide/overview)'s **Policy in force** card starts
 counting it.
+
+<Callout type="warning">
+  **Remove the rule before Step 8.** Step 8 promotes the same analysis again,
+  and with your rule still loaded that proposal is denied too. Delete the
+  rule's directory from your overlay repo, run `trustacks rule sign` again to
+  publish the overlay without it, and restart the runner
+  (`kubectl -n trustacks-system rollout restart deployment runner-runner`).
+  Or do Step 8 first and come back to this step.
+</Callout>
 
 ### Step 8. Review, merge, and see read-and-preserve
 
