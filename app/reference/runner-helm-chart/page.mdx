@@ -24,13 +24,19 @@ version pinned. You add one value, your enrollment token.
 ## Install
 
 Generate an enrollment token under **Settings → Runners** and copy the
-command the page shows. It looks like this:
+command the page shows. It has this shape; the commands on this page use
+three shell variables, and the app's command has the version and token
+filled in:
 
 ```bash
+NAMESPACE=trustacks-system   # any namespace you choose
+VERSION=0.0.0                # placeholder: the published version the app shows
+TOKEN=paste-from-ui          # placeholder: the enrollment token the app shows
+
 helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-  --version <version> \
-  -n "<your-namespace>" --create-namespace \
-  --set saas.enrollmentToken=<token>
+  --version "$VERSION" \
+  -n "$NAMESPACE" --create-namespace \
+  --set saas.enrollmentToken="$TOKEN"
 ```
 
 <Callout type="info">
@@ -43,13 +49,15 @@ Then watch it start and enroll. With the release name `trustacks-runner`, the
 deployment is `trustacks-runner-runner`:
 
 ```bash
-kubectl -n <your-namespace> rollout status deploy/trustacks-runner-runner
-kubectl -n <your-namespace> logs deploy/trustacks-runner-runner | grep -i enroll
+kubectl -n "$NAMESPACE" rollout status deploy/trustacks-runner-runner
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
 ```
 
 The Runners page shows the runner as connected once it has enrolled.
 
-[Screenshot placeholder: Settings → Runners, showing a connected runner with its running and published versions]
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Settings → Runners, showing a connected runner with its running and published versions</figcaption>
+</figure>
 
 ### The enrollment token
 
@@ -62,8 +70,8 @@ The Runners page shows the runner as connected once it has enrolled.
   yourself and leave `saas.enrollmentToken` empty:
 
   ```bash
-  kubectl -n <your-namespace> create secret generic trustacks-runner-enrollment \
-    --from-literal=enrollment-token=<token>
+  kubectl -n "$NAMESPACE" create secret generic trustacks-runner-enrollment \
+    --from-literal=enrollment-token="$TOKEN"
   ```
 
 ## Values
@@ -100,7 +108,7 @@ up healthy.
 Where the runner gets the constitution, and how it verifies it. See
 [Policy in force](/reference/policy-in-force) for what happens at start.
 
-| Value | Published default (0.2.14-rc24 and later) | Meaning |
+| Value | Published default (0.2.14-rc24 and later, pre-release) | Meaning |
 |---|---|---|
 | `policyBundle.bundleRef` | `ghcr.io/trustacks/policy/constitution:1` | The signed constitution to pull. |
 | `policyBundle.verify` | `true` | Verify the signature before loading. Turning this off loads the bundle unverified and the runner reports it as unverified. |
@@ -112,7 +120,9 @@ Where the runner gets the constitution, and how it verifies it. See
 <Callout type="warning">
   Runner charts before `0.2.14-rc24` have no `keyless` block and point
   `bundleRef` at a development registry that does not exist in your cluster.
-  Those runners fall back to the policy baked into the image.
+  Those runners fall back to the policy baked into the image. No stable
+  release has the `0.2.14-rc24` defaults yet, and the app's install command
+  uses the newest stable release.
 </Callout>
 
 ### Pod settings
@@ -150,7 +160,7 @@ All namespace-scoped to the runner's namespace unless stated.
 
 | Grant | Verbs | Why |
 |---|---|---|
-| Secrets | `get`, `list` | An init container loads git deploy keys labelled `trustacks.io/role=git-deploy-key` (used by local development) |
+| Secrets | `get`, `list` | An init container loads git deploy keys labeled `trustacks.io/role=git-deploy-key` (used by local development) |
 | Secrets | `get`, `create`, `update` | The runner writes its identity and LLM Secrets |
 | `applications.argoproj.io` in `observer.argocdNamespace` | `get`, `list`, `watch` | Observer only. Read-only: the runner cannot sync, roll back, or delete. |
 
@@ -179,14 +189,16 @@ The Runners page shows the published version and the version your runner is
 running, and generates the upgrade command:
 
 ```bash
+VERSION=0.0.0   # placeholder: the published version the app shows
 helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-  --version <version> \
-  -n "<your-namespace>" --reset-then-reuse-values
+  --version "$VERSION" \
+  -n "$NAMESPACE" --reset-then-reuse-values
 ```
 
 `--reset-then-reuse-values` takes the new chart's defaults, including the new
-runner image, then reapplies the values you set (your enrollment token and any
-observer settings).
+runner image, then reapplies the values you set yourself (for example
+`saas.enrollmentToken` if you passed it on the command line, and any observer
+settings).
 
 <Callout type="error">
   **Never upgrade with `--reuse-values`.** It reuses every value from the
@@ -198,13 +210,19 @@ observer settings).
 ## Uninstall
 
 ```bash
-helm uninstall trustacks-runner -n <your-namespace>
-kubectl -n <your-namespace> delete secret trustacks-runner-identity trustacks-runner-llm
+helm uninstall trustacks-runner -n "$NAMESPACE"
+kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner-llm
 ```
 
 The second command removes the Secrets the runner wrote itself, which Helm
 does not track. Then delete the runner on **Settings → Runners**. Removing the
 TruStacks GitHub App from your org is separate, in your GitHub settings.
+
+<Callout type="warning">
+  **Uninstalling does not revoke the enrollment token.** It is reusable,
+  does not expire, and has no self-serve revocation yet. Delete your copies
+  of it, and if it may have leaked, contact TruStacks to have it revoked.
+</Callout>
 
 ## Verify before you install
 
@@ -212,7 +230,7 @@ TruStacks GitHub App from your org is separate, in your GitHub settings.
 cosign verify \
   --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-mvp/\.github/workflows/publish-images\.yml@refs/tags/v.*$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/trustacks/charts/runner:<version>
+  "ghcr.io/trustacks/charts/runner:$VERSION"
 ```
 
 The same identity signs the runner image. See

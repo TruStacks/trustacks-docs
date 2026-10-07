@@ -82,8 +82,10 @@ Each Application:
   (Kustomize);
 - sets `syncOptions: [CreateNamespace=true]`;
 - has **no automated sync**. Merging a pull request does not deploy; someone
-  syncs in ArgoCD. For `argo-apps/argo-apps-prod/`, the constitution enforces
-  this (`practice.argocd_prod_requires_manual_sync`).
+  syncs in ArgoCD. For `argo-apps/argo-apps-prod/` (a target cluster named
+  `prod`), the constitution enforces this
+  (`practice.argocd_prod_requires_manual_sync`). The rule matches that
+  directory, not the cluster's tier.
 
 To have ArgoCD pick these up, apply one root Application of your own that
 points at `argo-apps/`. If the platform repo is private, ArgoCD needs read
@@ -108,14 +110,27 @@ Add this once to each service repo. It is the only pipeline file you write.
 ```yaml
 # .github/workflows/ci.yaml in the SERVICE repo
 name: ci
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]   # your default branch
+  pull_request:
 jobs:
   trustacks:
-    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@main
-    permissions: {contents: read, packages: write}
+    # The called workflow pushes an image. Pull requests from forks get a
+    # read-only token and cannot push, so skip them instead of failing.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@<commit-sha>
+    permissions:
+      contents: read
+      packages: write
 ```
 
-The proposal's summary includes this snippet with your names filled in.
+Pin `<commit-sha>` to a platform-repo commit you have reviewed, such as the
+merge commit of the TruStacks pull request that added the workflow, and move
+the pin when you merge a change to it. `@main` also works and follows every
+merge, at the cost of trusting whoever can push to that branch. The
+proposal's summary includes the snippet with your names filled in, in the
+shorter `@main` and `on: [push, pull_request]` form; prefer the one above.
 
 ### Private platform repos
 
@@ -124,14 +139,16 @@ caller then fails before running a step, with an error saying the workflow
 **was not found**, which points away from the real cause. Grant access once:
 
 ```bash
+PLATFORM_REPO=your-org/your-platform-repo   # owner/name of your platform repo
+
 # Platform repo owned by an organization:
 gh api --method PUT \
-  repos/<owner>/<platform-repo>/actions/permissions/access \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
   -f access_level=organization
 
 # Platform repo owned by a personal account:
 gh api --method PUT \
-  repos/<owner>/<platform-repo>/actions/permissions/access \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
   -f access_level=user
 ```
 

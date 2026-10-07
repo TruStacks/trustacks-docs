@@ -1,6 +1,6 @@
 ---
 title: Proposal lifecycle
-description: Every step between an analysis and a running deploy. Pre-emit validation, the OPA constitution gate, the advisory gap check, the pull request, merge detection, the deploy observer, and image tag promotion.
+description: How a proposal moves from an analysis to a running deploy, through validation, the policy gate, the pull request, merge, and image tag promotion.
 ---
 
 import { Callout } from 'nextra/components'
@@ -38,7 +38,9 @@ Analysis ──▶ Promote to proposal ──▶ DevOps Engineer emits files
 
 Every step appears on the proposal's timeline (`#/proposals/<id>`).
 
-[Screenshot placeholder: proposal detail timeline showing artifact validation, policy check, gap check, and pull request opened]
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>proposal detail timeline showing artifact validation, policy check, gap check, and pull request opened</figcaption>
+</figure>
 
 ## Before: analysis
 
@@ -56,7 +58,7 @@ Grounded in the matching [framework pack](/reference/knowledge-packs), your
 your platform repo, it emits the files described in
 [Platform repo layout](/reference/platform-repo-layout). The image reference
 and tag are supplied to it (your registry, your repo name, the commit it
-analysed); it does not invent them.
+analyzed); it does not invent them.
 
 ## 1. Pre-emit validation
 

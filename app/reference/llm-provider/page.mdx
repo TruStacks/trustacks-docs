@@ -23,9 +23,8 @@ which model runs.
 
 <Callout type="info">
   **There is no model picker, by design.** The agents and their prompts are
-  tuned and tested on Claude. Tool use on other models is unmeasured, and a
-  governance product should not ship an unmeasured path. OpenRouter models
-  that do not start with `anthropic/` are refused.
+  tuned and tested only on Claude; other models are not supported.
+  OpenRouter models that do not start with `anthropic/` are refused.
 </Callout>
 
 ## What happens when you save
@@ -41,12 +40,14 @@ which model runs.
    to prove the key works.
 5. **Status.** The page shows **pending** until the runner reports back, then
    **configured** or **invalid**. If no runner collects the key within five
-   minutes, it shows **expired**: check that your runner is connected, then save again.
+   minutes, it shows **expired**; see [Troubleshooting](#troubleshooting).
 
-The page shows only the first six characters of the key afterwards. To
+The page shows only the first six characters of the key afterward. To
 rotate, save a new key the same way.
 
-[Screenshot placeholder: Settings → LLM with OpenRouter selected and status configured]
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Settings → LLM with OpenRouter selected and status configured</figcaption>
+</figure>
 
 ## Where your key goes
 

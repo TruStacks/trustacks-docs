@@ -29,10 +29,12 @@ The runner pod's `load-policy-bundle` init container runs before the runner:
    plane after enrolling.
 
 <Callout type="warning">
-  **Runner versions.** Steps 1 to 3 run on hosted runners from `0.2.14-rc24`.
-  Earlier runners, including `0.2.13`, try to pull from a development registry
-  that does not exist in your cluster, fall back, and enforce the baked copy
-  without a signature check.
+  **Runner versions.** Steps 1 to 3 run on hosted runners `0.2.14-rc24` and
+  later, which are pre-releases. No stable release includes them yet, and
+  the app's install command uses the newest stable release. Earlier runners,
+  including `0.2.13`, try to pull from a development registry that does not
+  exist in your cluster, fall back, and enforce the baked copy without a
+  signature check.
 </Callout>
 
 The fallback keeps proposals flowing when the registry is unreachable. It is
@@ -74,10 +76,10 @@ tell us.
 ## Where to see it
 
 **In your cluster.** The init container prints its decision and a status
-line:
+line (`NAMESPACE` is the namespace you installed the runner in):
 
 ```bash
-kubectl -n <your-namespace> logs deploy/trustacks-runner-runner -c load-policy-bundle
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner -c load-policy-bundle
 ```
 
 ```text
@@ -88,15 +90,16 @@ kubectl -n <your-namespace> logs deploy/trustacks-runner-runner -c load-policy-b
 The runner logs what it reported, once per start:
 
 ```bash
-kubectl -n <your-namespace> logs deploy/trustacks-runner-runner | grep policy_state.reported
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep policy_state.reported
 ```
 
 which includes `rules`, `constitution_source`, `constitution_verified`, and
 `constitution_reason`.
 
 **In the app.** The **Rules** page lists the rules your runner reports,
-including Rego source from `0.2.14-rc24`. Runners from `rc21` to `rc23` report
-rule IDs and descriptions without source, and the page says so.
+including Rego source from `0.2.14-rc24` (pre-release). Runners `0.2.14-rc21`
+to `rc23` report rule IDs and descriptions without source, and the page says
+so. Older runners report no rules.
 
 <Callout type="info">
   A card on the Overview showing constitution source and verification is
@@ -106,7 +109,8 @@ rule IDs and descriptions without source, and the page says so.
 
 ## The rules in force
 
-Whatever the source, the runner reports the full rule inventory it loaded:
+Whatever the source, a runner `0.2.14-rc21` or later reports the full rule
+inventory it loaded:
 each rule's ID, description, package, tooling categories, practice
 dimensions, and kind. That inventory drives the Rules page and makes every
 row of the [maturity score](/reference/maturity-scoring) verifiable. If you

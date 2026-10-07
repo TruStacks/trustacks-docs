@@ -14,7 +14,9 @@ LLM's opinion: the same inputs give the same score.
 
 Open **Maturity** in the sidebar and pick an Application.
 
-[Screenshot placeholder: Maturity page for one Application, showing the tier badge, the verified and potential bar, and the row breakdown]
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Maturity page for one Application, showing the tier badge, the verified and potential bar, and the row breakdown</figcaption>
+</figure>
 
 ## Per Application
 
@@ -72,7 +74,9 @@ you declared today.
 Reports from before the ceiling existed show none, rather than a guess.
 Runners older than `0.2.14-rc21` do not report their rule inventory, and
 without it some rows cannot be verified: the ceiling there is 82%, below gold.
-From `rc21` on, every row today is verifiable and the ceiling is 100%.
+From `0.2.14-rc21` on, every row today is verifiable and the ceiling is 100%.
+Those versions are pre-releases; no stable release reports the inventory
+yet.
 
 ## Tiers
 
@@ -90,12 +94,12 @@ the policy failed to load, not that you did well or badly.
 **Tooling categories** are verified from your pipeline: a declared tool is
 verified when TruStacks sees it running in a workflow, using the
 [tool-action packs](/reference/knowledge-packs#tool-action-packs) and known
-platform signatures to recognise it.
+platform signatures to recognize it.
 
 **Practices** are verified from:
 
 - **The latest judged proposal for the Application.** The constitution's
-  verdict on each behaviour rule confirms or disputes the practice it maps to.
+  verdict on each behavior rule confirms or disputes the practice it maps to.
 - **The Code Reviewer's analysis.** A service with no tests disputes
   `tests_in_ci`.
 

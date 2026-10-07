@@ -10,7 +10,7 @@ import { Callout } from 'nextra/components'
 Packs are curated YAML that ground the agents in known-good shapes instead of
 whatever a model remembers. There are three families. All of them are Apache
 2.0 and public in
-[`trustacks-policy`](https://github.com/TruStacks/trustacks-policy).
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>.
 
 | Family | Directory | Answers | If one is missing |
 |---|---|---|---|
@@ -44,7 +44,7 @@ and a reference CI workflow. The DevOps Engineer may adapt within the shape
 packs ship two jobs, `test` and `build`, and so does the emitted workflow,
 plus any jobs you added yourself.
 
-A repo that matches no pack is still analysed. Proposals for it are another
+A repo that matches no pack is still analyzed. Proposals for it are another
 matter: the framework pack is also where pinned foundational actions such as
 `actions/checkout` come from, so without one, expect the proposal to stop at
 pre-emit validation. In practice, proposals today cover the four frameworks
@@ -80,7 +80,7 @@ you declare a tool with no pack (for example `snyk_container`), the proposal
 gets **no step** for it and records a TODO, rather than a guessed SHA that
 would pass the pinning rule and fail at run time.
 
-These packs are also how maturity scoring recognises your tools running in
+These packs are also how maturity scoring recognizes your tools running in
 CI. See [Maturity scoring](/reference/maturity-scoring#where-evidence-comes-from).
 
 SHAs are reviewed on a quarterly cadence, recorded in `last_verified`. See
