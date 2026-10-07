@@ -139,8 +139,9 @@ token; the hosted service does not):
 ```bash
 cd runner && uv sync
 uv run trustacks review sample-app-gitea           # Code Reviewer; prints the analysis id
-uv run trustacks plan <analysis-id> --dry-run      # DevOps Engineer, no PR
-uv run trustacks plan <analysis-id>                # opens a PR in Gitea
+read -r -p "Analysis id printed above: " ANALYSIS_ID
+uv run trustacks plan "$ANALYSIS_ID" --dry-run     # DevOps Engineer, no PR
+uv run trustacks plan "$ANALYSIS_ID"               # opens a PR in Gitea
 ```
 
 A proposal runs artifact validation, then the policy gate against the
@@ -203,7 +204,7 @@ customer-facing.
 |---|---|
 | `make up` fails at the secrets step | `ANTHROPIC_API_KEY` is missing from `.env`. Set it and run `make secrets`. |
 | `Permission denied` cloning from Gitea | Deploy keys and Secrets are out of sync. `make seed`, then roll the runner. |
-| Rules page is empty | The bundle (which carries the rule inventory) is not in Zot. `make policy-bundle`. |
+| Rules page is empty | Locally the control plane asks the runner for its rules (push mode), so check the runner is up (`make status`) and what its `load-policy-bundle` init container loaded. Both the signed bundle and the image-baked fallback carry the rule inventory; `make policy-bundle` republishes the bundle if Zot was wiped. |
 | First proposal denied by policy | The gate working. The `policy_check` event lists the rule ids; see the [constitution](/reference/constitution). |
 | Zitadel pods crash-loop after an upgrade | Its Postgres is pinned below 18 on purpose; don't bump it. See the comments in `scripts/bootstrap-k3d.sh`. |
 
