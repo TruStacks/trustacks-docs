@@ -1,213 +1,281 @@
 ---
-title: Cluster deploy
-description: Install the TruStacks Runner into a real Kubernetes or OpenShift cluster (eval and staging). Customer production installs are moving to the Cluster Operator post-Beta.
+title: Runner install
+description: Install, configure, verify, upgrade, and remove the TruStacks runner for the hosted service. The OCI Helm chart, the saas values, supplying the enrollment token from a Secret, the RBAC the chart creates, the egress it needs, and keyless cosign verification of the chart and the policy bundle.
 ---
 
 import { Callout } from 'nextra/components'
 
-# Cluster deploy
+# Runner install
 
-This guide installs the TruStacks Runner into a real Kubernetes or
-OpenShift cluster (eval, staging, or shared dev). The Runner is
-deployed as a single Helm release; it phones home to the TruStacks
-Control Plane over outbound mTLS only, with no inbound ports.
+The runner is the one TruStacks component you install. It is a single Helm
+release in your Kubernetes cluster that calls out to the hosted control plane
+at `api.trustacks.com`, pulls work, and runs the agents next to your code. It
+opens no inbound ports. This page is the reference for installing and
+operating it; the [Quickstart](/getting-started/hosted-quickstart) is the
+guided version.
 
-<Callout type="warning">
-  **Forward signpost: customer production installs are moving to a
-  Cluster Operator.** The Helm-based install on this page is the right
-  path for eval and staging today. Customer production installs will
-  ship via a CRD-driven Cluster Operator post-Beta; the operator is
-  scoped to give you a single `TruStacksRunner` custom resource and an
-  in-cluster reconciler that handles upgrades, Secret provisioning, and
-  drift. Track the architecture story on
-  [the architecture page](/reference/architecture#data-plane). The
-  Helm install here remains supported as the staging-cluster path
-  after the operator ships.
-</Callout>
+## Requirements
 
-## Supported platforms
+- Kubernetes **1.28 or newer** (the chart's `kubeVersion` is `>=1.28.0-0`).
+  Any conformant distribution, including managed ones and laptop clusters.
+- Nodes on `linux/amd64` or `linux/arm64`.
+- `helm` **3.14 or newer** (the upgrade command needs
+  `--reset-then-reuse-values`).
+- Permission to create a namespace, a Deployment, a ServiceAccount, Roles and
+  RoleBindings in it, and (only if you enable the observer) a ClusterRole.
+- An enrollment token from **Runners** in the app.
 
-- **Vanilla Kubernetes** 1.28+
-- **OpenShift** 4.13+
-- **EKS, GKE, AKS** (any current LTS minor)
+## Install
 
-The Helm chart's `kubeVersion` constraint is `>=1.28.0-0`. Older
-clusters are not supported.
-
-## Prerequisites
-
-You need:
-
-- Cluster admin access to your target cluster (to create the
-  `trustacks-system` namespace and apply the Runner resources).
-- `helm` ≥ 3.14 and `kubectl` matching your cluster version.
-- An Anthropic API key (or your OpenRouter key, if you BYO).
-- A signing identity registered with the TruStacks Control Plane
-  (required for overlay rule authoring; not required for an install
-  that only consumes the constitution).
-- Network egress from the cluster to:
-  - `api.anthropic.com` (or your chosen LLM endpoint)
-  - The TruStacks registry (for signed bundle pulls)
-  - The TruStacks Control Plane endpoint
-- The Helm chart source. During Beta you install from the chart in
-  the `trustacks-mvp` repository; post-Beta the chart ships from a
-  public OCI registry.
-
-## Install steps
-
-The full sequence runs in three commands. Each is described in detail
-below.
-
-### 1. Create the namespace and apply the policy public key
+Generate an enrollment token in **Runners** and copy the command the app
+shows. It pins the chart version the control plane currently publishes. The
+commands on this page use three shell variables; the app's command has the
+version and token filled in:
 
 ```bash
-kubectl create namespace trustacks-system
-kubectl -n trustacks-system apply -f https://raw.githubusercontent.com/TruStacks/trustacks-mvp/main/scripts/manifests/policy-pub-key.yaml
+NAMESPACE=trustacks-system   # any namespace you choose
+VERSION=0.0.0                # placeholder: the published version the app shows
+TOKEN=paste-from-ui          # placeholder: the enrollment token the app shows
+
+helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version "$VERSION" \
+  -n "$NAMESPACE" --create-namespace \
+  --set saas.enrollmentToken="$TOKEN"
 ```
 
-The `policy-pub-key` ConfigMap holds the Cosign public key the Runner's
-init container uses to verify policy bundles before extract. The
-manifest pins the TruStacks signing identity.
+Copy it from the app rather than from here, so the version matches what the
+hosted service expects. The chart is public; no registry login is needed.
 
-### 2. Provision Runner Secrets
+The published chart already has SaaS mode on, the control plane URL set to
+`https://api.trustacks.com`, and the image pinned to the matching
+`ghcr.io/trustacks/runner:<version>`. The enrollment token is the only value
+you must set.
 
-You need at minimum the LLM provider key and one git deploy key. See
-[the credentials guide](/installation/secrets) for the full pattern.
-
-For an eval install with a single connected repo:
+The chart names its resources `<release>-runner`. With the release name
+`trustacks-runner`, the Deployment is **`trustacks-runner-runner`**:
 
 ```bash
-# LLM provider key
-kubectl -n trustacks-system create secret generic trustacks-runner-llm \
-  --from-literal=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
-
-# Deploy key for one app repo (private SSH key + Gitea/GitHub registration)
-ssh-keygen -t ed25519 -f /tmp/sample-app-deploy -N "" -C "sample-app@trustacks"
-kubectl -n trustacks-system create secret generic sample-app-deploy-key \
-  --from-file=ssh-privatekey=/tmp/sample-app-deploy \
-  --from-file=ssh-publickey=/tmp/sample-app-deploy.pub
-kubectl -n trustacks-system label secret sample-app-deploy-key \
-  trustacks.io/role=git-deploy-key \
-  trustacks.io/repo=sample-app
+kubectl -n "$NAMESPACE" rollout status deploy/trustacks-runner-runner
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
 ```
 
-For Connect-a-repo flows in real customer environments, the UI wizard
-handles this end-to-end.
+A healthy runner long-polls the control plane; its log shows repeated
+`200` responses for `GET /api/runner/jobs`. **Runners** in the app shows it as
+connected, with its version.
 
-### 3. Install the Runner chart
+## The enrollment token
+
+The token ties the runner to your workspace. It is **reusable and does not
+expire**: the runner presents it again whenever it re-enrolls, so it must stay
+available to the pod. On our side it is stored only as a hash.
+
+There are two ways to supply it.
+
+**From the command line (default).** `--set saas.enrollmentToken="$TOKEN"`
+makes the chart create a Secret named `trustacks-runner-enrollment` holding
+it. The token is then also stored in the Helm release record.
+
+**From a Secret you manage.** If you don't want the token in Helm's release
+history, or you deliver secrets through your own tooling (External Secrets,
+Sealed Secrets, Vault), create the Secret yourself and leave
+`saas.enrollmentToken` empty:
 
 ```bash
-git clone https://github.com/TruStacks/trustacks-mvp.git
-cd trustacks-mvp
+kubectl -n "$NAMESPACE" create secret generic trustacks-runner-enrollment \
+  --from-literal=enrollment-token="$TOKEN"
 
-helm install runner ./charts/runner \
-  --namespace trustacks-system \
-  --set image.tag=<release-tag> \
-  --set policyBundle.bundleRef=ghcr.io/trustacks/policy/constitution:<release-tag> \
-  --set policyBundle.insecure=false \
-  --set policyBundle.verify=true
+helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version "$VERSION" \
+  -n "$NAMESPACE"
 ```
 
-The chart is intentionally narrow: it deploys the Runner pod with the
-init containers (Secret discovery, policy bundle pull and verify) and
-a ClusterIP Service on port 8000. No Ingress is created by default;
-exposure is your choice.
+The chart reads `saas.enrollmentTokenSecret.name` (default
+`trustacks-runner-enrollment`) and `saas.enrollmentTokenSecret.key` (default
+`enrollment-token`). Override either if your Secret uses other names.
 
-### 4. Connect the Runner to the Control Plane
+## Values you may set
 
-Set `TRUSTACKS_RUNNER_CONTROL_PLANE_URL` in the chart values to your
-Control Plane endpoint:
-
-```bash
-helm upgrade runner ./charts/runner \
-  --namespace trustacks-system \
-  --reuse-values \
-  --set env.TRUSTACKS_RUNNER_CONTROL_PLANE_URL=https://api.trustacks.com
-```
-
-`api.trustacks.com` is the single shared hosted Control Plane; there
-are no per-customer subdomains. Pointing a Runner at the hosted
-Control Plane is the hosted-control-plane track, which also needs a
-Beta enrollment token provisioned during assisted onboarding. The full
-hosted-track setup steps land here as that track settles.
-
-### 5. Verify the install
-
-```bash
-kubectl -n trustacks-system get pods
-kubectl -n trustacks-system logs deployment/runner -c policy-bundle-init
-```
-
-The `policy-bundle-init` log should end with a clean Cosign verification
-and the bundle extracted under `/policy-runtime/`. If verification
-fails, the Runner falls back to the image-baked bundle and logs the
-fallback; you can run with `policyBundle.verify=false` to bypass
-signature checks while debugging, but do not do this in production.
-
-## What lives where
-
-| Component | Where it runs | Why |
+| Value | Default in the published chart | What it does |
 |---|---|---|
-| Runner pod | Your cluster | Hosts the agent crew; reads your code, the Profile, the active rules |
-| Cluster Operator (optional, paid add-on) | Your cluster | Watches cluster events, drafts remediation PRs |
-| MCP clients | Your cluster | One per Profile-declared tool (Datadog, Jira, ...) |
-| Control Plane | TruStacks SaaS | Audit, rule distribution, billing, web UI |
-| Rule bundle registry | TruStacks OCI registry (signed) | Cosign-verified by the Runner's init container |
+| `saas.enrollmentToken` | empty | Token to put in a chart-created Secret |
+| `saas.enrollmentTokenSecret.name` / `.key` | `trustacks-runner-enrollment` / `enrollment-token` | Where the runner reads the token |
+| `observer.enabled` | `false` | Read-only ArgoCD deploy-status reporting (see below) |
+| `observer.argocdNamespace` | `argocd` | Namespace your ArgoCD Application resources live in |
+| `resources` | requests 50m CPU / 128Mi, limits 500m / 512Mi | Pod resources |
+| `imagePullSecrets` | none | For pulling through a private mirror |
+| `deployKeyLoader.image` | `alpine/k8s:1.31.4` | Image for one init container; override to use a mirror |
+| `nodeSelector`, `tolerations`, `affinity` | empty | Scheduling |
 
-Your source code stays in your network. Only findings, decisions, and
-agent traces leave, all of them redactable per your policy. See
-[the architecture page](/reference/architecture#data-plane) for the
-trust boundary in context.
+Leave the control plane URL, image, and policy settings at the published
+defaults. The full values list is in the
+[runner chart reference](/reference/runner-helm-chart).
+
+## What the chart creates
+
+- One **Deployment** (`<release>-runner`), one replica, running as a non-root
+  user (UID 10001) with a read-only root filesystem, no privilege escalation,
+  and all capabilities dropped.
+- A **ClusterIP Service** on port 8000. No Ingress. Nothing outside the
+  cluster needs to reach it.
+- A **ServiceAccount** and namespaced RBAC:
+
+| Grant | Scope | Why |
+|---|---|---|
+| Secrets: `get`, `list` | The runner's namespace | An init container loads labeled credential Secrets at start |
+| Secrets: `get`, `create`, `update` | The runner's namespace | The runner writes its own Secrets: the LLM key it receives sealed, and its identity |
+| ArgoCD Applications: `get`, `list`, `watch` | Your ArgoCD namespace only, and only when `observer.enabled=true` | Read deploy status. It cannot sync, roll back, or delete |
+
+The runner has no cluster-wide permissions and no access to other namespaces
+(apart from the optional read-only observer grant).
+
+Two Secrets are written by the runner, not by Helm:
+
+- `trustacks-runner-identity`: the runner's keypair and runner ID, so a
+  replaced pod re-enrolls as the same runner instead of appearing as a new
+  one.
+- `trustacks-runner-llm`: your LLM key, after the runner unseals it.
 
 ## Network requirements
 
-The Runner needs outbound network access to four endpoints:
+The runner needs **outbound HTTPS (443)** only. Nothing inbound.
 
-- **TruStacks Control Plane** (mTLS) · for audit submission, rule
-  distribution coordination, and UI event streaming.
-- **TruStacks rule registry** (HTTPS) · for signed constitution and
-  Specialist Pack bundle pulls.
-- **LLM provider endpoint** (HTTPS) · `api.anthropic.com` by default,
-  or your OpenRouter endpoint.
-- **Your Git provider** (SSH or HTTPS) · for cloning repos and opening
-  PRs.
+| Destination | Why |
+|---|---|
+| `api.trustacks.com` | Enrollment, jobs, results, sealed credentials |
+| `ghcr.io` (and its blob storage, `pkg-containers.githubusercontent.com`) | The runner image, the chart, and the policy bundle |
+| `registry-1.docker.io` and `auth.docker.io` | The `alpine/k8s` init container image, unless you override `deployKeyLoader.image` |
+| `github.com`, `api.github.com` | Clone your repos, push branches, open pull requests |
+| `api.anthropic.com` or `openrouter.ai` | The LLM provider you configured |
+| Sigstore: `tuf-repo-cdn.sigstore.dev`, `rekor.sigstore.dev` | Keyless verification of the policy bundle at start-up |
 
-No inbound ports. The Runner does not expose any service to the public
-internet.
+If you route egress through a proxy, it must allow these hosts. If the
+Sigstore hosts are blocked, the runner still starts but falls back to the
+policy copy built into its image, and reports why (see below).
 
-## Verifying signed images
+## Policy at start-up
 
-The Runner image and the policy bundle are both Cosign-signed. To
-verify before installing:
+An init container, `load-policy-bundle`, fetches the signed constitution from
+`ghcr.io/trustacks/policy/constitution`, verifies its signature keylessly
+against the public `trustacks-policy` publishing workflow, and only then
+extracts it.
+
+If the pull or the verification fails, the runner uses the copy of the
+constitution baked into its image instead, and records the reason
+(`pull_failed` or `verify_failed`). It never silently runs an unverified
+bundle. To see what your runner loaded:
 
 ```bash
-# Runner image
-cosign verify --key cosign.pub ghcr.io/trustacks/runner:<release-tag>
-
-# Constitution bundle
-cosign verify --key cosign.pub ghcr.io/trustacks/policy/constitution:<release-tag>
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner -c load-policy-bundle | grep status
 ```
 
-The TruStacks public Cosign key is published at
-`https://trustacks.com/cosign.pub` and pinned in the policy-pub-key
-ConfigMap from step 1.
+<Callout type="warning">
+  **Version note.** Pulling and verifying the published constitution ships
+  in runner 0.2.14-rc24 and later, which are pre-releases. No stable release
+  includes it yet, and the app's install command uses the newest stable
+  release, so a runner installed from it uses the image-baked copy,
+  unverified at start-up, until a stable release ships the verified pull.
+  See [Policy in force](/reference/policy-in-force).
+</Callout>
 
-## Upgrading
+## Verify what you install
 
-Upgrades are explicit operator actions. The chart's
-`image.tag` and `policyBundle.bundleRef` are pinned per release; bump
-them to the new release tag and run `helm upgrade`. The init container
-re-verifies the new bundle on the next pod roll.
+Everything you run is signed keylessly with Sigstore by a public GitHub
+Actions workflow. There is no key file to download: you verify against the
+workflow identity. Install
+<a href="https://docs.sigstore.dev/cosign/system_config/installation/" target="_blank" rel="noopener noreferrer">cosign</a>
+2.x or newer.
 
-See [the constitution reference](/reference/constitution#versioning)
-for the semver semantics of constitution version bumps.
+**The chart and the runner image** are signed by
+`trustacks-mvp/.github/workflows/publish-images.yml` on a release tag:
+
+```bash
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-mvp/\.github/workflows/publish-images\.yml@refs/tags/v.*$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  "ghcr.io/trustacks/charts/runner:$VERSION"
+
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-mvp/\.github/workflows/publish-images\.yml@refs/tags/v.*$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  "ghcr.io/trustacks/runner:$VERSION"
+```
+
+**The policy bundle** is signed by the public `trustacks-policy` repo's
+publish workflow:
+
+```bash
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-policy/\.github/workflows/publish\.yml@refs/tags/v.*$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/trustacks/policy/constitution:1
+```
+
+Policy versions independently of the product (the `1.x` line); the runner
+follows the `1` tag. Bundles published before policy `1.0.0` were signed by
+`trustacks-mvp/.github/workflows/publish-policy.yml`, and runners accept that
+identity too for one release cycle while it is retired.
+
+Images also carry an SPDX SBOM and build provenance. More in
+[supply-chain verification](/reference/supply-chain).
+
+## Upgrade
+
+**Runners** in the app shows the version your runner is running next to the
+version currently published, and gives you the upgrade command when they
+differ. Copy it from there:
+
+```bash
+VERSION=0.0.0   # placeholder: the published version the app shows
+helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version "$VERSION" \
+  -n "$NAMESPACE" --reset-then-reuse-values
+```
+
+<Callout type="error">
+  **Do not use `--reuse-values`.** It reuses the previous release's computed
+  values, which include the old image tag. The upgrade reports success and
+  keeps running the old runner. `--reset-then-reuse-values` (Helm 3.14+)
+  takes the new chart's defaults and then reapplies the values you set
+  yourself (for example `saas.enrollmentToken`, if you passed it on the
+  command line). A token you supply from your own Secret is read by name and
+  is unaffected either way.
+</Callout>
+
+Check the running version afterwards, not only Helm's exit code:
+
+```bash
+kubectl -n "$NAMESPACE" get deploy trustacks-runner-runner \
+  -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+## Uninstall
+
+1. Remove the runner in **Runners** in the app.
+2. Uninstall the release, then delete the Secrets the runner wrote itself
+   (Helm does not track them):
+
+   ```bash
+   helm uninstall trustacks-runner -n "$NAMESPACE"
+   kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner-llm
+   ```
+
+   If you created `trustacks-runner-enrollment` yourself, delete it too.
+
+<Callout type="warning">
+  **Removing a runner does not revoke its enrollment token.** Removing it in
+  the app deletes the runner's registered key, so nothing more is sealed to
+  it; the token itself stays valid, because tokens are reusable and do not
+  expire. There is no self-serve way to revoke a token yet. Delete every copy
+  you hold (Helm values files, CI variables, the Secret, an external secret
+  store), and if a token may have leaked, contact TruStacks to have it
+  revoked. Anyone holding a valid token can enroll a runner into your
+  workspace.
+</Callout>
 
 ## Where to go next
 
-- [Credentials and secrets](/installation/secrets) · the full
-  four-secrets pattern, including the GitHub App setup for production
-  Connect-a-repo flows
-- [GitOps integration](/installation/gitops) · how ArgoCD picks up
-  the PRs the DevOps Engineer ships
-- [Architecture · Data Plane](/reference/architecture#data-plane) ·
-  what runs where and why
+- [Credentials and trust boundary](/installation/secrets) · what each side
+  holds
+- [GitOps integration](/installation/gitops) · wire ArgoCD to the platform
+  repo
+- [Runner Helm chart reference](/reference/runner-helm-chart) · every value
