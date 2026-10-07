@@ -1,42 +1,34 @@
 ---
 title: Contributing
-description: Internal, contributor-facing docs for running TruStacks yourself. The self-hosted quickstart and the local-development build. Not the path for customers; hosted onboarding lives under Getting started.
+description: Contributor-facing docs for building and running TruStacks from source. Not the customer path; hosted onboarding lives under Getting started.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Contributing
 
-This section is for **internal developers and design partners** running
-TruStacks on infrastructure they control: the self-hosted quickstart and the
-local-development build from source. It is kept out of the main navigation and
-out of search.
+This section is for people **working on TruStacks itself**: building and
+running the whole platform from source. It is kept out of the main navigation
+and out of search.
 
 <Callout type="warning">
-  **Not the customer path.** If you are evaluating or running TruStacks as a
-  user, you want the hosted flow, not this section. Start at
-  [Ways to run TruStacks](/getting-started/ways-to-run): sign up for the
-  [hosted quickstart](/getting-started/hosted-quickstart) or onboard the
-  concierge way with [Getting started (Beta)](/getting-started/beta). On the
-  hosted track you install only the runner; there is no local platform to
-  operate.
+  **Not the customer path.** If you are using TruStacks, follow the
+  [Quickstart](/getting-started/hosted-quickstart). You use the hosted service
+  and install only the runner; there is no platform to operate.
 </Callout>
 
 <Callout type="info">
   **This is a public site, so "hidden" means soft-hidden.** These pages are
-  out of the nav and asked to stay out of search, but the URLs are still
-  reachable by anyone who has the link. Do not put anything here that must be
-  private. Truly internal material belongs in the `trustacks-mvp` repo.
+  out of the nav and asked to stay out of search, but anyone with the link can
+  read them. Do not put anything here that must be private. Internal material
+  belongs in the `trustacks-mvp` repo.
 </Callout>
 
 ## In this section
 
-- [Self-hosted quickstart](/contributing/self-hosted-quickstart) · bring the
-  whole platform up on a laptop in one `curl`-pipe-`bash`, in a single k3d
-  cluster with sample apps seeded. The offline / air-gapped evaluation path.
-- [Local development](/contributing/local-dev) · build and run TruStacks from
-  source: clone `trustacks-mvp`, `make up`, `make seed`, and iterate against
-  the running platform.
-
-Both run the full control plane locally, which is why they are contributor
-material and not the customer story.
+- [Local development](/contributing/local-dev) · clone `trustacks-mvp`,
+  `make up`, `make seed`, and iterate against the full platform on k3d. Also
+  covers how local differs from hosted: push mode, Gitea deploy keys, Zot,
+  and project-local policy signing.
+- [Self-hosted quickstart](/contributing/self-hosted-quickstart) · not
+  currently available.
