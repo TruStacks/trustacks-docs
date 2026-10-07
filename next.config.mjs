@@ -14,7 +14,17 @@ export default withNextra({
     return [
       {
         source: '/getting-started/quickstart',
-        destination: '/contributing/self-hosted-quickstart',
+        destination: '/getting-started/hosted-quickstart',
+        permanent: true
+      },
+      {
+        source: '/getting-started/beta',
+        destination: '/getting-started/hosted-quickstart',
+        permanent: true
+      },
+      {
+        source: '/getting-started/ways-to-run',
+        destination: '/getting-started/how-trustacks-runs',
         permanent: true
       },
       {
