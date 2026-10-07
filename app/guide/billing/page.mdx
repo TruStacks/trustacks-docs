@@ -1,0 +1,68 @@
+---
+title: Billing
+description: The Billing screen. Your plan, tier and trial dates, and the hand-off to Stripe to subscribe or manage billing.
+---
+
+import { Callout } from 'nextra/components'
+
+# Billing
+
+**Where:** **Billing** in the sidebar (`#/settings/billing`). While your
+workspace is on a trial, a strip at the top of every screen shows **Trial**
+(or **Workshop**), how many days are left and your workspace name. It turns
+urgent in the last five days.
+
+{/* screenshot-placeholder: Billing screen showing Plan, Tier, Trial ends and the amber "Billing isn't configured" note. Save as public/guide/billing.png */}
+
+## What you see
+
+A status card:
+
+- **Plan**: for example trial or paid.
+- **Tier**: your subscription tier (for example Developer).
+- **Subscription**: the Stripe subscription status, when there is one.
+- **Trial ends**: the date, while you are not on a paid plan.
+
+Under it, one of:
+
+- **Upgrade**: opens Stripe Checkout to subscribe.
+- **Manage billing**: opens the Stripe customer portal (invoices, payment
+  method, cancellation) once you have a subscription.
+- An amber note: **Billing isn't configured on this deployment**, and every
+  feature is available with no subscription.
+
+After Stripe sends you back, the screen confirms the outcome (*your
+subscription is being activated*, or *Checkout canceled, no charge was
+made*).
+
+## What it means
+
+Payments are handled entirely by Stripe; TruStacks never sees your card.
+A new workspace starts on a 30-day trial. The Developer tier is the plan on
+sale during Beta; see [pricing on trustacks.com](https://trustacks.com/pricing)
+for what it includes. Higher tiers are not sold during Beta.
+
+Your LLM usage is billed separately by your LLM provider under your own key
+(see [Settings](/guide/settings)); it is not part of this bill.
+
+## What to do here
+
+- Before your trial ends, **Upgrade** if the screen offers it.
+- Use **Manage billing** to change your payment method or cancel.
+
+## How it connects
+
+- Seats on [Team](/guide/team) are tied to your plan once billing is
+  enforced.
+- So is the SOC2 Specialist Pack, which paid plans include: the SOC2
+  specialist on [Gap analyses](/guide/gap-analyses) and the evidence on
+  [Compliance](/guide/compliance). Pricing is at
+  [trustacks.com/pricing](https://trustacks.com/pricing).
+
+## Beta limits
+
+- **Billing may not be live yet.** If you see the *Billing isn't configured*
+  note, nothing is charged and nothing is gated: every feature, including
+  SOC2, is available.
+- **Plan limits are not enforced in the app during Beta** (for example seat
+  and service counts).

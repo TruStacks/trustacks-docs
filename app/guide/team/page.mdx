@@ -1,0 +1,60 @@
+---
+title: Team
+description: The Team screen. Who is in your workspace, pending invites, and how to add or remove people.
+---
+
+import { Callout } from 'nextra/components'
+
+# Team
+
+**Where:** **Team** in the sidebar (`#/settings/team`).
+
+{/* screenshot-placeholder: Team screen with the invite form open, two members and one pending invite. Save as public/guide/team.png */}
+
+## What you see
+
+- **Invite teammate**, which opens an email field and **Send invite**.
+  The note under it: they are added to your organization and join the
+  workspace on their first sign-in.
+- **Members (N)**: everyone in the workspace, with **(you)** next to your own
+  entry, each member's role, and **Remove** (with a confirm step) for
+  others.
+- **Pending invites (N)**: emails invited but not yet signed in, each with
+  **Revoke**.
+
+## What it means
+
+A workspace is your organization's tenant in TruStacks. Inviting someone
+adds them to your organization in the TruStacks sign-in service and emails
+them. When they first sign in, they join the workspace and the invite is
+marked accepted. Sign-in is by email and password.
+
+Common messages:
+
+| Message | Meaning |
+|---|---|
+| *That person is already a member or already invited.* | Nothing to do. |
+| *Enter a valid email address.* | Fix the address. |
+| *Invites aren't set up for this workspace yet.* | Invites are not available on this deployment; contact TruStacks. |
+
+## What to do here
+
+- Invite the people who review and merge TruStacks PRs and who own your
+  platform repo. In *agents propose, policy decides, humans approve*, they
+  are the humans who approve, by merging.
+- Remove people when they leave. Removing a member does not touch their
+  access to your Git provider or cluster, which you manage separately.
+
+## How it connects
+
+- Seats are part of your plan; see [Billing](/guide/billing).
+- Everyone in the workspace sees the same Applications, runs and scores.
+
+## Beta limits
+
+- **No roles yet.** Every member is an owner with full access, including
+  runner enrollment, LLM keys and billing. Application-level permissions
+  are planned.
+- **Seat limits are not enforced.** The Developer tier includes 5 seats;
+  the app does not stop you inviting more during Beta.
+- Google and Microsoft sign-in are not available on the hosted service.

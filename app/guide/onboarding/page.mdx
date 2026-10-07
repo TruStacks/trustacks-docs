@@ -1,0 +1,99 @@
+---
+title: Get set up
+description: The six-step setup wizard. What each step does, what it hands off to, and how the app decides a step is done.
+---
+
+import { Callout } from 'nextra/components'
+
+# Get set up
+
+**Where:** **Get set up** in the sidebar (`#/onboarding`). A green number
+on the sidebar item shows how many steps remain. A new workspace is sent
+here automatically on first sign-in.
+
+{/* screenshot-placeholder: Get set up wizard, step list on the left with two steps ticked, "Enroll your runner" open on the right. Save as public/guide/onboarding.png */}
+
+The wizard is the path from an empty workspace to your first governed pull
+request. It is a checklist with shortcuts, not a gate: you can open any step
+in any order, skip steps and come back.
+
+## What you see
+
+A numbered step list on the left and the open step on the right. Each step
+has a short explanation, its own controls, and at the bottom **Mark done &
+continue** (or **Finish** on the last step) and **Skip for now**.
+
+| # | Step | What you do there |
+|---|---|---|
+| 1 | **Tell us about your team** | Optional. A short form (company, role, what you want to use TruStacks for, how you heard about us). **Save & continue**. |
+| 2 | **Enroll your runner** | **Generate enrollment token**, copy the `helm install` command and run it against your cluster. The step waits, showing **Waiting for your runner to connect…**, and ticks itself when the runner checks in. Same component as [Runners](/guide/runners). |
+| 3 | **Connect a repo** | If you have no Application yet, create one inline (the name defaults to `my-services`). Then **Connect a repo** opens the connect wizard. See [Applications](/guide/applications#connecting-repos). |
+| 4 | **Declare what you run** | Explains `environment-profile.yaml`, lists the twelve tooling categories, and shows a starter file with **Copy YAML**. **Got it** acknowledges the step. **See what you've declared on Stack** opens [Stack](/guide/stack). |
+| 5 | **Set your LLM provider** | **Open LLM settings** takes you to [Settings](/guide/settings). |
+| 6 | **Run your first analysis** | **Go to your services** takes you to the services list, where you open a service and press **Run analysis**. |
+
+When everything is complete, a banner says so and you can still revisit any
+step.
+
+## What it means
+
+- **"Done" mostly comes from the server, not from your clicks.** The runner
+  step is done when a runner is actually checking in; the repo step when a
+  repo is connected; the LLM step when a key is configured; the analysis step
+  when one has run. **Mark done & continue** ticks a step optimistically, but
+  the next status refresh shows the real state.
+- **Step 4 is the exception.** Nothing on the server can tell whether you
+  read the explanation, so **Got it** is stored in your browser. Committing
+  the file to your platform repo is what actually matters.
+- **Step 1 and step 4 are different "profiles".** Step 1 is *who you are*.
+  Step 4 is *what you run*: a file in your platform repo that every agent
+  reads and that your maturity score is computed from. The wizard says this
+  explicitly because the names collide.
+
+## What to do here
+
+Work top to bottom on the first visit. The order that avoids dead ends:
+
+1. Enroll the runner first. Nothing runs without it.
+2. Create an Application before connecting repos. The connect wizard refuses
+   to start without one, because every repo must belong to an Application.
+3. Connect the **platform repo** (role: Platform) and at least one **service
+   repo** (role: Service) to that Application.
+4. Commit `environment-profile.yaml` to the root of the platform repo. Fill
+   in the tools you run. Leave the `practices:` block commented until each
+   line is true of your pipeline (see
+   [Verified, claimed and disputed](/concepts/verified-claimed-disputed)).
+5. Set the LLM key.
+6. Run the first analysis, then promote it to a proposal.
+
+The [hosted quickstart](/getting-started/hosted-quickstart) walks the same
+path with commands.
+
+## Why the starter profile has blanks
+
+The starter `environment-profile.yaml` ships with two configuration entries
+filled in (GitHub Actions as CI, ArgoCD as GitOps controller) and every
+claim about your practice commented out. That is deliberate. A `true` under
+`practices:` is an attestation that the maturity score counts. TruStacks
+never writes one for you, because a claim about your pipeline has to be
+yours.
+
+## How it connects
+
+- Step 2 → [Runners](/guide/runners)
+- Step 3 → [Applications](/guide/applications)
+- Step 4 → [Stack](/guide/stack) and the
+  [environment profile reference](/reference/environment-profile)
+- Step 5 → [Settings](/guide/settings)
+- Step 6 → [Applications → services → analyses](/guide/applications#analyses)
+
+## Beta limits
+
+- Step 1 says you can fill the team profile in later from Settings. Today
+  the form only exists in this wizard; revisit step 1 to change it.
+- Step 4 explains the file and hands you a starter; it does not open a PR
+  that writes the file for you.
+- The **Connect a repo** button lands on the cross-application services
+  list. Its empty state mentions `make seed` and Gitea, which only apply to
+  local development. On the hosted product, use **+ Connect repo** and pick
+  GitHub.

@@ -1,0 +1,109 @@
+---
+title: Overview
+description: The Overview screen. Your maturity headline, what needs a human right now, and which rules have been refusing proposals.
+---
+
+import { Callout } from 'nextra/components'
+
+# Overview
+
+**Where:** the first item in the sidebar (`#/`). It is also where you land
+after signing in, once setup is complete.
+
+{/* screenshot-placeholder: Overview with maturity header, two attention cards and the Policy in force card. Save as public/guide/overview.png */}
+
+The Overview answers one question: *what did the crew do, and what needs
+me?* Every number on it comes from your own workspace. Where there is no
+data, it says so rather than showing a plausible-looking placeholder.
+
+## What you see
+
+### Maturity (top right)
+
+- If you have never run a gap analysis: a **Run an audit to score it**
+  link.
+- Otherwise: the tier badge (bronze, silver or gold) and score from your
+  most recent completed gap analysis, a three-part bar (verified, credited,
+  potential; see [Maturity](/guide/maturity)) and, once you have more than
+  one run, a small trend line.
+- A **▲ / ▼ N pts** change appears only when the previous run was for the
+  *same* Application. Two Applications are scored separately and are never
+  compared with each other.
+
+### Finish setting up
+
+While any step of [Get set up](/guide/onboarding) is incomplete, a banner
+shows how many steps are done, with **Resume setup** and **Dismiss**.
+Dismissing hides it for the browser session only.
+
+### Needs your attention
+
+A queue of cards, most urgent first. Each card names a thing that is stuck,
+waiting or broken, and links to where you fix it:
+
+| Card | Severity | Where it links |
+|---|---|---|
+| No runner is enrolled / no runner is checking in | Blocked (red). Nothing else can progress. | Runners |
+| The latest analysis or proposal for a service failed | Failed (red) | The failed run |
+| *app* is degraded (or similar) in the cluster | Failed (red). Only if the optional ArgoCD observer is on. | Applications |
+| Fixes waiting on your approval / findings not yet triaged | Waiting (amber) | Signals |
+| A pull request is ready for your review | Ready (green) | The proposal |
+| The latest analysis for this service is ready to promote | Ready (green) | The analysis |
+
+The queue clears itself from what happens in the world, not from a dismiss
+button. A failed run drops off when a newer run for the same service
+exists. A PR drops off once it is merged or closed.
+
+An empty queue reads **Nothing is waiting on you.** That is a statement
+about the queue, not a clean bill of health for your systems.
+
+### Policy in force
+
+Below the queue: how often your rules refused a proposal over the recent
+window (shown in days on the card). For each rule that fired you see the
+rule id, how many times it fired, across how many proposals, its most recent
+message and which Applications it hit.
+
+Two empty states are worded carefully, and the distinction matters:
+
+- **No proposal reached a policy decision in the last N days.** Nothing was
+  judged. This says nothing about whether your rules are being met.
+- **N proposals checked, none refused.** Things were judged and passed. A
+  rule that never fires is either perfectly observed or a poor fit for your
+  stack, and it is worth knowing which.
+
+## What it means and why it exists
+
+TruStacks is a governance product, so its home screen is about decisions:
+which of your standards actually bite, and which actions are waiting on a
+human. It deliberately does not show vanity counts ("12 analyses run") or
+health percentages for systems it has not observed.
+
+## What to do here
+
+1. Work the attention queue from the top. A red **No runner is checking
+   in** card means nothing else in the queue can move until you fix the
+   runner.
+2. When a PR is ready, open it, review it in your Git provider and merge it
+   (or close it). TruStacks never merges for you.
+3. Read **Policy in force** weekly. A rule that denies often may point at a
+   real gap in what the agents emit, or in what your stack declares.
+
+## How it connects
+
+- Maturity header → [Maturity](/guide/maturity) and
+  [Gap analyses](/guide/gap-analyses)
+- Attention cards → [Runners](/guide/runners),
+  [Applications and proposals](/guide/applications), [Signals](/guide/signals)
+- Policy in force → [Rules](/guide/rules)
+
+## Beta limits
+
+- Only the denial-count card of the planned "policy in force" section is
+  built. Cards for constitution status (did the signed bundle load), rules by
+  origin and pack provenance are not built yet.
+- The **Run an audit to score it** link opens the Compliance screen. To
+  actually run a gap analysis, go to [Gap analyses](/guide/gap-analyses).
+- Deploy-health cards appear only if you enabled the runner's optional
+  ArgoCD observer (`observer.enabled=true`; off by default). Without it,
+  TruStacks cannot see your cluster and shows nothing rather than guessing.

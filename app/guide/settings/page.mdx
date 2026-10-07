@@ -1,0 +1,83 @@
+---
+title: Settings (LLM provider)
+description: The Settings screen. Bring your own Anthropic or OpenRouter key. Both route to Claude Sonnet 4.5 or newer.
+---
+
+import { Callout } from 'nextra/components'
+
+# Settings (LLM provider)
+
+**Where:** **Settings** in the sidebar (`#/settings/llm`). Step 5 of
+[Get set up](/guide/onboarding) links here.
+
+{/* screenshot-placeholder: Settings screen with the Anthropic provider selected, masked key fields and the green "configured" banner. Save as public/guide/settings.png */}
+
+The agents need a large language model to work. TruStacks uses your key, so
+the model spend is on your own account with the provider you choose.
+
+## What you see
+
+- A banner: either **No LLM provider configured yet**, or which provider
+  is configured, the first characters of the key, the model if one is
+  pinned, and when it was last updated.
+- **Provider**: two cards, **Anthropic** (direct, console.anthropic.com)
+  and **OpenRouter** (billing via OpenRouter).
+- **API key** and **Confirm API key**. You paste the key twice, to catch a
+  bad paste before anything is called.
+- **Model**:
+  - With Anthropic: **Model override (optional)**. Leave it blank to use
+    the runner's default.
+  - With OpenRouter: **Model (required)**, and it must start with
+    `anthropic/` (for example `anthropic/claude-sonnet-4-5`).
+- **Save + rotate**. While it works the button reads **Validating + rolling
+  runner…**; when done, **Saved at …** with a note that the new key takes
+  effect on the next run.
+
+## What it means
+
+**The choice is your billing relationship, not the model.** Both providers
+route to Claude Sonnet 4.5 or newer. TruStacks' agents, prompts and policy
+expectations are tuned for that model family, so picking a different model
+family is not offered. The model field exists to pin a specific Claude
+release during a model rollover, not to swap vendors.
+
+**What happens on save:**
+
+1. The control plane makes a live test call to the provider with your key.
+   A bad key fails here, before anything changes.
+2. The key is sealed to your runner and written as the
+   `trustacks-runner-llm` Secret in your runner's namespace.
+3. The runner is rolled so it picks the key up.
+
+TruStacks keeps only a short prefix of the key for display.
+
+## What to do here
+
+1. Create a key in the Anthropic console or the OpenRouter dashboard.
+2. Pick the matching provider, paste the key twice, and (for OpenRouter)
+   enter an `anthropic/…` model.
+3. **Save + rotate**. To rotate a key later, paste the new one and save
+   again.
+
+Details on the Secret, rotation and egress are in the
+[LLM provider reference](/reference/llm-provider).
+
+## How it connects
+
+- Every agent run (analyses, proposals, gap analyses, rule drafts) uses this
+  key. Without it, runs fail at the configuration stage, and the failure
+  shows on [Overview](/guide/overview).
+- The runner that receives the key is the one on [Runners](/guide/runners).
+
+<Callout type="info">
+  **What the provider sees.** While the agents work, they send your
+  provider the context they need: prompts, your environment profile, and the
+  contents of repository files they choose to read. That traffic goes from
+  the runner in your cluster to your provider, under your key.
+</Callout>
+
+## Beta limits
+
+- One provider configuration per workspace. There are no per-Application or
+  per-agent keys, by design.
+- TruStacks-managed model billing is not offered today; bring your own key.

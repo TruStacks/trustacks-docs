@@ -1,0 +1,92 @@
+---
+title: Product guide
+description: How the TruStacks product fits together, screen by screen. Connect, analyze, propose, gate, approve, deploy, score.
+---
+
+import { Callout } from 'nextra/components'
+
+# How the product fits together
+
+TruStacks is AI delivery governance: the control layer between the agents
+that write your software and the systems that run it. This guide walks
+through every screen in the TruStacks app (app.trustacks.com), what it shows
+you, what it means, and what you do there.
+
+One sentence holds the whole product together: **agents propose, policy
+decides, humans approve.** Every screen in the app is a view onto one part of
+that loop.
+
+## The loop
+
+```text
+connect → analyze → propose → gate → approve → deploy → score
+```
+
+| Step | What happens | Who does it | Where you see it |
+|---|---|---|---|
+| **Connect** | You install a runner in your own cluster, set an LLM key, create an Application and connect its repos through the TruStacks GitHub App. | You | [Get set up](/guide/onboarding), [Runners](/guide/runners), [Settings](/guide/settings), [Applications](/guide/applications) |
+| **Analyze** | The Code Reviewer reads a service repo and describes it: framework, language, runtime, tests, Dockerfile, CI. | Agent | [Applications → service → Analyses](/guide/applications#analyses) |
+| **Propose** | The DevOps Engineer turns the analysis and your declared stack into delivery artifacts (a reusable CI workflow, a Helm chart or Kustomize base, an ArgoCD Application). | Agent | [Proposal detail](/guide/applications#a-proposal-from-your-side) |
+| **Gate** | The artifacts are validated (do they render, parse and use legal names?) and then evaluated by OPA against the signed constitution plus any overlay rules you run. A deny stops the run. No PR opens. | Policy | Proposal timeline, [Rules](/guide/rules), [Overview → Policy in force](/guide/overview#policy-in-force) |
+| **Approve** | On allow, the runner opens a pull request against your platform repo. A person on your team reviews and merges it. Nothing merges itself. | You | Your Git provider; the [Overview](/guide/overview) queue tells you a PR is waiting |
+| **Deploy** | Your ArgoCD deploys what was merged. Every Application TruStacks emits uses manual sync, so someone presses Sync. | Your stack | [Applications](/guide/applications) deploy-status chips (optional observer) |
+| **Score** | A gap analysis reads your declared stack, checks it against the rules, consults the specialist agents and produces a maturity score per Application. | Agent + policy | [Gap analyses](/guide/gap-analyses), [Maturity](/guide/maturity), [Stack](/guide/stack) |
+
+The loop is deliberately one-directional at the merge. TruStacks authors the
+right artifact; you run it on your stack. TruStacks never merges a PR, never
+syncs your ArgoCD and never operates your CI.
+
+## Where things run
+
+- **Your cluster** runs the runner. It calls out to TruStacks over HTTPS
+  (nothing calls in), clones your repos, runs the agents, evaluates policy
+  and opens PRs. Credentials it needs are written as Secrets in your
+  namespace. See [Runners](/guide/runners).
+- **The TruStacks control plane** (api.trustacks.com) stores your workspace:
+  Applications, connection records, run history, events and scores. It hands
+  jobs to the runner and serves this app.
+- **Your LLM provider** (Anthropic or OpenRouter, under your own key)
+  receives what the agents send it while they work, which includes the
+  repository files they read. See [Settings](/guide/settings).
+- **Your Git provider and ArgoCD** stay yours. PRs land in your platform
+  repo; your ArgoCD deploys from it.
+
+## The nouns you will meet
+
+- **Application**: a set of services promoted together across tiers
+  (dev, uat, prod). It owns exactly one platform repo and a list of target
+  clusters. Maturity is scored per Application. See
+  [Applications, repositories and services](/concepts/applications-repositories-services).
+- **Service**: a connected service repo bound to an Application. Today one
+  repo is one service.
+- **Platform repo**: the GitOps repo where proposals land as PRs. It also
+  holds `environment-profile.yaml`.
+- **Environment profile**: `environment-profile.yaml` at the root of the
+  platform repo. Your declaration of the tools you run and the behaviors you
+  attest to. Every agent reads it. See
+  [Environment profile reference](/reference/environment-profile).
+- **Analysis**: one Code Reviewer run against one service at one ref.
+- **Proposal**: one DevOps Engineer run built from one analysis, ending in a
+  PR, a policy deny, a "nothing to change", or an error.
+- **Gap analysis**: one scoring run for one Application, ending in a report
+  with a maturity tier.
+- **Constitution**: the TruStacks-authored, signed Rego rules every
+  proposal is judged against. **Overlay**: rules you add on top.
+
+## Reading order
+
+If you are new, read the guide in the order the sidebar lists it: it follows
+the setup path first ([Get set up](/guide/onboarding), [Runners](/guide/runners),
+[Settings](/guide/settings), [Applications](/guide/applications),
+[Stack](/guide/stack)), then the daily surfaces
+([Overview](/guide/overview), [Workspace](/guide/workspace)), then scoring
+([Gap analyses](/guide/gap-analyses), [Maturity](/guide/maturity),
+[Rules](/guide/rules)), then the rest.
+
+<Callout type="info">
+  **TruStacks is in Beta.** Each page in this guide has a *Beta limits*
+  section that says plainly what is partial, what is sample data, and what is
+  not built yet. If the app and this guide disagree, the app is right and the
+  guide is stale. Please tell us (the app's sidebar carries a **Join our
+  Discord** link when community support is enabled for your workspace).
+</Callout>

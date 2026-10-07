@@ -1,6 +1,7 @@
 export default {
   index: 'Overview',
   'getting-started': 'Getting started',
+  guide: 'Product guide',
   installation: 'Installation',
   workshops: 'Workshops',
   reference: 'Reference',

@@ -1,0 +1,99 @@
+---
+title: Compliance and audit reports
+description: The Compliance screen and Audit reports. SOC2 evidence TruStacks recorded per control, and on-demand PDF or JSON evidence reports for your auditor.
+---
+
+import { Callout } from 'nextra/components'
+
+# Compliance and audit reports
+
+**Where:** **Compliance** in the sidebar (`#/compliance`); **Audit Reports**
+at `#/audit`, reached from **Download an audit report (PDF) →** on
+Compliance.
+
+Compliance is about *proving what happened*. For how well your pipeline is
+*set up*, see [Maturity](/guide/maturity). The two answer different
+questions. SOC2 evidence comes with the SOC2 Specialist Pack, which paid
+plans include; see [trustacks.com/pricing](https://trustacks.com/pricing).
+
+## Compliance
+
+{/* screenshot-placeholder: Compliance screen with the SOC2 evidence card listing controls and event counts for the last 90 days. Save as public/guide/compliance.png */}
+
+### What you see
+
+A **SOC2 evidence** card for the **last 90d**: one row per SOC2 control that
+has evidence, with the control id, its title and a count of events
+TruStacks recorded against it. Under it:
+
+- **Download an audit report (PDF) →** opens Audit Reports.
+- **Export full evidence pack →**, disabled for now.
+
+If nothing was recorded in the window: *No evidence recorded in this window.
+Evidence accrues as the crew runs analyses, proposals, and gap analyses.*
+
+### What it means
+
+Every governed action leaves a record: an analysis run, a proposal with its
+policy verdict, a PR opened, a gap analysis. TruStacks maps those event kinds
+to the SOC2 controls they evidence (for example, change-management controls
+for governed proposals) and counts them.
+
+<Callout type="info">
+  **Evidence, not a verdict.** The card deliberately shows no pass, fail or
+  "covered" marks. Evidence that a control was exercised is not the same as
+  the control being satisfied. TruStacks reports what it observed; your
+  auditor judges.
+</Callout>
+
+## Audit Reports
+
+{/* screenshot-placeholder: Audit Reports form (control family SOC2, PDF, 7-day window) with the "Report download started" banner. Save as public/guide/audit-reports.png */}
+
+### What you see
+
+A form:
+
+- **Control family**: SOC2 (the only family today).
+- **Format**: **PDF (auditor-ready)** or **JSON (inline preview)**.
+- **Window start** and **Window end** (defaults to the last 7 days).
+- **Generate report**.
+
+PDF downloads a file and confirms **Report download started**. JSON renders
+a **Preview** of each control section on the page.
+
+### What it means
+
+The report is generated on demand from your workspace's recorded events
+for the window. The PDF response carries a SHA-256 of its content in the
+`X-TruStacks-Content-Sha256` response header (visible in your browser's
+developer tools), which you can hand to your auditor alongside the file.
+
+## What to do here
+
+1. Before an audit, pick the observation window your auditor asked for
+   and generate the PDF.
+2. Use JSON to check what is in a window before you send anything.
+3. Keep running your delivery through TruStacks: evidence accrues only
+   from governed runs.
+
+## How it connects
+
+- Evidence comes from runs on [Applications](/guide/applications) (analyses
+  and proposals) and [Gap analyses](/guide/gap-analyses).
+- The SOC2 specialist that comments during gap analyses is part of the same
+  SOC2 Specialist Pack and works from the same SOC2 control families; see
+  [Gap analyses](/guide/gap-analyses).
+
+## Beta limits
+
+- **SOC2 only.** HIPAA, PCI, FedRAMP and other frameworks are coming
+  soon.
+- **The PDF is hashed, not signed.** It carries a SHA-256 header, not a
+  cosign signature.
+- **No stored history.** Reports are generated on demand; there is no list
+  of past reports.
+- **The full evidence-pack export is not built.**
+- Once billing is live, SOC2 evidence needs a paid plan, which includes the
+  SOC2 Specialist Pack. While
+  billing is not enabled, it is available to every workspace.
