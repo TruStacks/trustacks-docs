@@ -76,8 +76,11 @@ set.
 
 ## What nobody but you can do
 
-- **Merge.** Agents open pull requests on branches. They cannot push to your
-  default branch, approve their own work, or merge.
+- **Merge.** Agents open pull requests on branches. They do not push to your
+  default branch, approve their own work, or merge. That is how TruStacks is
+  built, not something GitHub enforces on its own: protect your default
+  branch, with the TruStacks GitHub App off the bypass list, and GitHub
+  enforces it too.
 - **Deploy.** Your ArgoCD deploys from your platform repo. The runner can
   optionally *observe* ArgoCD Applications, read-only, to report deploy
   status. It cannot sync, roll back, or delete.

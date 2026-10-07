@@ -94,24 +94,32 @@ work that touches your code. Nothing connects inbound to your cluster.
    with the token already in it.
 2. **Copy the command from the UI.** It pins the chart version the control
    plane currently publishes, so you always install a release we have tested
-   against the hosted service. It looks like this:
+   against the hosted service. The commands on this page use a shell variable
+   for the namespace; set it once to the namespace you want the runner in:
 
    ```bash
-   helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-     --version <published> \
-     -n "<your-namespace>" --create-namespace \
-     --set saas.enrollmentToken=<token>
+   NAMESPACE=trustacks-system   # any namespace you choose
    ```
 
-   Replace `<your-namespace>` with the namespace you want the runner in (for
-   example `trustacks-system`). The chart is a public OCI artifact; no
-   registry login is needed. The hosted control plane URL is already set in
-   the published chart, so the token is the only value you supply.
+   The UI's command has this shape, with the version and token filled in:
+
+   ```bash
+   VERSION=0.0.0          # placeholder: the UI fills in the published version
+   TOKEN=paste-from-ui    # placeholder: the enrollment token the UI shows
+   helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+     --version "$VERSION" \
+     -n "$NAMESPACE" --create-namespace \
+     --set saas.enrollmentToken="$TOKEN"
+   ```
+
+   The chart is a public OCI artifact; no registry login is needed. The
+   hosted control plane URL is already set in the published chart, so the
+   token is the only value you supply.
 3. Wait for it to come up:
 
    ```bash
-   kubectl -n <your-namespace> rollout status deploy/trustacks-runner-runner
-   kubectl -n <your-namespace> logs deploy/trustacks-runner-runner | grep -i enroll
+   kubectl -n "$NAMESPACE" rollout status deploy/trustacks-runner-runner
+   kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
    ```
 
    With the release name `trustacks-runner`, the deployment is named
@@ -121,7 +129,8 @@ work that touches your code. Nothing connects inbound to your cluster.
 
 The enrollment token is reusable and does not expire. It is stored only as a
 hash on our side, and the runner keeps presenting it when it re-enrolls, so
-keep it. Generate another to enroll a second runner. The token ends up in a
+keep it, and protect it like a password: anyone holding it can enroll a
+runner into your workspace. Generate another to enroll a second runner. The token ends up in a
 Secret in your namespace; to supply it from a Secret you manage instead, see
 the [runner install reference](/installation/cluster).
 
@@ -140,7 +149,7 @@ the [runner install reference](/installation/cluster).
 ## Step 4. Create an Application
 
 An **Application** is the unit TruStacks works in: one or more service repos
-plus the one platform repo their delivery config lands in. Every connected
+plus the one platform repo their delivery config lands in. Every service
 repo belongs to exactly one Application, so you create the Application first.
 The connect wizard refuses to run until one exists.
 
@@ -176,8 +185,11 @@ code. You connect each repo once.
   **What the GitHub App can do.** It asks for Contents (read and write),
   Workflows (read and write), Pull requests, and Metadata, on the repos you
   grant it. The service role being "read-only" is enforced by TruStacks, not
-  by a narrower GitHub permission. Agents open pull requests on branches;
-  they never push to your default branch. Details in
+  by a narrower GitHub permission. Agents are built to open pull requests on
+  branches and never push to your default branch, but GitHub does not enforce
+  that for an App with Contents write. To enforce it, protect the default
+  branch (branch protection or a ruleset) and leave the TruStacks GitHub App
+  out of the bypass list. Details in
   [Credentials and trust boundary](/installation/secrets#the-github-app).
 </Callout>
 
@@ -296,17 +308,34 @@ it, so the build runs against your service code.
 # .github/workflows/ci.yaml in the SERVICE repo.
 # GitHub only reads workflows from .github/workflows/.
 name: ci
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]   # your default branch
+  pull_request:
 jobs:
   trustacks:
-    uses: <owner>/<platform-repo>/.github/workflows/<generated-file>.yaml@main
-    permissions: {contents: read, packages: write}
+    # The called workflow pushes an image. Pull requests from forks get a
+    # read-only token and cannot push, so skip them instead of failing.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@<commit-sha>
+    permissions:
+      contents: read
+      packages: write
 ```
 
-`<generated-file>` is the workflow the pull request added under
-`.github/workflows/` in your platform repo (one per service, for example
-`ci-<service>.yaml`). The DevOps Engineer is instructed to include this snippet,
-with the names filled in, in the proposal summary.
+Replace the four placeholders: `<owner>` and `<platform-repo>` name your
+platform repo, `ci-<service>.yaml` is the workflow the pull request added
+under `.github/workflows/` there (one per service), and `<commit-sha>` is the
+full SHA of the platform-repo commit you want to run, for example the merge
+commit of that pull request.
+
+**Pin to a commit SHA.** The called workflow runs with `packages: write`.
+Pinned, a later change on the platform repo's `main` does not reach your
+service's CI until you move the pin, so when you merge a TruStacks pull
+request that changes this workflow, update the SHA in the same review.
+`@main` also works and picks up every merged change on its own, at the cost
+of trusting whoever can push to that branch. The proposal summary shows this
+snippet with `@main` and `on: [push, pull_request]`; use the pinned form above.
 
 **If your platform repo is private, grant Actions access once.** A private
 repo shares its reusable workflows with nothing by default, and GitHub reports
@@ -314,14 +343,16 @@ that as `workflow was not found` (naming your generated file), not as a
 permissions error.
 
 ```bash
+PLATFORM_REPO=your-org/your-platform-repo   # owner/name of your platform repo
+
 # Platform repo owned by an organization:
 gh api --method PUT \
-  repos/<owner>/<platform-repo>/actions/permissions/access \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
   -f access_level=organization
 
 # Platform repo owned by a personal account:
 gh api --method PUT \
-  repos/<owner>/<platform-repo>/actions/permissions/access \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
   -f access_level=user
 ```
 
@@ -355,9 +386,10 @@ TruStacks writes ArgoCD Applications into `argo-apps/` in your platform repo.
 
 **Emitted Applications use manual sync.** Merging a pull request does not
 deploy anything by itself; someone clicks **Sync** in ArgoCD (or runs
-`argocd app sync`). For production the constitution enforces it: a proposal
-that sets automated sync on a prod Application is denied. If you want
-automated sync on `dev`, that is your change to make and review.
+`argocd app sync`). For a target cluster named `prod` the constitution also
+enforces it: a proposal that sets automated sync on an Application under
+`argo-apps/argo-apps-prod/` is denied. If you want automated sync on `dev`,
+that is your change to make and review.
 
 ## What happens next
 
@@ -377,18 +409,18 @@ Once the loop is running, these happen without another setup step:
 - **Maturity.** **Maturity** shows a bronze, silver, or gold tier per
   Application, row by row, and separates what TruStacks has verified from
   what you have only claimed. See [Maturity scoring](/reference/maturity-scoring).
-- **Deploy status (optional).** Install the runner with
+- **Deploy status (optional, Beta).** Install the runner with
   `--set observer.enabled=true --set observer.argocdNamespace=argocd` and it
   reports ArgoCD sync and health back, read-only (get, list, and watch on
   ArgoCD Applications in that namespace, nothing else). Applications then
-  show a deploy-status chip.
+  show a deploy-status chip. See [GitOps integration](/installation/gitops#deploy-status-optional).
 
 ## What good looks like
 
 | Step | You should see |
 |---|---|
 | 1 · workspace | You land on **Get set up** in a new workspace |
-| 3 · runner | `kubectl -n <your-namespace> get pods` shows the runner pod `1/1 Running`; the wizard shows **Runner connected** |
+| 3 · runner | `kubectl -n "$NAMESPACE" get pods` shows the runner pod `1/1 Running`; the wizard shows **Runner connected** |
 | 5 · repos | Both repos appear under **Services** (the platform repo with the Platform role) and on the Application's detail page |
 | 6 · profile | **Stack** lists the categories you declared |
 | 7 · LLM | The provider shows as configured after the live check |
@@ -401,8 +433,8 @@ Once the loop is running, these happen without another setup step:
 
 | Symptom | Likely cause and fix |
 |---|---|
-| Runner pod stuck in `Init` | Check the init containers: `kubectl -n <your-namespace> describe pod -l app.kubernetes.io/name=runner`. Usually an image pull blocked by egress; see [network requirements](/installation/cluster#network-requirements). |
-| Runner running but never shows connected | `kubectl -n <your-namespace> logs deploy/trustacks-runner-runner`. Look for enrollment errors. Confirm the cluster can reach `api.trustacks.com` over HTTPS and that the token was pasted whole. Tokens do not expire, so a token from earlier is still valid. |
+| Runner pod stuck in `Init` | Check the init containers: `kubectl -n "$NAMESPACE" describe pod -l app.kubernetes.io/name=runner`. Usually an image pull blocked by egress; see [network requirements](/installation/cluster#network-requirements). |
+| Runner running but never shows connected | `kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner`. Look for enrollment errors. Confirm the cluster can reach `api.trustacks.com` over HTTPS and that the token was pasted whole. Tokens do not expire, so a token from earlier is still valid. |
 | Connect wizard says "Create an Application first" | Create one (step 4). |
 | GitHub install returns to the app but shows no repos | The App was installed without access to those repos. Change the repo selection in GitHub under your account or organization's installed GitHub Apps, then retry. |
 | Analysis fails with an LLM error | Re-enter the key in Settings. Check the provider shows as configured, not pending. A pending key means your runner has not collected it yet; confirm the runner is connected. |
@@ -435,15 +467,23 @@ Once the loop is running, these happen without another setup step:
 2. Uninstall it:
 
    ```bash
-   helm uninstall trustacks-runner -n <your-namespace>
+   helm uninstall trustacks-runner -n "$NAMESPACE"
    ```
 
    The runner writes two Secrets itself, so Helm does not remove them. Delete
    them if you are not reinstalling:
 
    ```bash
-   kubectl -n <your-namespace> delete secret trustacks-runner-identity trustacks-runner-llm
+   kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner-llm
    ```
+
+   <Callout type="warning">
+     **Removing a runner does not revoke its enrollment token.** Tokens are
+     reusable and do not expire, and there is no self-serve way to revoke one
+     yet. Delete every copy you hold (Helm values files, CI variables, the
+     `trustacks-runner-enrollment` Secret if you created one), and if a token
+     may have leaked, contact TruStacks to have it revoked.
+   </Callout>
 
 3. Uninstall the TruStacks GitHub App from your account or organization in
    GitHub if you no longer want it to have access.
