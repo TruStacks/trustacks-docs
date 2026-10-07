@@ -1,179 +1,172 @@
 ---
 title: Constitution
-description: The signed, immutable foundation of TruStacks policy. Universal rules every proposal must respect. Non-waivable. Free at all tiers.
+description: The 16 rules every TruStacks proposal is judged against. Gate rules, behavior rules, and posture rules, how each feeds the maturity score, and how the signed policy reaches your runner from the public trustacks-policy repository.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Constitution
 
-The constitution is the TruStacks-authored Rego foundation that every
-proposal must respect. It is signed by TruStacks, distributed as an OCI
-artifact, and verified by an init container in your Runner before extract.
-Free at all tiers. Non-waivable.
+The constitution is the Rego policy TruStacks writes and every proposal is
+judged against. It is Apache 2.0, lives in the public
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>
+repository, and is published as a signed OCI artifact. Free at all tiers.
 
-If anything in this site is the load-bearing trust artifact, it is this:
-the agents *cannot* propose a change that violates a constitution rule.
-Your overlay *cannot* loosen one. The policy linter rejects any overlay
-that tries.
+The runner evaluates it with OPA inside your cluster, after the DevOps
+Engineer emits a proposal and before anything is written to your platform
+repo. A proposal with any deny never becomes a pull request.
 
-## How the constitution is delivered
+## The rules
 
-- **Format** · Rego bundles for OPA. Bundle build, sign, and distribute
-  pipeline lives in the open-source `trustacks-policy` repository.
-- **Signing** · Cosign keyless OIDC. The TruStacks signing identity is
-  pinned in the Runner's init container.
-- **Distribution** · OCI artifact in the public TruStacks registry.
-  The Runner pulls its *pinned* constitution version on startup and
-  re-verifies it on each rule refresh. Constitution upgrades are an
-  explicit operator action (see [Versioning](#versioning) below); the
-  Runner does not silently pick up new versions in the background.
-- **Verification** · The Runner's init container verifies the Cosign
-  signature against the pinned identity before extracting the bundle.
-  An unsigned or wrong-signed bundle never reaches the OPA evaluator.
+Sixteen rules in three kinds. The kind decides what a rule can do.
 
-This is the "verify yourself" property. You can verify the constitution
-bundle TruStacks ships with the same Cosign command auditors would use.
-The signature chain is auditable end-to-end.
+| Kind | Can refuse a proposal | Feeds the maturity score |
+|---|---|---|
+| **Gate** | Yes | No |
+| **Behavior** | Yes | Yes, as a practice row |
+| **Posture** | No, never | Yes, as a tooling row |
 
-## What is in the constitution
+### Gate rules
 
-The constitution covers properties that apply to *every* customer,
-regardless of stack, regulatory regime, or domain. Categories of rules:
+Is the artifact the right shape, in the right place?
 
-### Process rules
+| Rule ID | What it checks |
+|---|---|
+| `proposal.allowed_paths` | Every file lives under `gitops/`, `argo-apps/`, or `.github/workflows/`. |
+| `proposal.no_path_traversal` | No path is absolute or contains a `..` segment. |
+| `proposal.has_workflow` | The proposal includes at least one `.github/workflows/*.yaml` file. |
+| `proposal.has_helm_chart` | Helm renderer: at least one `Chart.yaml` under `gitops/`. |
+| `proposal.has_kustomization` | Kustomize renderer: at least one `kustomization.yaml` under `gitops/`. |
+| `proposal.has_argocd_application` | At least one `argo-apps/argo-apps-<cluster>/<service>-application.yaml`. |
+| `argocd.repoURL_is_canonical` | Every ArgoCD Application's `spec.source.repoURL` equals your platform repo URL. |
 
-- **All changes reach `main` via PR with at least one human approval.**
-  No autonomous merge path. Ever.
-- **Agents cannot approve their own PRs.** A human or a non-author
-  reviewer must approve.
-- **Agents never write to your `main` branch directly.** Every change
-  is a PR against a feature branch.
+Only the renderer check that matches your Application's renderer applies.
 
-### Credential rules
+### Behavior rules
 
-- **No long-lived static credentials in code or CI config.** Short-lived
-  tokens only, scoped to the smallest required surface.
-- **Agents never hold cluster credentials, cloud credentials, or
-  production secrets.**
-- **Production access is short-lived, audited, and broken-glass.**
+Is the artifact doing the right thing? Each one maps to a practice key in
+your [environment profile](/reference/environment-profile).
 
-### Supply chain rules
+| Rule ID | What it checks | Practice |
+|---|---|---|
+| `practice.workflow_has_test_step` | Every workflow has a `run:` step that runs tests: `pytest`, `npm test`, `yarn test`, `pnpm test`, `dotnet test`, `go test`, or a Maven `test`/`verify` or Gradle `test`/`check`/`build`. | `tests_in_ci` |
+| `practice.workflow_has_lint_step` | Every workflow has a lint or static-analysis step: `ruff`, `eslint`, `biome`, `golangci-lint`, `go vet`, `staticcheck`, `dotnet format`, `checkstyle`, `spotless`, `spotbugs`, `pmd`, or `-Dlint`. | `linting_in_ci` |
+| `practice.argocd_prod_requires_manual_sync` | An Application under `argo-apps/argo-apps-prod/` (a target cluster named `prod`) has no `spec.syncPolicy.automated`. The rule matches the directory, not the cluster's tier. | `manual_promotion_to_prod` |
+| `practice.dockerfile_runs_as_nonroot` | Every Dockerfile in the proposal has a `USER` that is not `root` or `0`. | `non_root_containers` |
+| `practice.workflow_pins_action_versions` | Every third-party `uses:` pins a full 40-character commit SHA. `actions/*` and local `./` actions are exempt. | `supply_chain_pinning` |
 
-- **Every released artifact has a signed SBOM and provenance
-  attestation.** Syft for SBOM, Cosign for signing, in-toto for
-  provenance.
-- **All third-party dependencies pass a baseline vulnerability scan
-  before merge.** Failed scans block merge by default; severity
-  thresholds are configurable in your overlay (only stricter).
+### Posture rules
 
-### Citation rules
+Do you run the tools? These never refuse a proposal. A missing scanner is a
+gap in your posture, not a broken artifact, so it shows up in your gap
+report and your score instead of blocking delivery.
 
-- **Every proposal carries a citation back to the rule that motivated
-  it.** PR bodies include rule IDs, blast radius, rollback steps, and
-  which Environment Profile entries informed each tool choice.
+| Rule ID | Category it scores |
+|---|---|
+| `posture.image_scanning_declared` | `image_scanning` |
+| `posture.sast_sca_declared` | `sast_sca` |
+| `posture.secret_scanning_declared` | `secret_scanning` |
+| `posture.sbom_signing_declared` | `sbom_signing` |
 
-### Data residency rules
+### The naming rule
 
-- **Your source code never leaves the Data Plane unless you explicitly
-  opt in.** The Runner phones home with findings, decisions, and agent
-  traces, all of which are redactable per your policy.
+`constitution.overlay_rule_naming` checks the IDs of your own overlay rules
+against the [rule-naming standard](/reference/rule-naming-standard). It
+judges overlay rule metadata, not proposals.
 
-### Environment Profile rules
+<Callout type="info">
+  The Rules page (`#/rules`) lists every rule your runner reports, with its
+  description, tooling categories, and Rego source. Filter by **Structural**
+  (gate) or **Behaviors**.
+</Callout>
 
-- **Agents never silently mutate the Environment Profile.** Every
-  change is a PR you review.
-- **The constitution can declare required tooling categories.** The
-  Profile satisfies the requirement by naming a specific tool. Customer
-  overlays can require stricter tooling (FIPS-validated scanner) but
-  cannot remove a category the constitution required.
+## How the score uses the rules
 
-## What is *not* in the constitution
+Two rule fields drive the [maturity score](/reference/maturity-scoring):
 
-Anything that varies between customers belongs elsewhere.
+- `required_tooling_categories` puts a tooling row on the scorecard. Today
+  that is six categories: `ci_cd_platform` (from `proposal.has_workflow`),
+  `gitops_controller` (from `proposal.has_argocd_application`), and the four
+  posture categories.
+- `practice_dimensions` puts a practice row on the scorecard: the five
+  practice keys above.
 
-- **Compliance-domain rules** (SOC2 CC6.1, HIPAA 164.312, PCI 6.5, etc.)
-  live in [Specialist Packs](/reference/specialist-packs).
-- **Framework-specific or CI-runtime-specific rules** live in community
-  packs in `trustacks-policy`.
-- **Your organization's tribal knowledge** lives in your overlay
-  (Sunday-night deploy windows, change-calendar requirements, that one
-  service that has to deploy with a specific feature flag set).
+Gate rules with neither field are enforcement only. They never move your
+score.
 
-The constitution stays narrow on purpose. The smaller and more universal
-the floor, the easier it is to defend, version, and trust.
+## How the policy reaches your runner [#versioning]
 
-## The ratchet property
+The constitution is published from the `trustacks-policy` repository.
 
-Each layer of the rule stack can only make things *stricter* than the
-layer above. The constitution defines the floor. Specialist Packs can
-add to it. Your overlay can add to either. No layer can ever weaken a
-rule from a layer above.
+| | |
+|---|---|
+| Artifact | `ghcr.io/trustacks/policy/constitution` |
+| Current version | `1.0.0`, also tagged `1` and `latest` |
+| Signed by | `https://github.com/TruStacks/trustacks-policy/.github/workflows/publish.yml@refs/tags/v<version>` |
+| Signing | Sigstore keyless, Rekor transparency log entry per release |
 
-The [policy linter](/reference/policy-linter) proves this at compile time.
-An overlay that tries to weaken a constitution rule fails to build.
-The property is enforced cryptographically, not by convention. Auditors
-can verify it. Your CISO can verify it. You can verify it.
+Hosted runners follow the `:1` tag. Fixes in the 1.x line reach your runner
+on its next start, without a runner upgrade. A 2.0 that needs a newer runner
+never arrives on a tag your runner follows.
 
-## Non-waivability
+At start, the runner's `load-policy-bundle` init container resolves `:1` to a
+digest, pulls that digest, and verifies its signature. If anything fails it
+falls back to the copy of the constitution baked into the runner image and
+reports why. See [Policy in force](/reference/policy-in-force).
 
-Constitution rules cannot be waived. Specialist Packs and overlay rules
-support time-bound, signed waivers with mandatory expiration and audit
-visibility, but constitution rules do not.
+<Callout type="warning">
+  **Runner versions.** Signed-policy pull for hosted runners ships in runner
+  `0.2.14-rc24` and later, which are pre-releases; no stable release includes
+  it yet. Earlier runners, including `0.2.13`, enforce the
+  copy baked into the runner image and do not verify a signature at start.
+</Callout>
 
-This is the deliberate property that makes the constitution the trust
-anchor. If anyone (including TruStacks) could waive a constitution rule
-quietly, the whole stack stops being defensible. The price of
-non-waivability is real: when a constitution rule is genuinely wrong for
-your context, the only fix is a constitution version bump (community
-process, signed by TruStacks). That cost is intentional.
+Policy versions independently of the product. The constitution is on the
+1.x line; runner and control-plane releases are on 0.2.x. See
+[Versioning](/reference/versioning).
 
-## Versioning
-
-Constitution releases follow semantic versioning.
-
-- **Patch** (`1.2.3` → `1.2.4`) · clarifications, typo fixes, test
-  additions. No rule behavior changes.
-- **Minor** (`1.2.x` → `1.3.0`) · new rules added. Existing rules
-  unchanged. Your overlay continues to validate.
-- **Major** (`1.x` → `2.0`) · a rule's behavior changes or a rule is
-  removed. Requires a migration check on your overlay. The policy
-  linter surfaces what your overlay needs to change before you can
-  upgrade.
-
-The Runner pins the constitution version per release. Upgrading is an
-explicit operator action, not a silent background update.
-
-## Inspecting the constitution
-
-You can inspect the active constitution bundle from the Runner in two
-ways.
-
-### From the Runner CLI
+Verify the policy yourself:
 
 ```bash
-trustacks rule list --layer constitution
-trustacks rule show <rule-id>
+cosign verify \
+  --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-policy/\.github/workflows/publish\.yml@refs/tags/v.*$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/trustacks/policy/constitution:1
 ```
 
-See the [Runner CLI reference](/reference/runner-cli) for the full
-command surface.
+## Your own rules
 
-### From the Coordinator
+Overlay rules let you add your own reasons to refuse a proposal. Their denies
+are unioned into the constitution's (`data.proposal.deny`), so an overlay can
+only add refusals. It has no way to cancel a constitution deny. That holds by
+how the policy is assembled, not because a tool proves it.
 
-Ask the Coordinator in chat:
+What works today:
 
-> *Which constitution rules apply when I open a PR that adds a
-> Dockerfile?*
+- **Drafting.** Type `/rule new <id>` in the Workspace chat and the
+  Coordinator drafts a rule grounded in your environment profile. Drafts are
+  not saved; copy or download them.
+- **Authoring and testing.** `trustacks rule new`, `test`, and `lint` work on a
+  local checkout. See the [Runner CLI](/reference/runner-cli).
 
-The Coordinator returns the rule IDs, the verdicts for the current
-proposal, and links to the rule text.
+<Callout type="warning">
+  **No delivery path to hosted runners yet.** `trustacks rule sign` publishes
+  to a local development registry with a local key, and the hosted runner chart
+  does not load overlay bundles. Per-customer signing keys are not built. Until
+  they are, overlay rules run only on local and self-hosted setups.
+</Callout>
+
+## What is not in the constitution
+
+- Rules about approvals, review counts, or who may merge. Merge control
+  belongs to your git provider's branch protection.
+- Rules about credentials, data residency, or citations.
+- Waivers. There is no waiver mechanism.
+- SOC 2, HIPAA, PCI, or FedRAMP rules. See [Specialist Packs](/reference/specialist-packs).
 
 ## Where to go next
 
-- [Architecture](/reference/architecture) · how the constitution fits
-  into the three-layer rule model
-- [Specialist Packs](/reference/specialist-packs) · regulatory bundles
-  that layer above the constitution
-- [Policy linter](/reference/policy-linter) · proves your overlay
-  ratchets stricter, never looser
+- [Maturity scoring](/reference/maturity-scoring) · how rules become a score
+- [Policy in force](/reference/policy-in-force) · what your runner is actually enforcing
+- [Proposal lifecycle](/reference/proposal-lifecycle) · where the gate sits
+- [Supply-chain verification](/reference/supply-chain) · every artifact and its signing identity

@@ -23,17 +23,15 @@ following links.
 
 | What | License | Where |
 |---|---|---|
-| **Quickstart scripts, Helm chart, sample apps** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a> |
-| **Constitution Rego bundle, framework packs** | Apache License 2.0 | `trustacks-policy` repository (private during Beta; flips public at Beta launch on 2026-07-27) |
+| **Quickstart scripts, sample apps** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a> |
+| **Constitution, framework packs, tool-action packs, renderer packs** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>, and the signed bundle at `ghcr.io/trustacks/policy/constitution` |
 | **Container images** (`ghcr.io/trustacks/control-plane`, `ghcr.io/trustacks/runner`, `ghcr.io/trustacks/ui`) | [TruStacks EULA (Beta)](https://trustacks.com/eula) | `ghcr.io/trustacks/*` |
 
 Everything in the first two rows you can fork, modify, and run
 anywhere with no further permission, under their Apache 2.0 grants.
-`trustacks-quickstart` is accessible today; `trustacks-policy` flips
-public at Beta launch on 2026-07-27, so the license is in place from
-day one but the code becomes readable then. Everything in the third
-row you can pull and run on infrastructure you control during the
-Beta program, under the terms summarized below.
+Both repositories are public. Everything in the third row you can pull
+and run on infrastructure you control during the Beta program, under
+the terms summarized below.
 
 ## What the EULA covers
 
@@ -96,33 +94,29 @@ target is five business days during the Beta period.
 
 ## What's open source
 
-Three repositories, all Apache 2.0. The `trustacks-quickstart`
-repository is public today; `trustacks-policy` flips public at Beta
-launch on 2026-07-27 (it's licensed Apache 2.0 from day one, the
-visibility flip is a soft-launch sequencing decision).
+Two repositories, both Apache 2.0 and both public.
 
 ### `trustacks-policy`
 
-Holds the [constitution](/reference/constitution) Rego bundle and the
-framework packs the agents read. The same policy primitives your
-runner verifies on every proposal. After the Beta-launch visibility
-flip, you'll be able to fork it, write your own packs against the same
-schema, and run them through the [policy linter](/reference/policy-linter)
-without permission.
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>
 
-Contributions land via DCO sign-off, no CLA required during the Beta
-program. The `CONTRIBUTING.md` in the repo will document the workflow
-once the repo is public.
+Holds the [constitution](/reference/constitution) and the
+[knowledge packs](/reference/knowledge-packs) the agents read, and
+publishes the signed constitution bundle your runner verifies. Fork it,
+read every rule, and write your own packs against the same schema.
+
+Contributions land via DCO sign-off (`git commit -s`), no CLA. CI
+rejects commits without a sign-off. The repository's `CONTRIBUTING.md`
+documents the workflow.
 
 ### `trustacks-quickstart`
 
 <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a>
 
-Holds the `install.sh` and `bootstrap.sh` scripts the
-[curl-pipe-bash install](https://trustacks.com/quickstart) runs, the
-Helm chart values the local sandbox uses, and the four polyglot sample
-applications. Fork it, modify the install flow for your environment,
-or lift the samples into your own evaluation harness.
+Holds the `install.sh` and `bootstrap.sh` scripts and the four
+polyglot sample applications. Fork it or lift the samples into your own
+evaluation harness. The local install scripts are not currently a
+working install path; use the [hosted quickstart](/getting-started/hosted-quickstart).
 
 ### Vendored third-party libraries inside the images
 
@@ -131,7 +125,7 @@ The SBOM attached to each image manifest is the authoritative
 enumeration. Pull it with:
 
 ```bash
-VERSION=0.1.0
+VERSION=0.2.13
 docker buildx imagetools inspect \
   "ghcr.io/trustacks/runner:${VERSION}" \
   --format '{{ json .SBOM }}'
@@ -142,18 +136,16 @@ EULA governs the *composition*, not the individual components.
 
 ## Specialist Packs sit on a third axis
 
-The constitution and the framework packs are Apache 2.0. The agent
-container images are EULA-governed. The
-[Specialist Packs](/reference/specialist-packs) (SOC 2, HIPAA, PCI,
-FedRAMP, ITIL) are on a third axis: **vendor-curated, paid**.
+The constitution and the packs are Apache 2.0. The agent container
+images are EULA-governed. The
+[Specialist Packs](/reference/specialist-packs) are on a third axis:
+**vendor-curated, paid**.
 
-A Specialist Pack ships through the same signed OCI bundle channel as
-the constitution. A subscriber on the Enterprise tier or above can
-read every rule in the bundle. We're charging for the *curation* and
-the *brand attestation* that the rules map correctly to the regulatory
-control families, not for secrecy. The bundle is closed in the
-distribution sense (entitlement-gated) but not in the read sense
-(subscribers see the Rego).
+Today a Specialist Pack is a specialist agent: SOC 2, included from the
+Developer tier. There are no Specialist Pack Rego bundles yet. HIPAA,
+PCI, FedRAMP, and ITIL are coming soon. When regulatory rule bundles
+ship, the charge is for the *curation* and the attestation that rules
+map correctly to control families, not for secrecy.
 
 This third axis exists because regulatory compliance carries
 auditor-defensibility risk we accept on the customer's behalf. A
@@ -166,9 +158,10 @@ risk lives with us.
 "TruStacks", the TruStacks logo, and the TruStacks trade dress are
 trademarks of TruStacks, Inc. The plain-language policy summary is
 the [EULA's Trademarks section](https://trustacks.com/eula#trademarks)
-on trustacks.com; the canonical TRADEMARK.md in the `trustacks-policy`
-repository (incorporated into the EULA by reference) becomes publicly
-readable when that repository flips public at Beta launch on 2026-07-27.
+on trustacks.com; the canonical
+<a href="https://github.com/TruStacks/trustacks-policy/blob/main/TRADEMARK.md" target="_blank" rel="noopener noreferrer">TRADEMARK.md</a>
+in the public `trustacks-policy` repository is incorporated into the
+EULA by reference.
 
 The plain-language summary:
 
@@ -186,17 +179,17 @@ The plain-language summary:
 The Beta grant is time-bounded. General Availability changes the
 license model. The table below is the procurement-shaped view.
 
-| Concern | Beta period (today) | General Availability (target 2026-07-27 hosted, 2027-04-28 image GA) |
+| Concern | Beta period (today) | General Availability (target 2027-04-28) |
 |---|---|---|
 | Image license | EULA Beta v1.0 (royalty-free) | Commercial license, tier-specific |
 | Permitted use | Evaluation, workshop, local development | Production workloads |
 | Infrastructure | Infrastructure you control | Customer-controlled or TruStacks-managed (hosted SaaS) |
-| Cost | Free under the Beta grant | Subscription per tier (Developer, Team, Enterprise, Enterprise+) |
+| Cost | Free under the Beta grant | Subscription per tier (Developer, Enterprise, Enterprise+, Federal) |
 | Support | Best-effort via the public Discord | SLAs per tier |
 | Transition | Beta grant ends at GA + 30-day window | Continuing under commercial license |
 
-The constitution Rego bundle, framework packs, and quickstart scripts
-**stay Apache 2.0** at GA. Only the container images transition.
+The constitution, the packs, and the quickstart scripts **stay
+Apache 2.0** at GA. Only the container images transition.
 
 <Callout type="warning">
   **Do not deploy the Beta images to production workloads or in
@@ -220,8 +213,8 @@ days.
 
 ## Where to go next
 
-- [Constitution](/reference/constitution) · the Apache-licensed Rego
-  bundle every runner verifies
+- [Constitution](/reference/constitution) · the Apache-licensed policy
+  every runner enforces
 - [Specialist Packs](/reference/specialist-packs) · the
   vendor-curated, paid third axis
 - [Architecture](/reference/architecture) · how the open-core boundary

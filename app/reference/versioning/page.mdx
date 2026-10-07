@@ -1,133 +1,83 @@
 ---
 title: Versioning and releases
-description: How TruStacks versions its public images and constitution bundle, how to pin a release with TRUSTACKS_VERSION, and what each semver bump means for you.
+description: How TruStacks versions its images, runner chart, and policy. Product releases on 0.2.x, the constitution on its own 1.x line, how release candidates work, and how to know which runner version to install.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Versioning and releases
 
-TruStacks publishes four public artifacts on every release: the
-control-plane image, the runner image, the UI image, and the
-constitution Rego bundle. They all carry the same version, so you only
-ever track one number.
+TruStacks ships on two version lines.
 
-<Callout type="info">
-  One release, one tag. `TRUSTACKS_VERSION=0.1.2` pins all four
-  artifacts to the same coherent set. There is no compatibility matrix
-  to manage and no risk of mixing a new runner with an old policy
-  bundle.
-</Callout>
-
-## The four artifacts move together
-
-A maintainer cuts a single semver tag and two workflows publish in
-parallel against it. The images and the constitution bundle ship as a
-set, every time:
-
-| Artifact | OCI reference |
-|---|---|
-| Control-plane image | `ghcr.io/trustacks/control-plane:<version>` |
-| Runner image | `ghcr.io/trustacks/runner:<version>` |
-| UI image | `ghcr.io/trustacks/ui:<version>` |
-| Constitution Rego bundle | `ghcr.io/trustacks/policy/constitution:<version>` |
-
-Because they share a tag, pinning one version pins all four. The
-runner you run, the UI you see, and the policy bundle the runner
-evaluates are always from the same release. For how each artifact is
-signed and how to verify it, see
-[Supply-chain verification](/reference/supply-chain).
-
-## What each version bump means for you
-
-The public artifacts follow [Semantic Versioning
-2.0.0](https://semver.org/spec/v2.0.0.html) (`MAJOR.MINOR.PATCH`),
-starting at `0.1.0`. During the Beta, read the parts like this:
-
-| Bump | What it means for you | How often during Beta |
+| Line | Artifacts | Current |
 |---|---|---|
-| **MAJOR** | A breaking change to something customer-visible: an HTTP route rename, an Environment Profile schema change without a migration path, a constitution `rule_id` rename, or a removed agent crew member. | Not during Beta. The line stays on `0.x` until GA. |
-| **MINOR** | A new capability you can adopt: a new CLI subcommand, a new constitution rule, a new agent specialist, a new UI feature. Backward-compatible with the prior minor. | Roughly every 2 to 4 weeks. |
-| **PATCH** | Bug fixes, prompt refinements, and internal changes with no customer-visible API change. | As needed; more than once a week is normal. |
+| **Product** | `ghcr.io/trustacks/runner`, `control-plane`, `ui`, and the chart `ghcr.io/trustacks/charts/runner` | `0.2.13` stable; `0.2.14-rcN` release candidates |
+| **Policy** | `ghcr.io/trustacks/policy/constitution` | `1.0.0` |
 
-<Callout type="warning">
-  Pre-1.0 caveat. Until the line reaches `1.0.0` at GA, a MINOR release
-  may carry a small breaking change when a customer-facing artifact (a
-  Profile schema, a route shape) has to evolve. When that happens, the
-  release notes call it out explicitly. You will not be surprised.
-</Callout>
+Both follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+Tags in git carry a `v` prefix (`v0.2.13`); OCI tags do not (`0.2.13`).
 
-## Pinning a version
+## Product releases
 
-By default the installer pulls `:latest`, which always points at the
-most recent stable release across all four artifacts. That is the
-right choice for workshops and evaluation, where you want the newest
-build.
+The runner, control-plane, and UI images and the runner chart are built and
+signed together from one tag in `trustacks-mvp`. The chart is published with
+the runner image of the same version pinned inside it.
 
-When you need a reproducible install, for example to match a
-procurement record or to keep an environment fixed, set
-`TRUSTACKS_VERSION` to the exact tag:
+### Which runner version to install
 
-```bash
-# Reproducible, pinned install
-TRUSTACKS_VERSION=0.1.2 \
-  curl -fsSL https://trustacks.com/install | bash
-```
+**Copy the install or upgrade command from the app.** Settings → Runners shows
+the version the hosted control plane currently advertises and the version
+your runner is running, and generates the command with the right `--version`.
+Don't hardcode a version from a doc page, this one included.
 
-The value is the OCI tag (`0.1.2`), with no `v` prefix. A pinned
-install resolves the same four image and bundle digests every time, so
-two runs of the same `TRUSTACKS_VERSION` give you byte-identical
-artifacts.
+A stable release cannot be published unless the hosted control plane is set
+to advertise that same version, so the version the app shows is always one
+that exists and has been signed.
+
+### Release candidates
+
+Tags such as `0.2.14-rc23` are release candidates. They publish their
+versioned tag only. They never move `:latest`. The app advertises
+stable releases.
+
+`:latest` on the images points at the newest stable release.
+
+### Beta caveat
+
+The product line stays on `0.x` through the Beta. Under semver, a `0.x`
+minor release may change behavior you rely on.
+
+## Policy releases
+
+The constitution is published from the public
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>
+repository on its own schedule, independent of product releases.
+
+| Tag | Moves when |
+|---|---|
+| `1.0.0` | Points at exactly that release |
+| `1` | Every stable `1.x.y` release |
+| `latest` | Every stable release |
+
+Hosted runners follow `:1`. A rule fix in the 1.x line reaches your runner the
+next time it starts, without a runner upgrade. A `2.x` release is tagged `:2`, so a
+change that needs a newer runner never reaches a runner that follows `:1`.
 
 <Callout type="info">
-  Pre-release tags (for example `0.2.0-rc1`) publish the versioned tag
-  only. They never move `:latest`, so an early look never lands on an
-  evaluator who did not ask for it.
+  **Before `1.0.0`**, the constitution was published from `trustacks-mvp` with
+  the product's version (`0.x`, `0.2.14-rcN`) and a different signing
+  identity. Runners accept both identities for one release cycle. See
+  [Supply-chain verification](/reference/supply-chain#one-cycle-overlap-on-the-policy-identity).
 </Callout>
 
-## Release cadence
-
-- **Minor releases** land roughly every 2 to 4 weeks during the Beta,
-  as new capabilities clear their gates.
-- **Patch releases** ship as needed, often more than once a week.
-- **Out-of-band patches** cover security fixes you should pull right
-  away. When one ships, a plain-language advisory is posted to the
-  public
-  <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">trustacks-quickstart</a>
-  repository.
-
-Internal sprint cadence does not gate version bumps. Test-only
-changes, CI fixes, and internal refactors do not cut a release; the
-next scheduled release picks them up.
-
-## Reading what changed
-
-Every published version is available from the public
-`ghcr.io/trustacks/*` registry, so you can always see which tags
-exist. Notable changes and security advisories are posted to the
-public
-<a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">trustacks-quickstart</a>
-repository. Richer per-version release notes will grow as the Beta
-program matures.
-
-## Constitution versioning
-
-The constitution bundle is one of the four artifacts, so it ships at
-the release tag like everything else. It also carries its own internal
-semantic version for the rule set it contains, and the runner pins that
-constitution version per release. The rule-level meaning of a
-constitution patch, minor, or major bump (and what a major bump asks of
-your overlay) lives on the
-[Constitution](/reference/constitution#versioning) page.
+Signed-policy pull for hosted runners ships in runner `0.2.14-rc24` and
+later, which are pre-releases; no stable release includes it yet.
+Earlier runners enforce the copy of the constitution baked into the runner
+image, which is the version that was current when that image was built. See
+[Policy in force](/reference/policy-in-force).
 
 ## Where to go next
 
-- [Supply-chain verification](/reference/supply-chain) · how each
-  artifact is signed and how to verify it before you run it
-- [Constitution](/reference/constitution) · the rules the runner
-  evaluates, and how the rule set itself is versioned
-- [Self-hosted quickstart](/contributing/self-hosted-quickstart) · the
-  contributor path: run the `curl-pipe-bash` install, pinned or on
-  `:latest`
-- [License and the bright line](/reference/license) · what the Beta
-  license permits for the images and the bundle
+- [Runner Helm chart](/reference/runner-helm-chart) · install and upgrade
+- [Supply-chain verification](/reference/supply-chain) · verify each artifact
+- [Constitution](/reference/constitution) · what is in the policy

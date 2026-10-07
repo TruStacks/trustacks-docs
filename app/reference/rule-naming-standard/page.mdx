@@ -1,43 +1,38 @@
 ---
 title: Rule-naming standard
-description: The grammar, reserved namespaces, and length cap that govern every rule_id in a TruStacks customer overlay. Enforced by the Constitution at sign time; validated at every authoring surface.
+description: The grammar, reserved namespaces, and length cap for every rule_id in a TruStacks overlay, and every place the standard is checked.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Rule-naming standard
 
-Every `rule_id` in a TruStacks customer overlay follows the same
-naming standard. The standard is enforced by the
-[Constitution](/reference/constitution) at bundle-sign time (no
-bundle ships with a malformed slug) and validated at every authoring
-surface so you get friendly feedback long before you hit the gate.
+Every `rule_id` in a TruStacks overlay follows one naming standard. The same
+regular expression, reserved list, and length cap are checked by the CLI, the
+rule-drafting API, and the signing step, so an ID that passes one passes all
+of them.
 
-<Callout type="info">
-  The full specification and examples table live in the
-  `trustacks-policy` repository (Apache 2.0; flips public at Beta
-  launch on 2026-07-27). This page is a reference summary for daily
-  use.
-</Callout>
+The full specification lives in the public `trustacks-policy` repository at
+<a href="https://github.com/TruStacks/trustacks-policy/blob/main/standards/rule-naming.md" target="_blank" rel="noopener noreferrer">standards/rule-naming.md</a>.
+This page is the summary.
 
 ## The shape
-
-A `rule_id` looks like this:
 
 ```text
 <namespace>.<name>
 ```
 
-- **Lowercase letters, digits, and underscores.** No hyphens, no
-  uppercase, no spaces.
-- **Exactly one dot** separating namespace and name.
-- **Leading character of each part is a letter.** `9foo.bar` is
-  rejected; `foo9.bar` is fine.
-- **64 characters total or fewer.**
-- **Reserved namespaces** are off-limits to customer overlays:
-  `proposal`, `argocd`, `constitution`, `trustacks`.
+- **Lowercase letters, digits, and underscores.** No hyphens, uppercase, or
+  spaces.
+- **Exactly one dot** between namespace and name.
+- **Each part starts with a letter.** `9foo.bar` is rejected; `foo9.bar` is fine.
+- **64 characters or fewer** in total.
+- **Reserved namespaces** belong to TruStacks: `argocd`, `constitution`,
+  `proposal`, `trustacks`.
 
-## Quick examples
+The pattern is `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`.
+
+## Examples
 
 Valid:
 
@@ -52,73 +47,48 @@ Invalid:
 ```text
 Acme.RequiresRunbookLink           # uppercase
 acme-corp.requires_runbook         # hyphen
-acme.security.requires_runbook     # nested namespace
+acme.security.requires_runbook     # two dots
 proposal.requires_runbook_link     # reserved namespace
 ```
 
 ## Recommended conventions
 
-Beyond the grammar above, two conventions keep overlays readable as
-they grow:
+Not enforced, but they keep an overlay readable as it grows:
 
-- **Namespace = your workspace slug.** Use one prefix across every
-  rule in your overlay. The TruStacks UI proposes a namespace from
-  your workspace name by default.
-- **Name = `<verb>_<noun>`** in present tense. Common verbs that read
-  naturally:
-  - `requires_<thing>`: fails when the thing is missing
-  - `denies_<thing>`: fails when the thing is present
-  - `mandates_<thing>`: same shape as `requires_`, for process rules
-  - `forbids_<thing>`: same shape as `denies_`, for strong
-    prohibitions
+- **Namespace = your workspace or org slug.** One prefix for every rule you
+  write.
+- **Name = `<verb>_<noun>`** in present tense: `requires_<thing>` fails
+  when the thing is missing, `denies_<thing>` fails when it is present.
 
-These conventions are recommended, not enforced; reviewers will likely
-ask you to rename if you stray far from them.
+## Where it is checked
 
-## Where it's enforced
+| Surface | When | What you see on failure |
+|---|---|---|
+| `trustacks rule new <id>` | Scaffolding a rule | An error naming the reason; exit code 1, nothing written |
+| `trustacks rule test <id>` and `trustacks rule lint <id>` | Scoping a run to one rule | Same error, exit code 1 |
+| `trustacks rule lint` | Every directory under `rules/` | One issue per bad directory name |
+| `/rule new <id>` in Workspace chat | Starting a draft | A hint with an example ID |
+| `POST /api/rule-drafts` | Creating a draft through the API | HTTP 422 with the reason |
+| `trustacks rule sign` | Before anything is pushed | Signing stops; no bundle is published |
 
-| Surface                                | When it fires                                          | What you see on failure                                |
-| -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
-| `trustacks rule new <id>` (CLI)        | When you scaffold a new rule                           | Rich-printed error; CLI exits non-zero                 |
-| `/rule new` (TruStacks UI)             | When you type a command                                | Chat-turn hint with example slug                       |
-| `POST /api/rule-drafts` (Control Plane)| Direct-API + UI dispatch                               | HTTP 422 with structured error detail                  |
-| [Constitution](/reference/constitution)| At `trustacks rule sign` time                          | Sign aborts; no signed bundle leaves the registry      |
-
-All four surfaces read the same regex + reserved set + length cap.
-A CI lockstep test in the product repo asserts they stay byte-identical
-across the canonical Python module + each consumer's mirror.
+The constitution also carries the standard: `constitution.overlay_rule_naming`
+and its `data.naming.json` hold the same pattern, reserved list, and cap, so
+the rule set you are judged against states the rule you are named by.
 
 <Callout type="info">
-  The Constitution check is the load-bearing gate. Even a hand-edited
-  `rule_metadata.yaml` file that bypasses the CLI cannot ship in a
-  signed bundle.
+  The checks above all run through TruStacks tools. A bundle built and signed
+  some other way skips them. Overlay bundles have no delivery path to hosted
+  runners yet; see [the constitution page](/reference/constitution#your-own-rules).
 </Callout>
-
-## Full specification
-
-The canonical standard, including the auditor-readable rationale,
-examples table, description-style conventions, and the versioning
-plan, lives at `standards/rule-naming.md` in the `trustacks-policy`
-repository. That repository is Apache 2.0 and flips public at Beta
-launch on 2026-07-27; until then, this page is the accessible
-reference.
-
-That document is the source of truth. This reference page is a
-short summary maintained in lockstep with it.
 
 ## Versioning
 
-This is version 1 of the standard, the baseline. Future revisions
-will declare a version number in the constitution bundle's
-`data.naming.json` sidecar so existing signed bundles continue to
-verify against the version they were signed under.
+This is version 1 of the standard. A version 2 that ties a rule's namespace
+to the directory it lives in is in progress. Rule IDs already in use do not
+change.
 
 ## Related
 
-- [Constitution](/reference/constitution): what the constitution is,
-  how it's signed, and where the rule-naming check fits.
-- [Runner CLI](/reference/runner-cli): the `trustacks rule new` /
-  `test` / `lint` / `sign` flow.
-- `trustacks-policy` repository: the full standard plus
-  community-contributed framework packs. Apache 2.0; flips public at
-  Beta launch on 2026-07-27.
+- [Policy linter](/reference/policy-linter) · everything `rule lint` checks
+- [Runner CLI](/reference/runner-cli) · `rule new`, `test`, `lint`, `sign`
+- [Constitution](/reference/constitution) · the rules your overlay adds to

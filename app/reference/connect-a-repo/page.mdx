@@ -1,117 +1,124 @@
 ---
 title: Connect a repo
-description: How TruStacks connects to your repositories. The two-repo model (a read-only service repo and a pull-request platform repo), the shared GitHub App, the access each role gets, and the trust boundary. The canonical reference both hosted walkthroughs link to.
+description: How TruStacks connects to your repositories. The service repo and platform repo roles, the shared TruStacks GitHub App and the permissions it asks for, the one-Application rule, and what crosses the network.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Connect a repo
 
-TruStacks works against two of your repositories: it **reads** your
-application code and **opens pull requests** into a separate GitOps repo. This
-page is the canonical model behind the **Services → Connect a repo** step in
-both hosted walkthroughs. For the click-through, see step 5 of the
-[hosted quickstart](/getting-started/hosted-quickstart#step-5-connect-your-repos)
-or the [concierge Beta walkthrough](/getting-started/beta); this page explains
-what you are actually granting and why.
+TruStacks works against two kinds of repository. It **reads** your service
+repos and **opens pull requests** into one platform repo, the GitOps repo
+your ArgoCD watches. This page explains what you grant when you connect
+them. For the click-through, see the
+[hosted quickstart](/getting-started/hosted-quickstart).
 
-**Agents propose. Policy decides. Humans approve.**
+## Before you connect
 
-## The two-repo model
+- **Create an Application first.** Every repo belongs to an Application, and
+  the connect wizard refuses to start without one ("Create an Application
+  first"). Create it under **Applications**: a name, at least one target
+  cluster with a tier (`dev`, `uat`, or `prod`), and a renderer (Helm or
+  Kustomize).
+- **Install the runner.** Analyses and proposals run in your runner. See the
+  [runner Helm chart](/reference/runner-helm-chart).
 
-You connect two repositories, in two distinct roles:
+## The two roles
 
-| Role | What it holds | What TruStacks does with it | Access |
-|---|---|---|---|
-| **Service repo** | Your application code | The crew reads it to analyze framework, language, runtime, and security posture | Read-only |
-| **Platform repo** | Your GitOps tree (`gitops/`, `argo-apps/`, `.github/workflows/`) | The crew opens pull requests here: the CI workflow, Helm chart, and ArgoCD Application it proposes | Pull-request write |
+| Role | What it holds | What TruStacks does with it |
+|---|---|---|
+| **Service** | Your application code | The Code Reviewer clones and reads it. TruStacks never commits to it. |
+| **Platform** | Your GitOps tree: `gitops/`, `argo-apps/`, `.github/workflows/`, and `environment-profile.yaml` | The DevOps Engineer opens pull requests here. |
 
-The split is deliberate. TruStacks **never writes generated delivery files
-into your application repo.** Proposals land as pull requests in the platform
-repo, where your existing GitOps controller already watches for change. Your
-application repo stays exactly as your engineers left it.
+Generated delivery files never land in your service repo. The one file you
+add there yourself is a short caller workflow that runs the pipeline stored
+in the platform repo. See [Platform repo layout](/reference/platform-repo-layout).
 
-You can point both roles at the same starter pair to try it, or bring your
-own. The [hosted quickstart](/getting-started/hosted-quickstart#step-5-connect-your-repos)
-documents the TruStacks starter service and platform repos and the
-`gh repo create` commands to fork them into your org; bring-your-own works
-too, with any GitHub application repo as the service repo and any GitHub repo
-carrying the platform layout as the platform repo.
+Two rules shape how repos map to Applications:
 
-## The GitHub App
+- **A service is a repo.** One repository is one service. A monorepo with
+  several deployable services connects as one service today; per-path
+  services inside one repo are not supported yet.
+- **A repo belongs to exactly one Application.** Connecting a repo that is
+  already a member of another Application is refused.
 
-TruStacks connects through a **single shared GitHub App**. You do not register
-your own app or manage OAuth credentials.
+## The TruStacks GitHub App
 
-1. In the app, go to **Services** and click **+ Connect repo**, choose
-   **GitHub**, then **Install on GitHub**. This installs the TruStacks GitHub
-   App on your org.
-2. Grant it access to your two repositories. Choose **Only select
-   repositories** and pick the service repo and the platform repo. That is the
-   grant TruStacks needs. **All repositories** also works, but it hands the app
-   access to every repo in the org, present and future, so treat it as a
-   deliberate exception rather than the default. You can narrow or widen the
-   grant later from your org's **Settings → Third-party Access → GitHub Apps →
-   Configure**.
-3. Back in the app, bind each repo to its role: the **service repo**
-   (read-only) and the **platform repo** (pull-request write).
+You connect through a single shared GitHub App. You do not register an app,
+create OAuth credentials, or paste tokens.
 
-The crew opens pull requests rather than pushing to a branch directly, and
-**TruStacks never merges them.** The GitHub App's write access is the access
-needed to open a PR, and merging stays with you. Whether an approval is
-*required* before that merge is your repository's setting, not ours: enforce it
-with branch protection or a ruleset on the platform repo, and leave the
-TruStacks GitHub App out of the bypass-actor list so the requirement holds for
-its pull requests too.
+1. Go to **Services** and click **+ Connect repo** (or type `/discover` in
+   the Workspace chat).
+2. Pick the role (Service or Platform), then GitHub.
+3. Click **Install on GitHub**. Choose **Only select repositories** and pick
+   the repos you are connecting. **All repositories** works but grants the
+   app every repo in the org, present and future.
+4. Back in TruStacks, pick the repo, the Application, and a name.
 
-<Callout type="info">
-  **Provider support.** GitHub, via the GitHub App, is the supported provider
-  for real repositories today. The bundled
-  [self-hosted quickstart](/contributing/self-hosted-quickstart) uses an in-cluster
-  Gitea instead. GitLab and Azure DevOps are on the roadmap and not
-  connectable yet.
+Repeat once per repo. You can change the grant later from your org's
+**Settings → GitHub Apps → TruStacks → Configure**.
+
+### What the app is allowed to do
+
+The app requests these repository permissions, and they apply to **every
+repo in the installation grant**:
+
+| Permission | Access | Why |
+|---|---|---|
+| Contents | Read and write | Clone repos; push the proposal branch to the platform repo |
+| Workflows | Read and write | Proposals add files under `.github/workflows/` in the platform repo |
+| Pull requests | Read and write | Open the proposal PR; poll whether it merged |
+| Metadata | Read | Required by GitHub for every app |
+
+<Callout type="warning">
+  **"Read-only" for a service repo is a TruStacks setting, not a GitHub
+  permission.** TruStacks never writes to a repo bound as a service, but
+  GitHub grants the app the same permissions on every repo you select. If
+  you need a hard guarantee, keep service repos out of the installation
+  grant you use for write, or enforce it with branch protection.
 </Callout>
 
-## The trust boundary
+**TruStacks never merges.** Require approvals on the platform repo with branch
+protection or a ruleset, and leave the TruStacks app out of the bypass list.
 
-On the hosted track, the analysis runs in **your runner, in your cluster**.
-That shapes what actually crosses the network when you connect a repo:
+<Callout type="info">
+  **Providers.** GitHub, through the TruStacks GitHub App, is the only
+  provider for hosted workspaces. Local development uses an in-cluster
+  Gitea. GitLab and Azure DevOps are not connectable yet.
+</Callout>
 
-- **Your source is cloned and read inside your cluster.** The runner does the
-  clone and the analysis locally. Your application code does not transit the
-  TruStacks control plane.
-- **Only findings, audit events, and pull requests flow back.** The control
-  plane records the audit trail and shows you the results; it does not hold
-  your repo contents.
-- **The pull request is opened through your git provider,** carrying the
-  proposed artifacts and the constitution rule citations that motivated them.
+## What crosses the network
 
-This is the same outbound-only posture described on the
-[architecture reference](/reference/architecture). Before you install the
-runner that does this work, you can verify its signed image and policy bundle:
-see [supply-chain verification](/reference/supply-chain).
+- **The runner clones and reads your code inside your cluster.** It uses a
+  GitHub App installation token that the control plane mints, valid for about
+  an hour and sealed to your runner.
+- **The control plane reads one file directly**: `environment-profile.yaml`
+  from the platform repo root, through the GitHub API.
+- **Analysis results, generated artifacts, and verdicts flow back** to the
+  control plane. Your repository is not uploaded.
+- **The pull request goes through GitHub**, opened by the runner.
+
+The file contents the agents read are sent to your LLM provider under your
+key. See [Architecture](/reference/architecture#what-leaves-your-cluster).
 
 ## Troubleshooting
 
-- **No pull request after you promote a proposal** · confirm your **platform**
-  repo is bound (with the pull-request write role) and that the TruStacks
-  GitHub App still has access to it. The crew also runs a Code Reviewer pass
-  first, which takes a few minutes, so a proposal is not instant.
-- **The GitHub App can't see a repo** · re-open the installation from your
-  org's **Settings → Third-party Access → GitHub Apps**, click **Configure**
-  on TruStacks, and add the repo to the grant. A newly created platform repo
-  is a common miss.
-- **Analysis runs but finds nothing to read** · confirm the **service** repo
-  is the one bound in the read-only role, not the empty platform repo.
+- **"Create an Application first"** · create one under **Applications**, then
+  reconnect.
+- **The repo isn't in the picker** · add it to the app's installation grant
+  under your org's GitHub App settings. A newly created platform repo is the
+  usual miss.
+- **No pull request after "Promote to proposal"** · open the proposal and read
+  the timeline. A failed artifact check or a policy denial stops the run
+  before any PR exists, and says which check or rule. Also confirm the
+  Application has a platform repo bound.
+- **The first pipeline run fails with `workflow was not found`** · your platform
+  repo is private and has not shared its workflows. See
+  [Platform repo layout](/reference/platform-repo-layout#private-platform-repos).
 
 ## Where to go next
 
-- [Hosted quickstart](/getting-started/hosted-quickstart) · the self-serve
-  walkthrough, with the connect step inline
-- [Getting started (Beta)](/getting-started/beta) · the concierge walkthrough
-- [GitOps integration](/installation/gitops) · how your controller deploys the
-  merged pull request
-- [Architecture](/reference/architecture) · the outbound-only runner and the
-  Data Plane / Control Plane split
-- [Supply-chain verification](/reference/supply-chain) · verify the signed
-  runner image and policy bundle before they run
+- [Platform repo layout](/reference/platform-repo-layout) · what lands where, and the caller workflow
+- [Proposal lifecycle](/reference/proposal-lifecycle) · from analysis to deploy
+- [GitOps integration](/installation/gitops) · pointing your ArgoCD at the platform repo
+- [Environment profile](/reference/environment-profile) · declare what you run
