@@ -1,4 +1,4 @@
 export default {
-  'ci-cd-generation': 'CI/CD generation',
-  'policy-authoring': 'Policy authoring'
+  'ci-cd-generation': 'CI/CD generation (local dev)',
+  'policy-authoring': 'Policy authoring (local dev)'
 }

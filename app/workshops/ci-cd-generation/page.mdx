@@ -1,240 +1,240 @@
 ---
 title: CI/CD generation workshop
-description: A guided walkthrough of one full crew run. The Code Reviewer reads your repo. The Coordinator routes to the DevOps Engineer. The DevOps Engineer emits CI + manifests, the OPA policy gate verdicts, and the PR opens.
+description: A guided walkthrough of one full crew run. The Code Reviewer reads a repo, the DevOps Engineer drafts the pipeline and deploy artifacts, validation and the policy gate run, a PR opens, and a gap analysis scores the result.
 ---
 
 import { Callout } from 'nextra/components'
 
 # CI/CD generation workshop
 
-A guided walkthrough of one full crew run: the Code Reviewer reads your
-repository, the Coordinator routes the work to the DevOps Engineer, the
-DevOps Engineer emits CI workflow + Kubernetes manifests, the OPA
-policy gate runs, and the PR opens.
+A guided walkthrough of one full crew run: the Code Reviewer reads a
+service repo, the DevOps Engineer drafts a CI workflow and deploy artifacts,
+the artifacts are validated and judged by the policy gate, a pull request
+opens, and a gap analysis scores the result.
 
-The point of this workshop is not just to make a PR happen. It is to
-show you *what* the agents are doing at each step, *why* the dialogue
-sounds the way it does, and *where* the trust boundaries are.
+The point is not just to make a PR happen. It is to see *what* each agent
+does, *why*, and *where* the trust boundaries are: agents propose, policy
+decides, humans approve.
+
+<Callout type="warning">
+  **This workshop needs a local development environment.** It uses the
+  seeded sample repos, the in-cluster Gitea and ArgoCD, and the `trustacks`
+  CLI, which talks to a local or self-hosted control plane (the CLI sends no
+  credentials, so it cannot drive the hosted service). Set up with
+  [Local development](/contributing/local-dev) first.
+
+  **On the hosted product?** You can follow the same steps in the app
+  against your own repos: steps 2, 3, 5, 6 and 8 below are all UI steps.
+  The [product guide](/guide) covers each screen.
+</Callout>
 
 ## What you will learn
 
-- How the Code Reviewer detects framework and runtime version, and
-  what gets surfaced as findings.
-- How the Coordinator routes work to specialists and mediates when
-  they disagree.
-- What the DevOps Engineer reads before it writes (the
-  read-and-preserve protocol).
-- How rule citations land in the PR body.
-- What a Gap Analysis Report looks like for the sample stack.
+- How the Code Reviewer identifies a framework, and why known frameworks
+  are detected deterministically before the agent runs.
+- What the DevOps Engineer reads before it writes (read-and-preserve).
+- The two checks before any PR: artifact validation, then the policy gate.
+- What a TruStacks pull request tells its reviewer.
+- What a gap analysis and maturity score look like for the sample stack.
 
 ## Time required
 
-Roughly 45 minutes. The crew runs are fast (under a minute each); the
-time is mostly in reading what the agents produced and watching the
-multi-speaker conversation in the UI.
+About 45 minutes. Each crew run takes a minute or two; most of the time is
+reading what the agents produced.
 
 ## Setup
 
-You need a fresh local install of TruStacks running. If you have not
-done that yet, work through
-[the quickstart](/contributing/self-hosted-quickstart) first (about fifteen
-minutes) or, if you have `trustacks-mvp` repository access and want to
-build from source, the
-[local-development install guide](/contributing/local-dev).
+Bring up the local stack and seed it, as described in
+[Local development](/contributing/local-dev):
 
-For this workshop, use the bundled sample `sample-app-gitea` (the
-FastAPI variant). It is already seeded by `make seed`.
+```bash
+make up
+make seed
+make urls   # every service reachable on *.localtest.me:8080
+```
 
-You should be able to:
+`make seed` creates four sample service repos in Gitea (FastAPI, Spring
+Boot, .NET and Go), a platform repo, an overlay repo, the matching
+connection profiles, and a `polyglot-demo` Application that binds the four
+samples to the platform repo. This workshop uses the FastAPI sample, whose profile is
+named `sample-app-gitea`.
 
-- `make urls` returns a healthy table.
-- `http://ui.localtest.me:8080` loads.
-- Gitea shows `sample-app` in the `trustacks` organization.
+Open `http://ui.localtest.me:8080`. You should see the app with the sidebar
+(Overview, Get set up, Workspace, Signals, Applications, …).
 
 ## Walkthrough
 
-### Step 1. Run the Code Reviewer
+### Step 1. Run the Code Reviewer from the CLI
 
 ```bash
 cd runner && uv sync
 uv run trustacks review sample-app-gitea
 ```
 
-The CLI streams the event log live:
+The CLI streams the run's events live. The shape:
 
 ```text
-started      → analysis_id=<uuid> repo=sample-app-gitea
-cloned       → ref=main commit=<short-sha>
-tool_call    → name=list_dir args={"path": "/"}
-tool_result  → result=[Dockerfile, pyproject.toml, src/, tests/]
-tool_call    → name=read_file args={"path": "pyproject.toml"}
-tool_result  → result=<pyproject.toml contents>
-finding      → category=framework value=python-fastapi confidence=0.96
-tool_call    → name=read_file args={"path": "src/main.py"}
-finding      → category=runtime value=python-3.11 confidence=0.92
-finding      → category=test-runner value=pytest confidence=0.88
-done         → analysis_id=<uuid>
+started → cloned → framework_detected (python_fastapi)
+  → tool_call / tool_result (the agent reading files) ×N
+  → finding ×N
+  → done
 ```
 
-**What is happening:** the Code Reviewer is doing repository-aware
-discovery through Anthropic-hosted Filesystem MCP. Each `tool_call`
-event is the agent calling an MCP tool; each `tool_result` is the
-response. The agent decides what to look at next based on what it has
-already seen. The `finding` events are the structured observations
-that land in the final `RepositoryAnalysis`.
+**What is happening:** before the agent starts, a deterministic detector
+matches the repo against TruStacks' framework packs (here, `fastapi` in
+`pyproject.toml`). The agent is told the framework as a fact, so it does
+not guess. It then reads files with a small, explicit set of tools, and
+submits a typed `RepositoryAnalysis`. Each `tool_call` is the agent asking
+to read something; each `tool_result` is the answer.
 
-Copy the analysis ID from the top of the output.
+Note the analysis id at the top of the output.
 
-### Step 2. Watch the same run in the UI
+### Step 2. See the same run in the app
 
-Open `http://ui.localtest.me:8080`. The sidebar shows **Activity**,
-**Applications**, **Services**, **Gaps**, **Rules**, **Settings**.
+Go to **Applications → View all services across applications**, open
+`sample-app-gitea`, and look at the **Analyses** tab. Your CLI run is there.
+**open →** shows the same events as an **Activity** log, with the
+Coordinator narrating and the Code Reviewer's tool calls attributed to it.
+When the run is done, the **Repository Analysis** card shows framework,
+language, package manager, runtime version, entrypoints, and whether tests,
+a Dockerfile and CI exist.
 
-Click into **Services → sample-app-gitea**. You will see an Analyses
-tab and a Proposals tab. Your run is in Analyses.
+You can start an analysis from here too: **Run analysis** with ref `main`.
 
-Click into it. The same event log you saw in the CLI is rendered as a
-timeline. Each tool call is a node. The agent's "thinking" between
-calls is rendered as activity, not as a fake-typing animation.
+### Step 3. Look at the declared stack
 
-### Step 3. Inspect the Environment Profile
-
-Click **Settings → Environment Profile** (or open the file directly in
-the overlay repo on Gitea).
-
-The Profile is the declarative inventory the agents read on every
-action. After `make seed`, it has a baseline declaration: GitHub
-Actions as the CI platform, a default scanner, ArgoCD as the GitOps
-controller. The Code Reviewer's run did not change it; if you ran
-discovery against a real repo with `.azure-pipelines.yml`, the Code
-Reviewer would *propose* a Profile PR to update the CI platform
-declaration.
+Open **Stack**. This is the environment profile the agents read: the
+`environment-profile.yaml` in the seeded overlay repo. Note which tooling
+categories are declared (CI platform, GitOps controller) and which are
+not. Only declared tools will get pipeline steps in the next step. The
+agents never add a tool you did not declare; recommendations go into the
+gap analysis instead.
 
 ### Step 4. Promote the analysis to a proposal
+
+From the CLI, with a dry run first:
+
+```bash
+uv run trustacks plan <analysis-id> --dry-run
+```
+
+Or in the app: on the service's **Analyses** tab, **promote →**, tick
+**dry-run (skip PR)**, then **Promote (dry-run)**.
+
+The event shape:
+
+```text
+started → cloned_app → cloned_platform → analysis_done → profile_loaded
+  → agent_started (DevOps Engineer)
+  → tool_call read_file (repo="platform") ×N      read-and-preserve
+  → artifact_emitted ×N
+  → proposal_built
+  → artifact_validation                            does it render and parse?
+  → policy_check (allow | deny)                    the gate
+  → gap_check (advisory)
+  → dry_run_skipped
+  → done
+```
+
+Watch for three things:
+
+- **The platform repo is read first.** The DevOps Engineer reads the
+  current version of each file it is about to write. On a first proposal,
+  nothing exists yet and it emits fresh files.
+- **Validation runs before policy.** Helm (or Kustomize) must render,
+  workflows must parse, names must be legal Kubernetes names. If anything
+  fails, or a check could not run, the run stops here.
+- **The Constitution speaks last.** `policy_check` is OPA evaluating the
+  proposal against the constitution and the overlay. On the proposal page
+  it reads **clean, no violations**, or **denied** with the rule ids.
+
+### Step 5. Read the proposal
+
+Open the proposal (the CLI prints its id; the app navigates there). Below
+the timeline:
+
+- **Explanation**: summary, blast radius, rollback, rules cited, and which
+  profile entries were used.
+- **Files**: one tab per emitted file. Expect a reusable CI workflow
+  (`.github/workflows/ci-<service>.yaml`, `on: workflow_call` only), a
+  minimal Helm chart (`Chart.yaml`, `values.yaml`, a Deployment and a
+  Service) under `gitops/<application>/<cluster>/<service>/`, and an ArgoCD
+  Application under `argo-apps/`.
+
+Look at the workflow's `uses:` lines. Every one is pinned to a 40-character
+commit SHA taken from a TruStacks-curated pack. An action that is not in a
+pack is left out and recorded as a TODO, never guessed.
+
+### Step 6. Open the real pull request
+
+Run it again without dry run:
 
 ```bash
 uv run trustacks plan <analysis-id>
 ```
 
-The CLI streams a longer event log:
+The run ends with `pr_opened` and a link to the PR in Gitea. The PR body
+carries the reviewer's context: **Summary**, **Blast radius**,
+**Rollback**, **Rule citations**, **EnvironmentProfile entries used**, any
+**Preservation notes** and **Files removed**, and the file list. The
+structure exists so a reviewer can answer *why was this proposed, and what
+does it touch?* before reading the diff.
 
-```text
-started           → analysis_id=<uuid>
-cloned_app        → ref=main
-analysis_done     → analysis_id=<uuid>
-profile_loaded    → version=<uuid> entries=12
-agent_started     → agent=devops-engineer
-tool_call         → name=read_platform_repo
-tool_result       → result=<existing files in platform/argo-apps/>
-tool_call         → name=emit_workflow args={...}
-artifact_emitted  → path=.github/workflows/sample-app-ci.yaml
-tool_call         → name=emit_helm_chart args={...}
-artifact_emitted  → path=gitops/sample-app/local/sample-app/Chart.yaml
-tool_call         → name=emit_argocd_app args={...}
-artifact_emitted  → path=argo-apps/local/sample-app.yaml
-proposal_built    → artifacts=3
-policy_check      → result=allow violations=[]
-pr_opened         → url=http://gitea.localtest.me:8080/trustacks/platform/pulls/1
-done              → proposal_id=<uuid>
-```
+If the platform repo already matches the proposal exactly, the run ends with
+"nothing to change" instead of opening a duplicate PR.
 
-The dialogue happens behind the scenes. Watch the same run in the UI's
-**Activity** view; the Coordinator's hand-off to the DevOps Engineer is
-rendered as a multi-speaker conversation.
+### Step 7. See a deny
 
-### Step 5. Read the PR
+The easiest way to watch the gate refuse something is to add a rule that the
+emitted workflow will not satisfy. The
+[policy authoring workshop](/workshops/policy-authoring) does exactly that:
+a rule requiring top-level `permissions:` on every workflow. After landing it,
+re-run Step 4. `policy_check` reports **denied**, cites your rule id, and no
+PR opens. The [Overview](/guide/overview)'s **Policy in force** card starts
+counting it.
 
-Click the `pr_opened.url` in the CLI output. Gitea opens the PR.
+### Step 8. Review, merge, and see read-and-preserve
 
-The PR body is structured. Look for:
+Merge the PR in Gitea. In local development, `make seed` has already
+pointed the in-cluster ArgoCD at the platform repo; open
+`http://argocd.localtest.me:8080` to see the new Application. (Building and
+loading the sample image for an actual running pod is covered in the
+project's workshop guide under *Close the deploy loop*.)
 
-- **Summary** · what the DevOps Engineer proposed in plain English.
-- **Rule citations** · the constitution rule IDs that motivated each
-  artifact. For example, `proposal.has_workflow` motivated the CI
-  workflow, `proposal.has_helm_chart` motivated the Helm chart.
-- **Environment Profile inputs** · which Profile entries informed each
-  tool choice. The CI workflow uses GitHub Actions because the
-  Profile says so; the scanner step uses the declared image scanner.
-- **Blast radius** · what Applications and Services are affected by
-  this change.
-- **Rollback** · how to revert if the deploy goes sideways.
+Now edit the generated workflow in Gitea (add a harmless step, for example
+an `echo` in its own step) and merge that edit. Promote the same analysis
+again. In the new PR:
 
-The structure exists so a human reviewer can answer *why was this
-proposed, and what does it touch?* without reading the diff first.
+- your added step is still there, because the DevOps Engineer read the file
+  before re-emitting it;
+- a **Preservation notes** section says what it kept and why.
 
-### Step 6. Watch the policy gate
+### Step 9. Score it
 
-In the proposal's UI view, you will see a green
-`✓ policy clean` line. Click into it to see the rule evaluation
-detail: each constitution rule, the input it was evaluated against,
-the verdict (`allow` or `deny`), and the rule's text.
+In the app, open **Gap analyses** and **Run new gap analysis** (or type
+`/gaps` in the Activity chat at `#/activity`). Watch the Coordinator
+consult **Baseline Security** and **SOC2**, each replying in its own voice.
 
-This is the OPA evaluation against the signed constitution bundle
-(see [the constitution reference](/reference/constitution)). For this
-sample app, every rule evaluates `allow` and the PR opens.
-
-To see a denied proposal, try this experiment after merging:
-
-```bash
-# Make a change that intentionally violates a rule
-# (e.g., delete a required citation from a proposal artifact)
-```
-
-The DevOps Engineer would still emit the proposal, but
-`policy_check` would emit `result=deny` with the rule IDs of the
-violations. No PR opens. The Coordinator surfaces the denials and you
-can ask why in chat.
-
-### Step 7. Review and merge
-
-Treat the PR like any code review. The structure of the PR body is
-specifically designed to make the review tractable: read the summary,
-spot-check the rule citations, look at the diff, merge.
-
-When you merge, ArgoCD picks up the change. The `make seed`-installed
-root Application syncs and creates the child Application for
-`sample-app`. The service deploys.
-
-### Step 8. Generate a Gap Analysis Report
-
-Back at the Coordinator, ask:
-
-> *Generate a gap analysis report for sample-app-gitea.*
-
-The Coordinator delegates to the relevant Specialist agents (Baseline
-Security at minimum; SOC2 if the SOC2 Specialist is enabled). The
-report leads with a maturity tier (bronze / silver / gold) and a
-coverage percent, then lists category-by-category findings with
-stack-aware recommendations.
-
-The tier is deterministic: it is derived from the policy bundle
-evaluation against the Environment Profile, not authored by the LLM.
-This matters for trust; you can show the bronze / silver / gold tile
-to the board without worrying about hallucinated numbers.
+Then open **Maturity**. You will see a tier, a bar split into verified,
+credited and potential, and the open gaps. Note that the score is computed
+deterministically by the runner from your profile and the rules; the
+language model writes the prose, not the number. See
+[Verified, claimed and disputed](/concepts/verified-claimed-disputed).
 
 ## What you should take away
 
-By the end of this workshop you should understand:
-
-- **The agent crew is a multi-speaker conversation.** You can ask
-  it questions. It disagrees out loud. Mediating disagreement is part
-  of the design.
-- **The OPA policy gate is the gate.** Not the agents' reasoning. The
-  policy gate is what decides whether a proposal can become a PR.
-- **The Environment Profile is the platform's memory.** The DevOps
-  Engineer chose GitHub Actions because the Profile said so. Change
-  the Profile, change the next proposal.
-- **The PR is the contract handoff.** Everything before the merge is
-  agents proposing. The merge is a human committing. ArgoCD is what
-  deploys.
+- **The gate is policy, not the agent's judgement.** Validation and OPA
+  decide whether a proposal can become a PR.
+- **The environment profile is the platform's memory.** Change it, and the
+  next proposal changes.
+- **The PR is the hand-off.** Everything before the merge is agents
+  proposing. The merge is a human committing. ArgoCD deploys.
+- **Re-runs are safe.** Read-and-preserve keeps your team's edits.
 
 ## Where to go next
 
-- [Policy authoring workshop](/workshops/policy-authoring) · write
-  your first overlay rule with the Coordinator's help
-- [Architecture](/reference/architecture) · the three planes, the
-  three layers of rules, the Environment Profile in context
-- [Constitution reference](/reference/constitution) · the rules the
-  OPA gate evaluated against
-- [Runner CLI](/reference/runner-cli) · the command surface you used
-  in this workshop
+- [Policy authoring workshop](/workshops/policy-authoring): write the rule
+  that produces the deny in Step 7.
+- [Agents propose, policy decides, humans approve](/concepts/agents-propose-policy-decides)
+- [Applications, services and proposals](/guide/applications)
+- [Runner CLI](/reference/runner-cli)
