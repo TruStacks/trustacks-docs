@@ -28,13 +28,19 @@ guided version.
 ## Install
 
 Generate an enrollment token in **Runners** and copy the command the app
-shows. It pins the chart version the control plane currently publishes:
+shows. It pins the chart version the control plane currently publishes. The
+commands on this page use three shell variables; the app's command has the
+version and token filled in:
 
 ```bash
+NAMESPACE=trustacks-system   # any namespace you choose
+VERSION=0.0.0                # placeholder: the published version the app shows
+TOKEN=paste-from-ui          # placeholder: the enrollment token the app shows
+
 helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-  --version <published> \
-  -n "<your-namespace>" --create-namespace \
-  --set saas.enrollmentToken=<token>
+  --version "$VERSION" \
+  -n "$NAMESPACE" --create-namespace \
+  --set saas.enrollmentToken="$TOKEN"
 ```
 
 Copy it from the app rather than from here, so the version matches what the
@@ -49,8 +55,8 @@ The chart names its resources `<release>-runner`. With the release name
 `trustacks-runner`, the Deployment is **`trustacks-runner-runner`**:
 
 ```bash
-kubectl -n <your-namespace> rollout status deploy/trustacks-runner-runner
-kubectl -n <your-namespace> logs deploy/trustacks-runner-runner | grep -i enroll
+kubectl -n "$NAMESPACE" rollout status deploy/trustacks-runner-runner
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
 ```
 
 A healthy runner long-polls the control plane; its log shows repeated
@@ -65,7 +71,7 @@ available to the pod. On our side it is stored only as a hash.
 
 There are two ways to supply it.
 
-**From the command line (default).** `--set saas.enrollmentToken=<token>`
+**From the command line (default).** `--set saas.enrollmentToken="$TOKEN"`
 makes the chart create a Secret named `trustacks-runner-enrollment` holding
 it. The token is then also stored in the Helm release record.
 
@@ -75,12 +81,12 @@ Sealed Secrets, Vault), create the Secret yourself and leave
 `saas.enrollmentToken` empty:
 
 ```bash
-kubectl -n <your-namespace> create secret generic trustacks-runner-enrollment \
-  --from-literal=enrollment-token=<token>
+kubectl -n "$NAMESPACE" create secret generic trustacks-runner-enrollment \
+  --from-literal=enrollment-token="$TOKEN"
 
 helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-  --version <published> \
-  -n "<your-namespace>"
+  --version "$VERSION" \
+  -n "$NAMESPACE"
 ```
 
 The chart reads `saas.enrollmentTokenSecret.name` (default
@@ -102,7 +108,7 @@ The chart reads `saas.enrollmentTokenSecret.name` (default
 
 Leave the control plane URL, image, and policy settings at the published
 defaults. The full values list is in the
-[runner chart reference](/reference/runner-chart).
+[runner chart reference](/reference/runner-helm-chart).
 
 ## What the chart creates
 
@@ -159,14 +165,16 @@ constitution baked into its image instead, and records the reason
 bundle. To see what your runner loaded:
 
 ```bash
-kubectl -n <your-namespace> logs deploy/trustacks-runner-runner -c load-policy-bundle | grep status
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner -c load-policy-bundle | grep status
 ```
 
 <Callout type="warning">
-  **Version note.** Pulling and verifying the published constitution is new
-  in runner releases after 0.2.13. Runner 0.2.13 and earlier always use the
-  image-baked copy, unverified at start-up. Upgrade to get the verified
-  pull. See [policy state](/reference/policy-state).
+  **Version note.** Pulling and verifying the published constitution ships
+  in runner 0.2.14-rc24 and later, which are pre-releases. No stable release
+  includes it yet, and the app's install command uses the newest stable
+  release, so a runner installed from it uses the image-baked copy,
+  unverified at start-up, until a stable release ships the verified pull.
+  See [Policy in force](/reference/policy-in-force).
 </Callout>
 
 ## Verify what you install
@@ -184,12 +192,12 @@ workflow identity. Install
 cosign verify \
   --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-mvp/\.github/workflows/publish-images\.yml@refs/tags/v.*$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/trustacks/charts/runner:<version>
+  "ghcr.io/trustacks/charts/runner:$VERSION"
 
 cosign verify \
   --certificate-identity-regexp '^https://github\.com/TruStacks/trustacks-mvp/\.github/workflows/publish-images\.yml@refs/tags/v.*$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/trustacks/runner:<version>
+  "ghcr.io/trustacks/runner:$VERSION"
 ```
 
 **The policy bundle** is signed by the public `trustacks-policy` repo's
@@ -217,23 +225,26 @@ version currently published, and gives you the upgrade command when they
 differ. Copy it from there:
 
 ```bash
+VERSION=0.0.0   # placeholder: the published version the app shows
 helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-  --version <published> \
-  -n "<your-namespace>" --reset-then-reuse-values
+  --version "$VERSION" \
+  -n "$NAMESPACE" --reset-then-reuse-values
 ```
 
 <Callout type="error">
   **Do not use `--reuse-values`.** It reuses the previous release's computed
   values, which include the old image tag. The upgrade reports success and
   keeps running the old runner. `--reset-then-reuse-values` (Helm 3.14+)
-  takes the new chart's defaults and then reapplies your own overrides, such
-  as the enrollment token.
+  takes the new chart's defaults and then reapplies the values you set
+  yourself (for example `saas.enrollmentToken`, if you passed it on the
+  command line). A token you supply from your own Secret is read by name and
+  is unaffected either way.
 </Callout>
 
 Check the running version afterwards, not only Helm's exit code:
 
 ```bash
-kubectl -n <your-namespace> get deploy trustacks-runner-runner \
+kubectl -n "$NAMESPACE" get deploy trustacks-runner-runner \
   -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 
@@ -244,11 +255,22 @@ kubectl -n <your-namespace> get deploy trustacks-runner-runner \
    (Helm does not track them):
 
    ```bash
-   helm uninstall trustacks-runner -n <your-namespace>
-   kubectl -n <your-namespace> delete secret trustacks-runner-identity trustacks-runner-llm
+   helm uninstall trustacks-runner -n "$NAMESPACE"
+   kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner-llm
    ```
 
    If you created `trustacks-runner-enrollment` yourself, delete it too.
+
+<Callout type="warning">
+  **Removing a runner does not revoke its enrollment token.** Removing it in
+  the app deletes the runner's registered key, so nothing more is sealed to
+  it; the token itself stays valid, because tokens are reusable and do not
+  expire. There is no self-serve way to revoke a token yet. Delete every copy
+  you hold (Helm values files, CI variables, the Secret, an external secret
+  store), and if a token may have leaked, contact TruStacks to have it
+  revoked. Anyone holding a valid token can enroll a runner into your
+  workspace.
+</Callout>
 
 ## Where to go next
 
@@ -256,4 +278,4 @@ kubectl -n <your-namespace> get deploy trustacks-runner-runner \
   holds
 - [GitOps integration](/installation/gitops) · wire ArgoCD to the platform
   repo
-- [Runner chart reference](/reference/runner-chart) · every value
+- [Runner Helm chart reference](/reference/runner-helm-chart) · every value

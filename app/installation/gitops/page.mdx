@@ -85,12 +85,33 @@ Add this to each service repo, once:
 ```yaml
 # .github/workflows/ci.yaml in the SERVICE repo
 name: ci
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]   # your default branch
+  pull_request:
 jobs:
   trustacks:
-    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@main
-    permissions: {contents: read, packages: write}
+    # The called workflow pushes an image. Pull requests from forks get a
+    # read-only token and cannot push, so skip them instead of failing.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@<commit-sha>
+    permissions:
+      contents: read
+      packages: write
 ```
+
+**Pin the called workflow to a commit SHA** in the platform repo, for example
+the merge commit of the TruStacks pull request that added it. It runs with
+`packages: write`, so a pin means nothing reaches your service's CI until you
+move it; when you merge a TruStacks change to this workflow, move the pin in
+the same review. `@main` also works and follows every merge automatically, at
+the cost of trusting whoever can push to the platform repo's `main`. The
+proposal summary shows the snippet with `@main` and `on: [push, pull_request]`;
+the pinned form above is the hardened one.
+
+Same-repo pull requests still build and push an image, tagged with the pull
+request's commit SHA. Image tag promotion follows only your default branch,
+so those images are never proposed for deployment.
 
 The workflow runs your tests and linter, builds the image from the
 `Dockerfile` in the service repo, and pushes it to GitHub Container Registry
@@ -101,7 +122,8 @@ Profile; a tool you have not declared gets no step.
 the caller fails with `workflow was not found`:
 
 ```bash
-gh api --method PUT repos/<owner>/<platform-repo>/actions/permissions/access \
+PLATFORM_REPO=your-org/your-platform-repo   # owner/name of your platform repo
+gh api --method PUT "repos/$PLATFORM_REPO/actions/permissions/access" \
   -f access_level=organization   # or access_level=user for a personal account
 ```
 
@@ -155,10 +177,12 @@ Every ArgoCD Application TruStacks writes uses **manual sync**, with
 Merging a pull request updates Git; it does not change what is running until
 someone syncs.
 
-For production this is policy, not just a default: the constitution denies a
-proposal that sets automated sync on an Application under
-`argo-apps/argo-apps-prod/`. Enabling automated sync on non-production
-Applications is your decision, made in your own reviewed change.
+For a target cluster named `prod` this is policy, not just a default: the
+constitution denies a proposal that sets automated sync on an Application
+under `argo-apps/argo-apps-prod/`. The rule matches that directory, not the
+cluster's tier, so a `prod`-tier cluster with another name gets manual sync
+from the DevOps Engineer but no constitution check on it. Enabling automated
+sync anywhere else is your decision, made in your own reviewed change.
 
 ## How a change reaches the cluster
 
@@ -192,16 +216,26 @@ policy gate, and human review as any proposal.
 
 ## Deploy status (optional)
 
-Install the runner with:
+Turn on the observer on an installed runner (`NAMESPACE` and `VERSION` as in
+[Runner install](/installation/cluster#install)):
 
 ```bash
---set observer.enabled=true --set observer.argocdNamespace=argocd
+helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version "$VERSION" -n "$NAMESPACE" --reset-then-reuse-values \
+  --set observer.enabled=true --set observer.argocdNamespace=argocd
 ```
 
-and it watches ArgoCD Applications in that namespace, read-only (`get`,
+It then watches ArgoCD Applications in that namespace, read-only (`get`,
 `list`, `watch`; it cannot sync, roll back, or delete), and reports sync and
 health status back. Applications in the app then show deploy status. The
 control plane separately checks whether proposal pull requests have merged.
+
+<Callout type="warning">
+  **Beta.** Deploy status is new. It only reports what ArgoCD says and never
+  changes anything, so if the chip stays empty, check that the observer is
+  enabled and that `argocdNamespace` is the namespace your ArgoCD
+  Application resources live in.
+</Callout>
 
 ## Other GitOps controllers
 
