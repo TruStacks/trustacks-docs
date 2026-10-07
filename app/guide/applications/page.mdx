@@ -59,11 +59,14 @@ Five cards, top to bottom:
 
 ### What the tiers mean
 
-Tiers drive tier-scoped policy. The clearest example: the constitution
-requires ArgoCD Applications for `prod` clusters to use **manual sync**. So
-when a proposal for a prod cluster merges, ArgoCD does not deploy it until a
-person presses Sync. That is the human approval, applied a second time at
-the point of production.
+Tiers drive tier-scoped policy. The clearest example is manual sync for
+production. Every ArgoCD Application TruStacks emits uses **manual sync**, so
+when a proposal merges, ArgoCD does not deploy it until a person presses
+Sync. That is the human approval, applied a second time at the point of
+deployment. For a cluster named `prod`, the constitution also denies any
+proposal that turns automated sync on; the rule matches the
+`argo-apps/argo-apps-prod/` directory, so a `prod`-tier cluster with another
+name is not covered by that check.
 
 <Callout type="warning">
   **Check the default cluster.** A new Application starts with one target
@@ -241,21 +244,24 @@ TODO instead of guessing. See the [platform repo layout](/reference/platform-rep
 2. **Add the caller workflow to the service repo, once.** The pipeline
    lives in the platform repo as a reusable workflow; the service repo needs
    a small `.github/workflows/ci.yaml` that calls it. The proposal's summary
-   includes the snippet.
+   includes the snippet; use the hardened form (fork pull requests skipped,
+   the called workflow pinned to a commit SHA) in
+   [GitOps integration](/installation/gitops#the-ci-workflow-reusable-plus-a-caller).
 3. **If the platform repo is private, grant Actions access once**, or the
    service repo's first run fails with `workflow was not found`:
 
    ```bash
-   # platform repo owned by an organisation
-   gh api --method PUT repos/<owner>/<platform-repo>/actions/permissions/access \
+   PLATFORM_REPO=your-org/your-platform-repo   # owner/name of your platform repo
+   # platform repo owned by an organization
+   gh api --method PUT "repos/$PLATFORM_REPO/actions/permissions/access" \
      -f access_level=organization
    # platform repo owned by a personal account: use access_level=user
    ```
 4. **Point your ArgoCD at the platform repo** (a root Application for
    `argo-apps/`, plus read credentials if the repo is private). TruStacks
    emits the configuration; your ArgoCD runs it.
-5. **Sync production by hand.** Prod-tier Applications are emitted with
-   manual sync.
+5. **Sync by hand.** Every Application TruStacks emits uses manual sync,
+   so merging does not deploy; someone presses Sync.
 
 ### After the first deploy: image tag promotion
 
@@ -278,7 +284,7 @@ TruStacks never renders an app it has not observed as healthy.
 ## How it connects
 
 - A service needs a [runner](/guide/runners) and an
-  [LLM key](/guide/settings) before it can be analysed.
+  [LLM key](/guide/settings) before it can be analyzed.
 - Proposals are judged by the rules on [Rules](/guide/rules), using the
   stack on [Stack](/guide/stack).
 - Pending PRs and failed runs surface on [Overview](/guide/overview).

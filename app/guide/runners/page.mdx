@@ -105,7 +105,7 @@ A list of every runner that has enrolled, each marked **connected** or
   api.trustacks.com, ghcr.io, your LLM endpoint, GitHub and Sigstore).
 
 Chart values, RBAC and egress requirements are in the
-[runner chart reference](/reference/runner-chart).
+[Runner Helm chart reference](/reference/runner-helm-chart).
 
 ## How it connects
 
@@ -115,13 +115,17 @@ Chart values, RBAC and egress requirements are in the
   connected under [Applications](/guide/applications).
 - The runner reports which rules it enforces, which feeds
   [Rules](/guide/rules) and the [Maturity](/guide/maturity) ceiling. Runners
-  from 0.2.14-rc24 also report each rule's Rego source, and pull and verify
-  the signed constitution at start-up; older runners use the copy baked into
-  their image. See [policy state](/reference/policy-state).
+  0.2.14-rc24 and later (pre-releases; no stable release has this yet) also
+  report each rule's Rego source, and pull and verify the signed
+  constitution at start-up; older runners use the copy baked into their
+  image. See [Policy in force](/reference/policy-in-force).
 
 ## Beta limits
 
 - Removing a runner deletes its record in TruStacks. It does not uninstall
-  anything from your cluster; use `helm uninstall` for that.
+  anything from your cluster (use `helm uninstall` for that), and it does
+  not revoke the enrollment token, which stays valid. There is no
+  self-serve token revocation yet; see
+  [Runner install](/installation/cluster#uninstall).
 - Runners that predate version reporting show no version; the card says it
   cannot tell whether they are current, and upgrading is safe.

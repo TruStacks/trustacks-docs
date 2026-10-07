@@ -41,7 +41,7 @@ bundles; this screen shows what your runner actually loaded.
 
 **The constitution** is the set of rules TruStacks authors, signs and
 publishes from the public, Apache-2.0
-[`trustacks-policy`](https://github.com/TruStacks/trustacks-policy)
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>
 repository. Every proposal must satisfy it. It is not waivable.
 
 **Your overlay** is rules your team adds. Overlay denies are added to the
@@ -85,14 +85,16 @@ control plane serves that list; it never reaches into your cluster to ask.
 - [Gap analyses](/guide/gap-analyses) and [Maturity](/guide/maturity) use
   each rule's metadata (the categories and behaviors it scores).
 - The bundle a runner loads, and whether it was verified, is described in
-  the [policy state reference](/reference/policy-state).
+  the [Policy in force reference](/reference/policy-in-force).
 
 ## Beta limits
 
-- **Source needs a recent runner.** Runners older than 0.2.14-rc24 report
-  which rules they enforce but not the Rego; the detail says so and suggests
-  upgrading on [Runners](/guide/runners).
-- **Impact tiles and paired recipes are not built.** They are labelled
+- **Source needs a recent runner.** Rego source is reported by runners
+  0.2.14-rc24 and later, which are pre-releases; no stable release includes
+  it yet. Runners 0.2.14-rc21 to rc23 report which rules they enforce but not
+  the Rego, and the detail says so and suggests upgrading on
+  [Runners](/guide/runners). Runners older than that report no rules.
+- **Impact tiles and paired recipes are not built.** They are labeled
   *coming soon*. For real denial counts, use the Overview.
 - **Customer overlays on the hosted service.** There is no supported way
   yet to deliver your own signed overlay bundle to a hosted runner, so a

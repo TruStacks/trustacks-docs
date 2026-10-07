@@ -1,6 +1,6 @@
 ---
 title: Product guide
-description: How the TruStacks product fits together, screen by screen. Connect, analyse, propose, gate, approve, deploy, score.
+description: How the TruStacks product fits together, screen by screen. Connect, analyze, propose, gate, approve, deploy, score.
 ---
 
 import { Callout } from 'nextra/components'
@@ -19,17 +19,17 @@ that loop.
 ## The loop
 
 ```text
-connect → analyse → propose → gate → approve → deploy → score
+connect → analyze → propose → gate → approve → deploy → score
 ```
 
 | Step | What happens | Who does it | Where you see it |
 |---|---|---|---|
 | **Connect** | You install a runner in your own cluster, set an LLM key, create an Application and connect its repos through the TruStacks GitHub App. | You | [Get set up](/guide/onboarding), [Runners](/guide/runners), [Settings](/guide/settings), [Applications](/guide/applications) |
-| **Analyse** | The Code Reviewer reads a service repo and describes it: framework, language, runtime, tests, Dockerfile, CI. | Agent | [Applications → service → Analyses](/guide/applications#analyses) |
+| **Analyze** | The Code Reviewer reads a service repo and describes it: framework, language, runtime, tests, Dockerfile, CI. | Agent | [Applications → service → Analyses](/guide/applications#analyses) |
 | **Propose** | The DevOps Engineer turns the analysis and your declared stack into delivery artifacts (a reusable CI workflow, a Helm chart or Kustomize base, an ArgoCD Application). | Agent | [Proposal detail](/guide/applications#a-proposal-from-your-side) |
 | **Gate** | The artifacts are validated (do they render, parse and use legal names?) and then evaluated by OPA against the signed constitution plus any overlay rules you run. A deny stops the run. No PR opens. | Policy | Proposal timeline, [Rules](/guide/rules), [Overview → Policy in force](/guide/overview#policy-in-force) |
 | **Approve** | On allow, the runner opens a pull request against your platform repo. A person on your team reviews and merges it. Nothing merges itself. | You | Your Git provider; the [Overview](/guide/overview) queue tells you a PR is waiting |
-| **Deploy** | Your ArgoCD syncs what was merged. Production-tier Applications are emitted with manual sync, so someone also presses Sync. | Your stack | [Applications](/guide/applications) deploy-status chips (optional observer) |
+| **Deploy** | Your ArgoCD deploys what was merged. Every Application TruStacks emits uses manual sync, so someone presses Sync. | Your stack | [Applications](/guide/applications) deploy-status chips (optional observer) |
 | **Score** | A gap analysis reads your declared stack, checks it against the rules, consults the specialist agents and produces a maturity score per Application. | Agent + policy | [Gap analyses](/guide/gap-analyses), [Maturity](/guide/maturity), [Stack](/guide/stack) |
 
 The loop is deliberately one-directional at the merge. TruStacks authors the
