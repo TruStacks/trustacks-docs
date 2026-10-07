@@ -1,156 +1,75 @@
 ---
 title: Specialist Packs
-description: Paid, signed Rego bundles for regulatory and specialty domains. SOC2, HIPAA, PCI, FedRAMP, ITIL. Each typically pairs with a Specialist agent.
+description: Specialist Packs add domain expertise to the TruStacks crew. Today that means two specialist agents, Baseline Security and SOC 2, consulted during gap analysis. What each does, which tier includes it, and what is coming.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Specialist Packs
 
-Specialist Packs are TruStacks-curated Rego bundles for regulatory and
-specialty domains. Each typically pairs with a Specialist agent of the same
-name. Sold as Enterprise-and-above add-ons. Available standalone for
-customers who want the rules without the agents.
+A Specialist Pack adds domain expertise to the crew. Today every Specialist
+Pack is a **specialist agent**: an agent the Coordinator consults during a gap
+analysis, which returns findings grounded in your declared stack. There are
+two.
 
-The boundary sits where it does deliberately. TruStacks carries the
-auditor-defensibility risk on these packs. CC6.1 has to actually map to
-CC6.1 correctly. So we curate, sign, and ship them through the vendor
-channel.
+| Specialist | What it covers | Tier |
+|---|---|---|
+| **Baseline Security** | Image scanning, SAST/SCA, secret scanning, SBOM and signing | Every tier |
+| **SOC 2** | SOC 2 control families CC1 through CC9, with evidence hints | Included from Developer |
 
-## Pack and agent: two distinct things
-
-A Specialist Pack and the matching Specialist agent are independently
-usable, even though they typically ship together.
-
-- **The Pack** is content. A signed Rego bundle that ratchets stricter
-  than the constitution for a specific domain. It is *rules* the OPA
-  engine evaluates against every proposal.
-- **The agent** is reasoning. An LLM agent the Coordinator delegates to
-  during gap analysis. It surfaces findings, evidence hints, and
-  recommendations grounded in your declared stack.
-
-You can subscribe to a Pack without the agent (a compliance team that
-already has its own platform team, for example). You can subscribe to an
-agent without that Pack (rare, but supported for customers who already
-have their own regulatory rule library and want a domain expert in the
-crew).
-
-## Available today
-
-### SOC2 Specialist Pack
-
-Shipping as of 2026-05-02. Auditor-relevant rules and findings spanning
-the CC1 through CC9 control families with evidence hints grounded in your
-declared stack.
-
-Pairs with the **SOC2 Specialist agent**. The agent contributes
-SOC2-specific observations to gap analysis, including missing controls,
-weak controls, and stack-shaped recommendations for closing each gap.
-
-## Queued
-
-The order below reflects current priority, weighted toward the customer
-pedigree (regulated, federal, healthcare-adjacent).
-
-- **HIPAA Specialist Pack** · 164.308 / 164.310 / 164.312 control families.
-  Pairs with the HIPAA Specialist agent.
-- **FedRAMP Specialist Pack** · Moderate baseline first, High to follow.
-  Pairs with the FedRAMP Specialist agent and the on-premises inference
-  posture required for the Federal tier.
-- **PCI Specialist Pack** · PCI DSS v4 control families. Pairs with the
-  PCI Specialist agent.
-- **ITIL Specialist Pack** · service management and change-management
-  rules. Pairs with the ITIL Specialist agent (the closest agent to "your
-  SRE in the crew").
-
-Specialist Packs ship in P5.4, post-Beta.
-
-## How Specialist Packs layer
-
-Specialist Packs sit above the constitution and below your overlay.
-
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  Your overlay                                                    │
-│  (can ratchet stricter than the Packs)                           │
-├──────────────────────────────────────────────────────────────────┤
-│  Specialist Packs (paid, TruStacks-signed)                       │
-│  (can ratchet stricter than the constitution)                    │
-├──────────────────────────────────────────────────────────────────┤
-│  Constitution                                                    │
-│  (free at all tiers, non-waivable)                               │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-A Pack can require stricter behavior than the constitution. Your overlay
-can require stricter behavior than the Pack. No layer ever weakens
-anything from a layer above. The [policy linter](/reference/policy-linter)
-enforces the ratchet cryptographically at compile time.
-
-Multiple Packs can be active simultaneously. A customer with SOC2 + HIPAA
-subscribed gets both rule sets applied. The union of all required rules is
-what every proposal is checked against.
-
-## Waivers
-
-Unlike constitution rules, Specialist Pack rules support time-bound,
-signed waivers with mandatory expiration and audit visibility.
-
-A waiver is a customer-overlay rule that explicitly cites the Pack rule
-it is suspending, the business justification, the expiration timestamp,
-and a sign-off. The Runner logs every waiver activation. The Gap Analysis
-Report flags active waivers and surfaces upcoming expirations.
-
-<Callout type="warning">
-  **Waivers are auditable, not invisible.** Your auditor will see them.
-  Your CISO will see them. The Coordinator will surface them in chat. The
-  feature exists for legitimate exceptions, not for working around rules
-  you do not like.
+<Callout type="info">
+  **No Specialist Pack Rego bundles ship yet.** Specialists advise; they do
+  not add rules to the policy gate. The only rules your proposals are judged
+  against are the [constitution](/reference/constitution) and any overlay
+  rules you run yourself. HIPAA, PCI, FedRAMP, and ITIL are coming soon.
 </Callout>
 
-## Distribution and signing
+## When specialists run
 
-Specialist Packs ship through the same pipeline as the constitution.
+Specialists run during a **gap analysis**, not during a code analysis or a
+proposal. Start one from **Gap analyses**, or type `/gaps` in the Workspace
+chat. The Coordinator decides which specialists are in scope and consults
+them; the chat shows each consultation and reply as its own turn.
 
-- **Format** · Rego bundles for OPA.
-- **Signing** · Cosign keyless OIDC, signed by the TruStacks identity.
-- **Distribution** · OCI artifact in the TruStacks registry, fetched by
-  your Runner on startup and on rule refresh. Pack subscriptions are
-  validated by the Control Plane before bundle delivery.
-- **Verification** · The Runner's init container verifies the signature
-  against the pinned TruStacks identity before extracting the bundle.
+A finding can be remediated from the gap report, which creates a proposal
+that goes through the same validation, policy gate, and human review as any
+other. See [Proposal lifecycle](/reference/proposal-lifecycle).
 
-The "verify yourself" property applies. Same Cosign command works on a
-Pack bundle as on the constitution bundle.
+## Baseline Security
 
-## Versioning
+Consults on the four security tooling categories of your
+[environment profile](/reference/environment-profile): `image_scanning`,
+`sast_sca`, `secret_scanning`, and `sbom_signing`. Returns findings with a
+severity and tool candidates that fit what you already run. Included at every
+tier.
 
-Specialist Packs follow semantic versioning, parallel to the constitution.
+## SOC 2
 
-- **Patch** · clarifications, test additions, evidence-hint refinements.
-- **Minor** · new rules added. Existing rules unchanged.
-- **Major** · a rule's behavior changes or a rule is removed. Surfaces in
-  the policy linter; your overlay may need migration.
+Returns findings mapped to a SOC 2 control family and control ID (for example
+CC8.1), with the related tooling categories and hints about what evidence an
+auditor would ask for.
 
-Pack updates land independently of constitution updates and independently
-of each other. Upgrading is an explicit operator action; the Runner pins
-versions per release.
+The **Compliance** page shows, per SOC 2 control, how much evidence your
+TruStacks activity has produced. It deliberately shows counts, not pass or
+fail: whether a control is met is your auditor's call. **Audit reports**
+(`#/audit`) exports that evidence as JSON or PDF on demand, with a SHA-256
+digest in the header. Reports are not signed.
 
-## Standalone subscriptions
+<Callout type="warning">
+  **Tier gating while billing is off.** SOC 2 is included from the Developer
+  tier. While billing is not configured on hosted TruStacks, the gate is not
+  enforced and SOC 2 is available to every workspace.
+</Callout>
 
-Customers who want the rules without the agents can subscribe to packs
-independently. Typical fit: a compliance team in a larger organization
-that already has its own platform team and just needs the rule library
-plus signing infrastructure.
+## Coming soon
 
-For current standalone pricing and availability, see
-[trustacks.com/pricing](https://trustacks.com/pricing).
+HIPAA, FedRAMP, PCI, and ITIL specialists. When regulatory packs ship they
+may include Rego rules alongside the agent, curated by TruStacks so the
+mapping to each control holds up in an audit. Nothing here is available
+today, and the shape may change before it is.
 
 ## Where to go next
 
-- [Architecture](/reference/architecture) · how Packs fit into the three
-  layers of rules
-- [Constitution](/reference/constitution) · the floor every Pack
-  ratchets above
-- [Policy linter](/reference/policy-linter) · enforces ratchet
-  refinement across all layers
+- [Maturity scoring](/reference/maturity-scoring) · how gap analyses become a score
+- [Constitution](/reference/constitution) · the rules every proposal is judged against
+- [Architecture](/reference/architecture) · where the crew runs

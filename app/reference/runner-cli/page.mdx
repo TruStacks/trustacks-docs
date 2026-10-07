@@ -1,192 +1,183 @@
 ---
 title: Runner CLI
-description: Command reference for the trustacks CLI. Rule authoring, Environment Profile management, and inspection commands the operator uses against the Runner pod.
+description: Command reference for the trustacks CLI. Overlay rule authoring that works anywhere, plus review, plan, gaps, and application commands for local and self-hosted control planes.
 ---
 
 import { Callout } from 'nextra/components'
 
 # Runner CLI
 
-The `trustacks` CLI is the operator-facing surface of the Runner. It
-drives rule authoring, manages the Environment Profile, and inspects
-agent state.
+The `trustacks` CLI ships inside the runner image. It has two halves:
 
-<Callout type="info">
-  This page documents commands that are stable as of the public Beta.
-  The full surface area is still settling; commands marked **Coming
-  soon** are reserved names whose exact shape may change before they
-  ship.
+- **`trustacks rule`** works on a local checkout of your overlay rules. It
+  needs no control plane at all.
+- **`review`, `plan`, `gaps`, and `application`** drive a control plane.
+
+<Callout type="warning">
+  **The control-plane commands do not work against hosted TruStacks.** They
+  send no sign-in credentials, so `api.trustacks.com` rejects them. They are
+  for local development and self-hosted control planes. On hosted, use the web
+  app for the same actions.
 </Callout>
+
+## Running it
+
+There is no standalone CLI package. Run it from the runner image, which
+also carries `opa`, `oras`, and `cosign`:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$PWD:/work" -w /work \
+  ghcr.io/trustacks/runner:<version> \
+  trustacks --help
+```
+
+If you work from a source checkout of the runner, `uv run trustacks` does the
+same.
 
 ## Conventions
 
-- Every command exits 0 on success, non-zero on any failure.
-- Every command prints structured output. `--output json` switches to
-  machine-readable JSON; the default is human-readable.
-- Path arguments are relative to the current working directory unless
-  qualified with `./` or an absolute path.
-- The CLI reads `~/.trustacks/config.yaml` for the active runner
-  endpoint and overlay-signing identity. `trustacks login` populates it.
+- Exit code `0` on success, `1` on any failure.
+- Output is for people (Rich formatting). There is no JSON output mode.
+- There is no config file and no `login` command. Control-plane commands read
+  `--cp-url`, which defaults to the `TRUSTACKS_CP_URL` environment variable and
+  then to `http://cp.localtest.me:8080` (the local development stack).
 
-## Rule authoring
+## Overlay rules: `trustacks rule`
 
-The four-step authoring flow for a customer-overlay rule.
+Every `rule` command takes `--overlay PATH`, a local checkout of your overlay
+repo. It defaults to the current directory and must contain
+`environment-profile.yaml` at its root. Rules live in `rules/<rule_id>/`.
 
 ### `trustacks rule new`
 
-Scaffold a new overlay rule with a stub implementation, a positive
-test, a negative test, and a citation block.
-
 ```bash
-trustacks rule new ./overlay/deploy-windows.rego
+trustacks rule new <rule_id> [--description TEXT] [--package NAME]
 ```
 
-The scaffold drops a working rule that denies every change. Tests pass
-on the stub. You replace the rule logic with your actual rule and
-update the tests.
+Scaffolds `rules/<rule_id>/<rule_id>.rego` and `<rule_id>_test.rego`. The
+rule ID must meet the [naming standard](/reference/rule-naming-standard). The
+package defaults to `overlay.<namespace>_<name>`.
+
+The stub's deny condition is `false`, so it **never fires** until you replace
+it. The test file ships one passing baseline test and a commented template
+for the real one. Refuses to overwrite an existing rule directory.
+
+```bash
+trustacks rule new acme.requires_runbook_link \
+  --description "Every service ships a runbook link"
+```
 
 ### `trustacks rule test`
 
-Run the rule's tests via the OPA test harness. Exits non-zero if any
-test fails or if positive / negative coverage is missing.
-
 ```bash
-trustacks rule test ./overlay/deploy-windows.rego
+trustacks rule test [rule_id] [-v | --verbose]
 ```
+
+Runs `opa test` on one rule's directory, or on all of `rules/`. `--verbose`
+prints each test name. Exits with `opa`'s status. An overlay with no `rules/`
+directory exits `0`.
 
 ### `trustacks rule lint`
 
-Prove that the rule ratchets stricter than the constitution and any
-active Specialist Packs. Validates citation, signature shape, and
-waiver shape (if the rule is a waiver). See
-[the policy linter reference](/reference/policy-linter) for what is
-checked.
-
 ```bash
-trustacks rule lint ./overlay/deploy-windows.rego
-trustacks rule lint ./overlay           # lint the whole overlay
+trustacks rule lint [rule_id]
 ```
+
+Checks rule ID validity, that both files exist, that the rule declares a
+`package` and a `rule_metadata` map keyed by its ID, then runs `opa check`.
+See [Policy linter](/reference/policy-linter) for the full list and what it
+does not check.
 
 ### `trustacks rule sign`
 
-Sign the rule with your overlay key. The signing identity must be
-registered with the Control Plane. Signed rules are accepted by the
-Runner; unsigned or mis-signed rules are rejected.
-
 ```bash
-trustacks rule sign ./overlay/deploy-windows.rego
+trustacks rule sign [--bundle-ref REF] [--registry HOST:PORT] [--tag TAG]
+                    [--key PATH] [--signing-config PATH]
+                    [--insecure | --no-insecure]
 ```
 
-## Rule inspection
+Builds an OPA bundle from `rules/` (with a `rule_inventory.json`), pushes it
+with `oras`, and signs the pushed digest with `cosign`. Every rule ID is
+checked against the naming standard first. It does **not** run `lint` or
+`test`.
 
-Inspect the active rule set the Runner has loaded.
+| Flag | Default |
+|---|---|
+| `--bundle-ref` | `<registry>/trustacks/policy/overlay/<profile name>:<tag>`, where the profile name is `name:` in `environment-profile.yaml` |
+| `--registry` | `zot.localtest.me:8080` |
+| `--tag` | `dev` |
+| `--key` | `.policy-keys/cosign.key` |
+| `--signing-config` | `.policy-keys/signing-config.json` (offline, no transparency log) |
+| `--insecure / --no-insecure` | `--insecure` (plain HTTP) |
 
-### `trustacks rule list`
+<Callout type="info">
+  The defaults target the local development registry and a local key. Hosted
+  runners do not load overlay bundles yet, and per-customer signing keys are
+  not built. See [the constitution page](/reference/constitution#your-own-rules).
+</Callout>
 
-List all active rules from a specific layer.
+## Control-plane commands
 
-```bash
-trustacks rule list --layer constitution
-trustacks rule list --layer specialist-pack --pack soc2
-trustacks rule list --layer overlay
-trustacks rule list                     # all layers, grouped
-```
+Local and self-hosted only (see the warning above). Each takes `--cp-url`.
 
-### `trustacks rule show`
-
-Show the full text of a specific rule by ID, including its citation,
-its tests, and its signature metadata.
-
-```bash
-trustacks rule show CONST-CRED-001
-```
-
-## Environment Profile
-
-Manage the declarative inventory of your stack.
-
-### `trustacks env declare`
-
-Add or update a Profile entry. Coordinator-assisted authoring is the
-default; `--non-interactive` reads from `stdin` for use in CI.
+### `trustacks review`
 
 ```bash
-trustacks env declare ci-platform=azure-devops
-trustacks env declare scanner=clair-v5
+trustacks review <profile> [--ref REF | -r REF] [--max-steps N]
 ```
 
-### `trustacks env validate`
+Runs the Code Reviewer against a connection profile (name or UUID) and
+streams progress. `--ref` defaults to `main`; `--max-steps` to `25`. Prints
+the analysis ID you pass to `plan`.
 
-Validate the Profile against its schema. Exits non-zero on any schema
-violation.
+### `trustacks plan`
 
 ```bash
-trustacks env validate ./environment-profile.yaml
+trustacks plan <analysis_id> [--overlay PROFILE] [--max-steps N] [--dry-run]
 ```
 
-### `trustacks env diff`
+Promotes a completed analysis to a proposal and streams the run: artifact
+validation, the policy check, the advisory gap check, and the pull request.
+`--overlay` is the overlay connection profile (default `overlay-gitea`);
+`--max-steps` defaults to `40`. `--dry-run` produces the proposal without
+opening a pull request.
 
-Show drift between the declared Profile and what the Discovery agent
-observes in your repositories. Useful before approving a
-Discovery-proposed Profile PR.
+### `trustacks gaps`
 
 ```bash
-trustacks env diff
+trustacks gaps run [--overlay PROFILE]
+trustacks gaps list
+trustacks gaps show <gap_analysis_id>
 ```
 
-## Operator commands
+`run` starts a gap analysis and streams it; `list` shows recent runs;
+`show` renders one report: the summary, profile observations, and each
+unsatisfied tooling category. The maturity score is in the web app.
 
-Commands the platform operator runs against the Runner directly.
-
-### `trustacks login`
-
-Authenticate the CLI against the Control Plane and the Runner
-endpoint. Writes the active config to `~/.trustacks/config.yaml`.
+### `trustacks application`
 
 ```bash
-trustacks login
+trustacks application list
+trustacks application show <name-or-id>
+trustacks application create <name> [--renderer helm|kustomize]
+                                    [--target-cluster NAME]
+                                    [--target-tier dev|uat|prod]
+                                    [--platform-profile PROFILE]
 ```
 
-### `trustacks status`
+`create` defaults to `--renderer helm`, `--target-cluster local-k3d`, and
+`--target-tier dev`. It sets one target cluster; add more in the web app.
 
-Print a health summary of the Runner: connected MCP servers, active
-rule bundle versions, current Environment Profile version, agent
-crew loaded.
+## Not in the CLI
 
-```bash
-trustacks status
-```
-
-### `trustacks version`
-
-Print the CLI version, the Runner version, and the constitution and
-Specialist Pack versions currently loaded.
-
-```bash
-trustacks version
-```
-
-## Coming soon
-
-The following command groups are reserved and will ship in
-post-Beta releases. Names are stable; flag surfaces may evolve.
-
-- `trustacks app` · Application-level operations (one Application
-  groups multiple Services under a single platform repo)
-- `trustacks service` · per-Service connection management
-- `trustacks pack` · subscribe, unsubscribe, list active Specialist
-  Packs
-- `trustacks trace` · inspect agent traces (prompt, tool calls, model
-  output, rule citations)
-- `trustacks gap` · generate a Gap Analysis Report against the active
-  rules and Profile
+These appeared in earlier versions of this page and do not exist: `rule
+list`, `rule show`, `env declare`, `env validate`, `env diff`, `login`,
+`status`, `version`, `--output json`, and `~/.trustacks/config.yaml`. Browse
+rules on the **Rules** page instead.
 
 ## Where to go next
 
-- [Constitution](/reference/constitution) · what `rule list --layer
-  constitution` returns
-- [Specialist Packs](/reference/specialist-packs) · what `rule list
-  --layer specialist-pack` returns
 - [Policy linter](/reference/policy-linter) · what `rule lint` checks
-- [Architecture](/reference/architecture) · how the Runner fits into
-  the Data Plane
+- [Rule-naming standard](/reference/rule-naming-standard) · valid rule IDs
+- [Constitution](/reference/constitution) · the rules your overlay adds to
