@@ -1,61 +1,74 @@
 ---
 title: Overview
-description: Technical documentation for TruStacks. Install the runner, connect a repository, author policy, and integrate with your existing stack.
+description: Technical documentation for TruStacks. Set up the hosted service, install the runner in your cluster, connect a service repo and a platform repo, and get policy-checked pull requests your team approves.
 ---
 
 # TruStacks Docs
 
-TruStacks is an AI agent crew that proposes every software-delivery change as
-a reviewed, policy-checked pull request. Engineers ship faster without breaking
-the controls auditors care about.
+TruStacks is a crew of AI agents that proposes software-delivery changes (CI
+workflows, Helm or Kustomize config, ArgoCD Applications) as pull requests in
+your platform repo. Every proposal is checked against a signed policy before
+the pull request opens, and a human on your team merges it.
 
 **Agents propose. Policy decides. Humans approve.**
 
-This site is the technical reference. For positioning, pricing, and the
-product overview, head to [trustacks.com](https://trustacks.com).
+This site is the technical reference. For positioning and pricing, head to
+[trustacks.com](https://trustacks.com).
 
 ## Where to start
 
-- **[Getting started](/getting-started/ways-to-run)** · sign up for the
-  hosted trial or onboard the concierge way, install only the runner, and
-  watch the crew open its first PR.
-- **[Installation](/installation/cluster)** · cluster deploy, credentials,
-  and GitOps wiring.
-- **[Workshops](/workshops/ci-cd-generation)** · guided walkthroughs that
-  exercise the crew on real-shaped problems.
+- **[Quickstart](/getting-started/hosted-quickstart)** · create a workspace,
+  install the runner, connect two repos, and merge your first governed pull
+  request.
+- **[How TruStacks runs](/getting-started/how-trustacks-runs)** · the hosted
+  control plane, your runner, and what crosses between them.
+- **[Installation](/installation/cluster)** · runner install reference,
+  credentials, and GitOps wiring.
+- **[Product guide](/guide/overview)** · every screen in the app.
 - **[Reference](/reference/architecture)** · architecture, the constitution,
-  Specialist Packs, the runner CLI, the MCP server surface, and the policy
-  linter.
-- **[Concepts](/concepts/spec-driven-development)** · how TruStacks fits with
-  spec-driven development tools (Spec Kit, Kiro) and other ecosystems you
-  may have arrived from.
+  supply-chain verification, and the runner CLI.
+- **[Workshops](/workshops/ci-cd-generation)** · guided walkthroughs of the
+  crew on real-shaped problems.
 
-## How TruStacks fits together
+## The unit you adopt: an Application
 
-The platform has three layers, each one strictly stricter than the one above.
+You use TruStacks one **Application** at a time. An Application is:
+
+- one or more **service repos**: application code the crew reads; and
+- one **platform repo**: your GitOps repo, where the crew opens pull requests
+  with the CI workflow, deployment config, and ArgoCD Applications for those
+  services.
+
+Each service repo belongs to exactly one Application. TruStacks never writes generated
+files into your service repos. The one file you add there yourself is a small
+CI caller workflow, once per service.
+
+## How the rules fit together
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
-│  Customer Overlay (your architects, SREs, compliance team)       │
-│  Your domain rules. Authoring at the Team tier and above.        │
+│  Your overlay rules (optional)                                   │
+│  Can only add denials; can never loosen the constitution.        │
 ├──────────────────────────────────────────────────────────────────┤
-│  Specialist Packs (TruStacks, paid, signed)                      │
-│  SOC2, HIPAA, PCI, FedRAMP, ITIL                                 │
-│  Community packs (open source, free)                             │
-│  Frameworks, CI runtimes, industry overlays                      │
+│  Specialists                                                     │
+│  Baseline Security (included) · SOC2 Specialist Pack             │
 ├──────────────────────────────────────────────────────────────────┤
-│  Constitution (TruStacks, signed, immutable, free at all tiers)  │
-│  The universal rules every proposal must respect.                │
+│  Constitution (signed, public, every tier)                       │
+│  The rules every proposal must pass before a PR opens.           │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-The agent crew reads all three. Each PR carries a citation back to the rule
-that motivated it. Your existing GitOps controller deploys merged PRs the way
-it always has.
+The constitution is published from the public
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">trustacks-policy</a>
+repo and signed, so you can read every rule and verify the bundle your runner
+evaluates. The specialists review your setup during gap analyses. Overlay
+rules can be drafted in the app today; delivering your own signed rules to a
+hosted runner is not available yet.
+
+Your GitOps controller deploys merged pull requests the way it always has.
 
 ## Status
 
-These docs are under active construction ahead of the public Beta. The
-reference, installation, and workshop sections are content-complete; new
-pages will continue to land as the platform settles. If something is
-missing or wrong, <a href="https://github.com/TruStacks/trustacks-docs/issues" target="_blank" rel="noopener noreferrer">open an issue</a>.
+TruStacks is in Beta. These docs describe what works on the hosted service
+today and call out Beta limits where they apply. If something is missing or
+wrong, <a href="https://github.com/TruStacks/trustacks-docs/issues" target="_blank" rel="noopener noreferrer">open an issue</a>.

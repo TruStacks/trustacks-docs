@@ -1,346 +1,498 @@
 ---
-title: Hosted quickstart
-description: Start a hosted TruStacks trial, enroll a runner on your own Docker Desktop, wire up two repos, and watch the agent crew open a real policy-checked pull request. The self-serve path for the hosted control plane. No control plane to operate; you run only the lightweight runner.
+title: Quickstart
+description: Set up hosted TruStacks from an empty workspace to a merged, policy-checked pull request and a running service. Create a workspace, enroll one runner in your cluster, create an Application, connect a service repo and a platform repo, run the crew, add the caller workflow, and deploy with your own ArgoCD.
 ---
 
 import { Callout } from 'nextra/components'
 
-# Hosted quickstart
+# Quickstart
 
-Create an account on the hosted control plane, start a trial, run one
-lightweight runner on your own Docker Desktop, connect a pair of repos,
-and watch the agent crew open a real, policy-checked pull request against
-your platform repo. TruStacks operates the control plane. You operate only
-the runner, in a cluster you control. Nothing reaches into your network;
-the runner reaches out.
+Hosted TruStacks takes about 30 minutes to set up. You create a workspace at
+app.trustacks.com, install one runner in a Kubernetes cluster you control,
+connect a service repo and a platform repo, and the agent crew opens a
+policy-checked pull request in your platform repo. You review and merge it, and
+your own ArgoCD deploys it.
 
 **Agents propose. Policy decides. Humans approve.**
 
+This page follows the in-app **Get set up** wizard in the same order, then
+continues past it to the steps the wizard does not cover: the caller workflow
+in your service repo, ArgoCD, and what happens after the first deploy.
+
 <Callout type="warning">
-  **Beta, self-serve early access.** The hosted control plane is open for
-  self-serve signups. The reliable payoff of this guide is a real,
-  policy-checked pull request in your own repo. The deploy leg (your local
-  ArgoCD syncing the merged PR) and closed-loop validation are opt-in and
-  still being exercised live during Beta. In-flight items are flagged inline
-  and collected under [what's in flight](#whats-in-flight) so nothing here
-  overstates what is built today.
+  **Beta.** Everything on this page works on the hosted service today. Where a
+  step is new, partial, or has a known sharp edge, it is called out inline and
+  collected under [Beta limits](#beta-limits). Nothing here should be read as
+  more finished than that.
 </Callout>
 
-## Which quickstart is this
+## What you need
 
-This is the **hosted control plane** track from
-[Ways to run TruStacks](/getting-started/ways-to-run). TruStacks runs the
-control plane at `api.trustacks.com`; you run one runner in your own
-cluster.
+- **A Kubernetes cluster you control**, version 1.28 or newer. A laptop
+  cluster (Docker Desktop, k3d, kind) is fine for a first run. The runner image
+  is published for `amd64` and `arm64`.
+- **`kubectl`** pointed at that cluster, and **`helm` 3.14 or newer**.
+- **A GitHub account or organization** where you can install a GitHub App.
+- **Two repos in it:**
+  - a **service repo**: the application code you want delivered;
+  - a **platform repo**: your GitOps repo, where TruStacks opens pull
+    requests. An empty repo is a fine starting point.
+- **An Anthropic API key**, or an OpenRouter key. You paste it in step 7.
+- **The GitHub CLI (`gh`)**, for one access grant in step 10. You can do the
+  same thing in GitHub's settings instead.
+- **ArgoCD** in a cluster, if you want step 11 (deploy). Steps 1 to 10 do not
+  need it.
 
-This page is the **self-serve** door: you sign up yourself, no invite
-required. Design partners and the Beta cohort onboard the concierge way
-instead (we provision your workspace, billing is off, and SOC2 is
-included); that path is [Getting started (Beta)](/getting-started/beta).
-
-Running the whole platform yourself on one laptop (control plane, runner, a
-local Git host, and ArgoCD all bundled by a single `curl`-pipe-`bash`, no
-account required) is a self-hosted, contributor path, not the customer track;
-it lives under Contributing as the
-[self-hosted quickstart](/contributing/self-hosted-quickstart). The agent
-crew, the constitution, and the review workflow are identical across both.
-
-## What you'll end up with
-
-- A hosted **trial workspace** you signed up for yourself.
-- One **runner** running in your local Kubernetes, enrolled to your
-  workspace, outbound-only.
-- Two connected repos in your own GitHub org: a **service repo** the crew
-  reads, and a **platform repo** where the crew opens pull requests.
-- A real **governed pull request** in your platform repo: CI workflow, Helm
-  chart, and an ArgoCD Application, each citing the constitution rule that
-  motivated it, checked by the OPA policy gate before it ever opened.
-
-Deploying that merged PR with your own ArgoCD is an
-[advanced, opt-in step](#advanced-deploy-with-your-own-argocd) documented at
-the end.
-
-## Prerequisites
-
-- **Docker Desktop** with **Kubernetes enabled** (Settings → Kubernetes →
-  *Enable Kubernetes*). Any local Kubernetes works (k3d, kind, minikube);
-  Docker Desktop's built-in cluster is the simplest.
-- **kubectl** (latest) and **helm** ≥ 3.14.
-- A **GitHub organization** (or your personal account) where you can install
-  a GitHub App and create repositories.
-- **`git`**, and (for the starter-clone path in
-  [step 5](#step-5-connect-your-repos)) the **GitHub CLI (`gh`)**, signed in
-  with `gh auth login` under an account that can create repositories in your
-  org. You can skip `gh` if you use GitHub's **Use this template** button
-  instead.
-- An **Anthropic API key** from
-  [console.anthropic.com](https://console.anthropic.com/settings/keys), or an
-  OpenRouter key. You paste it into the UI later; you do not need it at
-  install time.
-
-On macOS, Homebrew has the CLIs (install Docker Desktop separately):
-
-```bash
-brew install --cask docker
-brew install kubectl helm git gh
-```
-
-## Step 1. Create your account and start your trial
+## Step 1. Create your workspace
 
 Go to <a href="https://app.trustacks.com" target="_blank" rel="noopener noreferrer">app.trustacks.com</a>
-and click **Sign in**. That takes you to the TruStacks identity provider at
-`auth.trustacks.com`.
+and click **Sign in**. That takes you to the TruStacks sign-in page at
+`auth.trustacks.com`. Choose **Register** and create your organization and
+user (email and password).
 
-New here? Choose **Register** (org self-registration) and create your
-workspace. Signing in the first time *is* signup: it provisions a fresh
-**trial** workspace and makes you its owner. The trial runs **30 days, no
-credit card**.
+Start from app.trustacks.com, not from auth.trustacks.com directly, so the
+sign-in redirects you back into the app when you finish.
 
-Each company that registers gets its own isolated workspace. Verify your
-email through the identity provider's prompts, then you land in the app.
+Registering creates a new, isolated **workspace** with a **30-day trial**, and
+makes you its owner. You land on **Get set up**.
 
 <Callout type="info">
-  **Adding teammates.** Invite colleagues from **Settings → Team** (they
-  receive a set-password email and join *your* workspace). Do not have a
-  teammate self-register from scratch. That would create a separate
-  workspace. During Beta every member is an owner; finer-grained roles are
-  [in flight](#whats-in-flight).
+  **Adding teammates.** Invite colleagues from **Team** in the sidebar. They
+  get an email and join *your* workspace. A teammate who registers on their
+  own creates a separate workspace instead. During Beta every member is an
+  owner. See the [Team guide](/guide/team).
 </Callout>
 
-The app opens on **Get set up**, a short checklist: tell us about your team,
-enroll your runner, connect a repo, set your LLM provider, run your first
-analysis. The steps below follow that checklist. Its progress is real; each
-item ticks off when the underlying state actually exists.
+<Callout type="info">
+  **Card-based signup.** The app also has a **Create a workspace** path that
+  starts a trial through card checkout. It is shown only when self-serve
+  billing is enabled. Until then it says self-serve signup isn't open yet;
+  use **Register** as described above.
+</Callout>
+
+{/* asset: public/screenshots/getting-started/01-register.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 1 · The auth.trustacks.com sign-in page with the Register option.</figcaption>
+</figure>
 
 ## Step 2. Tell us about your team (optional)
 
-The first checklist item is an optional team profile. Fill it in or skip it;
-it does not gate anything below. Come back to it any time from **Settings**.
+The first wizard step is a short team profile. It helps us tailor support and
+does not gate anything. Skip it if you like; you can fill it in later.
 
-## Step 3. Enroll your runner on Docker Desktop
+This is **not** the Environment Profile in step 6. This one is who you are;
+that one is what you run.
 
-The runner is the only TruStacks component you operate. It runs in your
-cluster, reaches out to the hosted control plane, and does all the work that
-touches your code. The control plane never connects inbound.
+## Step 3. Enroll your runner
 
-1. In the app, open **Settings → Runners** (or the **Enroll your runner**
-   checklist step) and click **Generate enrollment token**. Copy the token.
-   It is shown once and stored only as a hash. The token is reusable and does
-   not expire; generate another any time to enroll a second runner.
+The runner is the only TruStacks component you install. It runs in your
+cluster, calls out to the hosted control plane over HTTPS, and does all the
+work that touches your code. Nothing connects inbound to your cluster.
 
-2. Confirm your local cluster is the active kubectl context:
+1. In the wizard (or **Runners** in the sidebar), click **Generate enrollment
+   token**. The UI shows the token and a ready-made `helm install` command
+   with the token already in it.
+2. **Copy the command from the UI.** It pins the chart version the control
+   plane currently publishes, so you always install a release we have tested
+   against the hosted service. The commands on this page use a shell variable
+   for the namespace; set it once to the namespace you want the runner in:
 
    ```bash
-   kubectl config use-context docker-desktop
-   kubectl get nodes
+   NAMESPACE=trustacks-system   # any namespace you choose
    ```
 
-3. Install the runner with the one-liner the UI shows, pasting your token:
+   The UI's command has this shape, with the version and token filled in:
 
    ```bash
+   VERSION=0.0.0          # placeholder: the UI fills in the published version
+   TOKEN=paste-from-ui    # placeholder: the enrollment token the UI shows
    helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-     --version 0.2.0 \
-     -n trustacks-system --create-namespace \
-     --set saas.enrollmentToken=<token>
+     --version "$VERSION" \
+     -n "$NAMESPACE" --create-namespace \
+     --set saas.enrollmentToken="$TOKEN"
    ```
 
-   The chart is a public OCI artifact (anonymous pull, no registry login).
-   The hosted control plane URL and SaaS defaults are baked into the
-   published chart, so the enrollment token is the only value you set. The
-   image and chart are Cosign-signed; see
-   [supply-chain verification](/reference/supply-chain).
-
-4. Watch it connect. Back on **Settings → Runners**, the status flips to
-   **Runner connected** within a few seconds of the runner completing its
-   outbound enrollment handshake. You can also check locally:
+   The chart is a public OCI artifact; no registry login is needed. The
+   hosted control plane URL is already set in the published chart, so the
+   token is the only value you supply.
+3. Wait for it to come up:
 
    ```bash
-   kubectl -n trustacks-system rollout status deploy/trustacks-runner
-   kubectl -n trustacks-system logs deploy/trustacks-runner | grep -i enroll
+   kubectl -n "$NAMESPACE" rollout status deploy/trustacks-runner-runner
+   kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
    ```
 
-To remove a runner later, click **Remove** in **Settings → Runners** (this
-drops the control-plane record) and then `helm uninstall trustacks-runner -n
-trustacks-system` in your cluster. See [cleanup](#cleanup).
+   With the release name `trustacks-runner`, the deployment is named
+   **`trustacks-runner-runner`** (the chart appends `-runner`).
+4. The wizard shows **Runner connected** a few seconds after the runner
+   enrolls, and moves on.
 
-## Step 4. Set your LLM provider
+The enrollment token is reusable and does not expire. It is stored only as a
+hash on our side, and the runner keeps presenting it when it re-enrolls, so
+keep it, and protect it like a password: anyone holding it can enroll a
+runner into your workspace. Generate another to enroll a second runner. The token ends up in a
+Secret in your namespace; to supply it from a Secret you manage instead, see
+the [runner install reference](/installation/cluster).
 
-The agents run on your own model key. Open **Settings → LLM Provider**, paste
-your Anthropic (or OpenRouter) key, and save. The raw key is never stored in
-the app: the control plane holds it in memory, seals it to your runner's key,
-and the runner writes its own in-cluster Secret from the sealed value. Both
-providers route to Claude Sonnet 4.5 or newer.
-
-<Callout type="warning">
-  **Key propagation to an already-running runner is being hardened.** If the
-  agents hang right after you save a key, the running runner process may not
-  have picked up the freshly delivered key yet. A fix that hands the new key
-  to the running process without a restart is landing
-  (<a href="https://github.com/TruStacks/trustacks-mvp/issues/282" target="_blank" rel="noopener noreferrer">issue #282</a>).
-  Do **not** `kubectl rollout restart` the runner to force it: if its Secret
-  has not been written yet, it would restart without a key. Give the sealed
-  delivery a moment, then retry the analysis.
+<Callout type="info">
+  **Verify before you run it.** The chart, the runner image, and the policy
+  bundle are all signed keylessly with Sigstore. Your security team can check
+  them with `cosign verify` before anything starts. See
+  [Runner install](/installation/cluster#verify-what-you-install).
 </Callout>
+
+{/* asset: public/screenshots/getting-started/03-enroll-runner.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 3 · Generate enrollment token, with the copyable helm install command.</figcaption>
+</figure>
+
+## Step 4. Create an Application
+
+An **Application** is the unit TruStacks works in: one or more service repos
+plus the one platform repo their delivery config lands in. Every service
+repo belongs to exactly one Application, so you create the Application first.
+The connect wizard refuses to run until one exists.
+
+1. In the wizard's **Connect a repo** step, give your first Application a
+   name and click **Create application**. Names are lowercase letters,
+   numbers, and hyphens (they become Kubernetes names and a directory in your
+   platform repo), and cannot be changed later.
+2. Open it from **Applications** and check two settings on the detail page:
+   - **Target clusters.** Every Application needs at least one cluster with a
+     tier (`dev`, `uat`, or `prod`). A new Application starts with one `dev`
+     cluster called `local-k3d`. Rename it to the cluster name you will deploy
+     to; the name shows up in paths in your platform repo.
+   - **Renderer.** Helm (the default) or Kustomize. Kustomize support is
+     Beta. See the [Applications guide](/guide/applications).
 
 ## Step 5. Connect your repos
 
-TruStacks reads your **service** repo (your application code) and opens pull
-requests into a separate **platform** repo (your GitOps repo, where the
-generated CI workflow, Helm chart, and ArgoCD Application land). It never
-writes generated files into your application repo. So you connect two repos.
-See [Connect a repo](/reference/connect-a-repo) for the model and the trust
-boundary.
+TruStacks reads your **service** repo and opens pull requests in your
+**platform** repo. It never writes generated files into your application
+code. You connect each repo once.
 
-### Option A. Start from the TruStacks starter pair (recommended)
-
-Two public starter repos give you a working service plus a matching platform
-repo to push into your own org:
-
-- <a href="https://github.com/TruStacks/trustacks-starter-hello" target="_blank" rel="noopener noreferrer">TruStacks/trustacks-starter-hello</a>
-  · a small .NET 8 service (a playful "dog eating food" page with a few
-  options to click through). This is the **service repo**.
-- <a href="https://github.com/TruStacks/trustacks-starter-hello-platform" target="_blank" rel="noopener noreferrer">TruStacks/trustacks-starter-hello-platform</a>
-  · the matching **platform repo** skeleton (`gitops/`, `argo-apps/`,
-  `.github/workflows/`).
-
-Get both into your own org. Either click **Use this template** on each repo
-on GitHub, or clone and push:
-
-```bash
-# service repo
-git clone https://github.com/TruStacks/trustacks-starter-hello.git
-cd trustacks-starter-hello
-gh repo create your-org/trustacks-starter-hello --private --source=. --push
-cd ..
-
-# platform repo
-git clone https://github.com/TruStacks/trustacks-starter-hello-platform.git
-cd trustacks-starter-hello-platform
-gh repo create your-org/trustacks-starter-hello-platform --private --source=. --push
-```
-
-### Option B. Bring your own repos
-
-You do not need the starter. Any application repo works as the service repo.
-For the platform repo, create an empty repo in your org and copy in the
-platform layout (a `gitops/` tree, an `argo-apps/` tree that your ArgoCD will
-watch, and `.github/workflows/`). The starter platform repo above is a
-ready-made example of that layout to copy from.
-
-### Connect them in the app
-
-1. Go to **Services** and click **+ Connect repo**, choose **GitHub**, then
-   **Install on GitHub**. That installs the TruStacks GitHub App on your org.
-   Grant it access to the two repos. (TruStacks uses one shared GitHub App;
-   you do not register your own.)
-2. Back in the app, connect your **service** repo with the **Service repo**
-   role (read-only).
-3. Connect your **platform** repo with the **Platform repo** role
-   (pull-request write). The crew opens its PRs here.
+1. Go to **Services** and click **+ Connect repo**.
+2. Pick the role: **Service** (code to analyze) or **Platform** (where PRs
+   land).
+3. Pick **GitHub**, then **Install on GitHub**. That installs the shared
+   **TruStacks GitHub App** on your account or organization. Grant it access
+   to both repos. You do not register an App of your own.
+4. Back in TruStacks, pick the repo, the Application from step 4, and a
+   name.
+5. Repeat for the other repo with the other role.
 
 <Callout type="info">
-  **Provider support.** GitHub (via the GitHub App) is the supported provider
-  for real repositories today. Gitea is used by the bundled
-  [self-hosted quickstart](/contributing/self-hosted-quickstart). GitLab and Azure
-  DevOps git providers are on the roadmap and
-  [not connectable yet](#whats-in-flight).
+  **What the GitHub App can do.** It asks for Contents (read and write),
+  Workflows (read and write), Pull requests, and Metadata, on the repos you
+  grant it. The service role being "read-only" is enforced by TruStacks, not
+  by a narrower GitHub permission. Agents are built to open pull requests on
+  branches and never push to your default branch, but GitHub does not enforce
+  that for an App with Contents write. To enforce it, protect the default
+  branch (branch protection or a ruleset) and leave the TruStacks GitHub App
+  out of the bypass list. Details in
+  [Credentials and trust boundary](/installation/secrets#the-github-app).
 </Callout>
 
-## Step 6. Run your first analysis and open a governed PR
+A service is a whole repo. If you have a monorepo, connect it as one service
+for now; per-path services inside one repo are not supported yet.
 
-1. Open your service in **Services** (or **Applications**) and run the **Code
-   Reviewer**. It clones your repo read-only through the runner, detects the
-   framework and runtime, and produces a structured analysis. For the starter
-   service it detects .NET 8.
-2. **Promote to plan.** The DevOps Engineer reads the analysis and your
-   Environment Profile, emits a CI workflow, a Helm chart, and an ArgoCD
-   Application, and runs the proposal through the OPA policy gate against the
-   signed constitution bundle.
-3. On `allow`, it opens a **pull request in your platform repo** on a
-   `trustacks/<id>` branch. The PR body is structured: a summary, the
-   constitution rule IDs that motivated each artifact, the Environment
-   Profile inputs that informed each tool choice, blast radius, and rollback.
+{/* asset: public/screenshots/getting-started/05-connect-repo.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 5 · + Connect repo: role picker, GitHub App install, then the repo and Application binding.</figcaption>
+</figure>
 
-Review it like any code review, and merge when you are satisfied. That is the
-loop: a real, policy-checked PR your team approves. Everything before the
-merge is the agents proposing; the merge is a human deciding.
+## Step 6. Declare what you run
 
-For a slower, narrated walk through one full crew run, see the
-[CI/CD generation workshop](/workshops/ci-cd-generation).
+Commit a file named **`environment-profile.yaml`** to the **root of your
+platform repo**. It declares the tools you already run, by category. Every
+agent reads it before proposing anything, and your maturity score is computed
+from it. TruStacks reads it from the platform repo through the GitHub App.
 
-## Advanced. Deploy with your own ArgoCD
+The wizard shows a starter file you can copy. A minimal one:
 
-Merging the PR lands the manifests in your platform repo. Turning that into a
-running deployment is done by **your** ArgoCD, which TruStacks does not
-install or wire for you. This section is optional and is where the Beta edges
-are.
+```yaml
+schema_version: "1"
+name: default
 
-1. Install ArgoCD in your local cluster (see the
-   <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer">ArgoCD getting-started guide</a>).
-2. Point it at your platform repo. Create a root ArgoCD Application (or
-   ApplicationSet) that watches your platform repo's `argo-apps/` path.
-   TruStacks writes Applications there in an opinionated layout; you own the
-   root that watches it.
-3. On merge, ArgoCD reconciles the new Application and deploys the service to
-   your cluster.
+ci_cd_platform:
+  - provider: github_actions
+    primary: true
 
-<Callout type="warning">
-  **Closed-loop validation is opt-in and being validated live.** The runner
-  can observe your ArgoCD, read-only, and report deploy status back so a
-  finding advances from *shipping* to *validated*. Enable it by adding
-  `--set observer.enabled=true --set observer.argocdNamespace=argocd` to the
-  runner install. It grants the runner get/list/watch on ArgoCD Applications
-  in that namespace only, and never any write. This observer is built but not
-  yet exercised end-to-end on the hosted path, and the final
-  *shipping → validated* transition depends on a sync feed that is still a
-  stub. Treat deploy-and-validate as a Beta preview, not a guaranteed path.
-</Callout>
+gitops_controller:
+  - provider: argocd
+    primary: true
 
-## What's in flight
+# Add one block per category you run, for example:
+# image_scanning:
+#   - provider: trivy
+#     primary: true
 
-Documented so nothing here overstates what exists today. These are tracked in
-the TruStacks issue tracker.
-
-- **LLM key propagation to a running runner** is being hardened
-  (<a href="https://github.com/TruStacks/trustacks-mvp/issues/282" target="_blank" rel="noopener noreferrer">#282</a>).
-  See the note in [step 4](#step-4-set-your-llm-provider).
-- **Closed-loop deploy validation** (the runner-side ArgoCD observer) is
-  opt-in and not yet exercised live on the hosted path; the
-  *shipping → validated* step awaits an ArgoCD sync feed.
-- **Billing and trial-to-paid conversion** are not built yet. The trial runs
-  30 days with no card; to continue past it, reach out at
-  [hello@trustacks.com](mailto:hello@trustacks.com). Pricing lives at
-  [trustacks.com/pricing](https://trustacks.com/pricing).
-- **Single sign-on** (Google, Microsoft Entra) is on the roadmap. Today
-  login is the TruStacks identity provider's own username and password.
-- **Roles beyond owner.** Every teammate you invite is an owner during Beta;
-  per-member and per-application roles are planned.
-- **GitLab and Azure DevOps** git providers are on the roadmap. GitHub is the
-  supported provider for real repositories today.
-
-## Cleanup
-
-Remove the runner from your workspace (**Settings → Runners → Remove**), then
-uninstall it from your cluster:
-
-```bash
-helm uninstall trustacks-runner -n trustacks-system
-kubectl delete namespace trustacks-system
+# practices:
+#   tests_in_ci: true
 ```
 
-Your trial workspace, connected repos, and GitHub App install are unaffected
-by removing the runner; manage those from the app and from GitHub. Your model
-provider billing relationship is unaffected throughout.
+Two things to know:
+
+- **A category you leave out counts as a gap.** It is not neutral, so your
+  score understates what you run until you declare it.
+- **`practices` are claims about you.** The starter ships every one of them
+  commented out on purpose. Uncomment a line only when it is true; the
+  maturity score counts it. TruStacks never fills these in for you.
+
+The full schema is in the [Environment Profile reference](/reference/environment-profile).
+**Stack** in the sidebar shows what TruStacks read from your file.
+
+## Step 7. Set your LLM provider
+
+Open **Settings** and the LLM provider section, choose **Anthropic** or
+**OpenRouter**, paste your key, and save.
+
+- The key is validated with a live call before it is accepted.
+- The control plane does not store it. It holds the key in memory just long
+  enough to seal it to your runner's public key; your runner unseals it and
+  writes its own Secret in your namespace.
+- Agents run on Claude Sonnet 4.5 or newer. With OpenRouter the model must be
+  an `anthropic/` model. There is no model picker; you choose who bills you,
+  not which model runs.
+
+See [LLM provider](/reference/llm-provider).
+
+## Step 8. Run your first analysis
+
+From the wizard, go to your services, open the service, and click **Run
+analysis**. Your runner picks the job up, clones the repo inside your cluster,
+and the **Code Reviewer** produces a structured analysis: framework, language,
+runtime, tests, and findings. You watch it stream live.
+
+Only the Code Reviewer runs here. That is expected: the DevOps Engineer runs
+in the next step, and the Baseline Security and SOC2 specialists run on gap
+analyses.
+
+## Step 9. Promote to proposal
+
+On the finished analysis, click **Promote to proposal**. The **DevOps
+Engineer** reads the analysis, your Environment Profile, and your platform
+repo, then writes the delivery artifacts into the platform repo: a reusable CI
+workflow, a Helm chart (or Kustomize base), and an ArgoCD Application.
+
+Before anything reaches GitHub, the proposal goes through three checks, all
+visible on the proposal page:
+
+1. **Artifact validation.** The chart is rendered (`helm template` or
+   `kustomize build`), the workflow is parsed, and names are checked. A check
+   that could not run counts as a failure, not a pass.
+2. **The policy gate.** The proposal is evaluated against the signed
+   constitution. A deny stops it here; no pull request opens, and the page
+   names the rules that denied.
+3. **An advisory gap check** against your Environment Profile. It reports;
+   it never blocks.
+
+On allow, a **pull request opens in your platform repo**. Its body explains
+what was generated, which rules it was checked against, and anything the agent
+deliberately kept from your existing repo (preservation notes). See the
+[proposal lifecycle](/reference/proposal-lifecycle).
+
+## Step 10. Merge, then add the caller workflow
+
+Review the pull request like any other change and merge it when you are
+satisfied. The merge is yours; no agent can do it.
+
+Then do the one step that most often breaks a first run. The CI workflow
+TruStacks wrote lives in the **platform** repo as a **reusable workflow**
+(`on: workflow_call`). It does not run by itself. Your **service** repo calls
+it, so the build runs against your service code.
+
+**Add a caller workflow to the service repo**, once:
+
+```yaml
+# .github/workflows/ci.yaml in the SERVICE repo.
+# GitHub only reads workflows from .github/workflows/.
+name: ci
+on:
+  push:
+    branches: [main]   # your default branch
+  pull_request:
+jobs:
+  trustacks:
+    # The called workflow pushes an image. Pull requests from forks get a
+    # read-only token and cannot push, so skip them instead of failing.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@<commit-sha>
+    permissions:
+      contents: read
+      packages: write
+```
+
+Replace the four placeholders: `<owner>` and `<platform-repo>` name your
+platform repo, `ci-<service>.yaml` is the workflow the pull request added
+under `.github/workflows/` there (one per service), and `<commit-sha>` is the
+full SHA of the platform-repo commit you want to run, for example the merge
+commit of that pull request.
+
+**Pin to a commit SHA.** The called workflow runs with `packages: write`.
+Pinned, a later change on the platform repo's `main` does not reach your
+service's CI until you move the pin, so when you merge a TruStacks pull
+request that changes this workflow, update the SHA in the same review.
+`@main` also works and picks up every merged change on its own, at the cost
+of trusting whoever can push to that branch. The proposal summary shows this
+snippet with `@main` and `on: [push, pull_request]`; use the pinned form above.
+
+**If your platform repo is private, grant Actions access once.** A private
+repo shares its reusable workflows with nothing by default, and GitHub reports
+that as `workflow was not found` (naming your generated file), not as a
+permissions error.
+
+```bash
+PLATFORM_REPO=your-org/your-platform-repo   # owner/name of your platform repo
+
+# Platform repo owned by an organization:
+gh api --method PUT \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
+  -f access_level=organization
+
+# Platform repo owned by a personal account:
+gh api --method PUT \
+  "repos/$PLATFORM_REPO/actions/permissions/access" \
+  -f access_level=user
+```
+
+The same setting is in the platform repo under **Settings → Actions →
+General → Access**. Public platform repos need nothing.
+
+Push the caller workflow. The run checks out your service, runs its tests and
+lint, builds the image from the `Dockerfile` at the root of your service repo,
+and pushes it to GitHub Container Registry tagged with the commit SHA.
+TruStacks never writes to your service repo, so if it has no Dockerfile, add
+one yourself.
+
+<Callout type="info">
+  **Image visibility.** A GHCR package pushed from a private repo is private.
+  Your cluster then needs an image pull secret for `ghcr.io`, or you make the
+  package public in its GitHub package settings. Without one of the two, the
+  deploy in step 11 sits in `ImagePullBackOff`.
+</Callout>
+
+## Step 11. Deploy with your ArgoCD
+
+TruStacks writes ArgoCD Applications into `argo-apps/` in your platform repo.
+**Your** ArgoCD deploys them. TruStacks does not install or operate ArgoCD.
+
+1. Give ArgoCD read access to the platform repo (a deploy key or token, set
+   up the way you normally add a private repo to ArgoCD).
+2. Apply one root Application that watches `argo-apps/` in the platform repo.
+   An example is in [GitOps integration](/installation/gitops#the-root-application).
+3. After the next sync, ArgoCD creates an Application per service and
+   cluster.
+
+**Emitted Applications use manual sync.** Merging a pull request does not
+deploy anything by itself; someone clicks **Sync** in ArgoCD (or runs
+`argocd app sync`). For a target cluster named `prod` the constitution also
+enforces it: a proposal that sets automated sync on an Application under
+`argo-apps/argo-apps-prod/` is denied. If you want automated sync on `dev`,
+that is your change to make and review.
+
+## What happens next
+
+Once the loop is running, these happen without another setup step:
+
+- **Image tag promotion.** When your service repo's default branch moves, the
+  hosted control plane notices and your runner opens a pull request in the
+  platform repo that bumps the image tag. You approve it like any other
+  proposal. A deployed tag that lags the newest commit means the bump is
+  waiting for review, which is the process working. The first deploy goes
+  through this too: the commit that adds the caller workflow produces the
+  first real image, and the tag bump that follows points at it.
+- **Gap analysis.** Run `/gaps` in **Workspace**, or start one from **Gap
+  analyses**. The Coordinator consults the Baseline Security and SOC2
+  specialists and reports what is missing against your Environment Profile.
+  Any gap can be turned into a proposal. See the [Gap analyses guide](/guide/gap-analyses).
+- **Maturity.** **Maturity** shows a bronze, silver, or gold tier per
+  Application, row by row, and separates what TruStacks has verified from
+  what you have only claimed. See [Maturity scoring](/reference/maturity-scoring).
+- **Deploy status (optional, Beta).** Install the runner with
+  `--set observer.enabled=true --set observer.argocdNamespace=argocd` and it
+  reports ArgoCD sync and health back, read-only (get, list, and watch on
+  ArgoCD Applications in that namespace, nothing else). Applications then
+  show a deploy-status chip. See [GitOps integration](/installation/gitops#deploy-status-optional).
+
+## What good looks like
+
+| Step | You should see |
+|---|---|
+| 1 · workspace | You land on **Get set up** in a new workspace |
+| 3 · runner | `kubectl -n "$NAMESPACE" get pods` shows the runner pod `1/1 Running`; the wizard shows **Runner connected** |
+| 5 · repos | Both repos appear under **Services** (the platform repo with the Platform role) and on the Application's detail page |
+| 6 · profile | **Stack** lists the categories you declared |
+| 7 · LLM | The provider shows as configured after the live check |
+| 8 · analysis | Live events stream; the analysis reaches **done** with the right framework and runtime |
+| 9 · proposal | Artifact validation passes, the policy gate shows **allow**, and a PR appears in your **platform** repo |
+| 10 · CI | The caller workflow run in your service repo goes green and pushes an image |
+| 11 · deploy | After you **Sync**, the ArgoCD Application is Healthy and Synced |
+
+## Troubleshooting
+
+| Symptom | Likely cause and fix |
+|---|---|
+| Runner pod stuck in `Init` | Check the init containers: `kubectl -n "$NAMESPACE" describe pod -l app.kubernetes.io/name=runner`. Usually an image pull blocked by egress; see [network requirements](/installation/cluster#network-requirements). |
+| Runner running but never shows connected | `kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner`. Look for enrollment errors. Confirm the cluster can reach `api.trustacks.com` over HTTPS and that the token was pasted whole. Tokens do not expire, so a token from earlier is still valid. |
+| Connect wizard says "Create an Application first" | Create one (step 4). |
+| GitHub install returns to the app but shows no repos | The App was installed without access to those repos. Change the repo selection in GitHub under your account or organization's installed GitHub Apps, then retry. |
+| Analysis fails with an LLM error | Re-enter the key in Settings. Check the provider shows as configured, not pending. A pending key means your runner has not collected it yet; confirm the runner is connected. |
+| **Promote to proposal** returns an error about clusters or the platform repo | The Application needs at least one target cluster and a bound platform repo. Check the Application detail page. |
+| Proposal stops at policy, no PR | The policy gate denied it. The proposal page lists each rule and why. See the [constitution](/reference/constitution). |
+| Proposal stops at artifact validation | A generated file did not render or parse. The proposal page shows the failing check and its output. |
+| Caller workflow fails with `workflow was not found` | The platform repo is private and has not granted Actions access. Run the `gh api` command in step 10. |
+| ArgoCD Application never appears | The root Application is not watching `argo-apps/` with recursion, or ArgoCD cannot read the platform repo. |
+| ArgoCD Application exists but nothing deployed | Emitted Applications use manual sync. Click **Sync**. |
+| Pod in `ImagePullBackOff` | Either the tag in `values.yaml` has no image yet (check the service repo's CI run pushed one, then approve the tag-bump PR), or the GHCR package is private and the cluster has no pull secret for it. |
+
+## Beta limits
+
+- **Sign-in is email and password.** Google and Microsoft sign-in are not
+  enabled on the hosted service.
+- **Roles.** Every workspace member is an owner.
+- **Git providers.** GitHub is the supported provider for real repos.
+- **Monorepos** connect as one service.
+- **Kustomize** renderer support is Beta; Helm is the default.
+- **Customer overlay rules** can be drafted in the Workspace chat and built
+  with the CLI, but there is no way yet to deliver your own signed rules to a
+  hosted runner.
+- **Billing.** Self-serve billing may not be enabled for your workspace yet.
+  [Billing](/guide/billing) in the app says plainly whether it is configured.
+  Pricing is at [trustacks.com/pricing](https://trustacks.com/pricing).
+
+## Remove everything
+
+1. In **Runners**, click **Remove** on the runner.
+2. Uninstall it:
+
+   ```bash
+   helm uninstall trustacks-runner -n "$NAMESPACE"
+   ```
+
+   The runner writes two Secrets itself, so Helm does not remove them. Delete
+   them if you are not reinstalling:
+
+   ```bash
+   kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner-llm
+   ```
+
+   <Callout type="warning">
+     **Removing a runner does not revoke its enrollment token.** Tokens are
+     reusable and do not expire, and there is no self-serve way to revoke one
+     yet. Delete every copy you hold (Helm values files, CI variables, the
+     `trustacks-runner-enrollment` Secret if you created one), and if a token
+     may have leaked, contact TruStacks to have it revoked.
+   </Callout>
+
+3. Uninstall the TruStacks GitHub App from your account or organization in
+   GitHub if you no longer want it to have access.
 
 ## Where to go next
 
-- [Ways to run TruStacks](/getting-started/ways-to-run) · the two hosted
-  doors and how they compare
-- [CI/CD generation workshop](/workshops/ci-cd-generation) · one full crew
-  run, narrated at the tool-call level
-- [Policy authoring workshop](/workshops/policy-authoring) · write your first
-  overlay rule with the Coordinator's help
-- [Architecture](/reference/architecture) · the Control Plane / Data Plane
-  split you just ran
-- [Supply-chain verification](/reference/supply-chain) · verify the signed
-  runner image and chart before you run them
+- [How TruStacks runs](/getting-started/how-trustacks-runs) · what runs where,
+  and what crosses the boundary
+- [Runner install](/installation/cluster) · values, RBAC, egress, upgrades
+- [GitOps integration](/installation/gitops) · the platform repo layout and
+  the root Application
+- [Product guide](/guide/overview) · every screen in the app

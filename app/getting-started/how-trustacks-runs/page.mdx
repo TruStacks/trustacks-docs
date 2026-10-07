@@ -1,0 +1,105 @@
+---
+title: How TruStacks runs
+description: TruStacks is a hosted control plane plus one runner you install in your own Kubernetes cluster. What runs where, what each side can reach, and exactly what crosses the boundary between them.
+---
+
+import { Callout } from 'nextra/components'
+
+# How TruStacks runs
+
+TruStacks is a hosted control plane that TruStacks operates, plus one runner
+that you install in your own Kubernetes cluster. The runner calls out to the
+control plane, picks up work, and runs the agents next to your code. The
+control plane never connects into your cluster. Your GitOps controller, not
+TruStacks, deploys what you merge.
+
+## What runs where
+
+| Component | Where it runs | Who operates it |
+|---|---|---|
+| Web app (`app.trustacks.com`), API (`api.trustacks.com`), sign-in (`auth.trustacks.com`) | TruStacks cloud | TruStacks |
+| **Runner** (agents, policy evaluation, git clone and push) | Your cluster | You (one Helm release) |
+| Your service repos and platform repo | GitHub | You |
+| ArgoCD, CI runners, registries | Your infrastructure | You |
+| LLM | Anthropic or OpenRouter, on your account | You (your key) |
+
+There is no self-hosted control plane offering today. If you are
+contributing to TruStacks itself, see
+[Local development](/contributing/local-dev).
+
+## How the runner talks to the control plane
+
+- **Outbound only.** The runner exchanges its enrollment token for a
+  short-lived session, then long-polls the control plane over HTTPS for jobs.
+  Nothing listens for inbound connections, so it works behind NAT and
+  firewalls.
+- **Its own identity.** On first start the runner generates a keypair and
+  registers the public half. Every credential the control plane sends it is
+  sealed to that key, on top of TLS. The runner keeps its identity in a
+  Secret in its namespace so a restarted pod re-enrolls as the same runner.
+- **It writes its own Secrets.** The control plane holds no credentials for
+  your cluster. The runner unseals what it is sent (your LLM key, short-lived
+  GitHub tokens) and writes or uses it inside its own namespace.
+
+## What crosses the boundary
+
+Stated plainly, because it is the thing your security team will ask.
+
+**Stays in your cluster:**
+
+- Repository clones. The runner clones, analyzes, and generates artifacts
+  locally.
+- Your LLM key at rest, in a Secret the runner writes.
+
+**Goes to your LLM provider, from the runner, on your key:**
+
+- The prompts the agents send, which include content from your repos.
+  TruStacks does not proxy this traffic.
+
+**Goes to the TruStacks control plane:**
+
+- Analysis results, findings, proposals (including the generated files),
+  policy verdicts, and audit events. This is what the app shows you.
+- Your rule inventory and runner status, as reported by the runner.
+- Your LLM key, once, in transit: the control plane holds it in memory just
+  long enough to seal it to your runner, and does not store it.
+
+**What the control plane reads from GitHub directly:**
+
+TruStacks operates one shared GitHub App, which you install on the repos you
+choose. The control plane holds that App's credential. It uses it to read
+`environment-profile.yaml` from your platform repo, to watch branch heads and
+pull request state, and to mint short-lived installation tokens that it seals
+to your runner for cloning and opening pull requests. See
+[Credentials and trust boundary](/installation/secrets) for the permission
+set.
+
+## What nobody but you can do
+
+- **Merge.** Agents open pull requests on branches. They do not push to your
+  default branch, approve their own work, or merge. That is how TruStacks is
+  built, not something GitHub enforces on its own: protect your default
+  branch, with the TruStacks GitHub App off the bypass list, and GitHub
+  enforces it too.
+- **Deploy.** Your ArgoCD deploys from your platform repo. The runner can
+  optionally *observe* ArgoCD Applications, read-only, to report deploy
+  status. It cannot sync, roll back, or delete.
+- **Change the rules.** Every proposal is evaluated against the signed
+  constitution before a pull request opens. The constitution is published
+  from the public
+  <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">trustacks-policy</a>
+  repo, so you can read every rule.
+
+<Callout type="info">
+  **Signed, and checkable.** The runner image, its Helm chart, and the policy
+  bundle are signed keylessly with Sigstore by public GitHub Actions
+  workflows. You can verify them before you install. See
+  [Runner install](/installation/cluster#verify-what-you-install).
+</Callout>
+
+## Where to go next
+
+- [Quickstart](/getting-started/hosted-quickstart) · set it up end to end
+- [Runner install](/installation/cluster) · values, RBAC, egress, upgrades
+- [Credentials and trust boundary](/installation/secrets) · custody of every
+  credential, in detail
