@@ -1,0 +1,105 @@
+---
+title: Stack
+description: The Stack screen. What your environment profile declares, per tooling category, and what each undeclared category costs you.
+---
+
+import { Callout } from 'nextra/components'
+
+# Stack
+
+**Where:** **Stack** in the sidebar (`#/stack`).
+
+{/* screenshot-placeholder: Stack grid with CI/CD platform and GitOps controller declared, Image scanning flagged by the last audit, and the Behaviors list. Save as public/guide/stack.png */}
+
+Stack is a read-only view of your **environment profile**: the
+`environment-profile.yaml` file at the root of your platform repo, where you
+declare the tools you run and the behaviors you attest to. Every agent reads
+that file before acting, and your maturity score is computed from it.
+
+You do not edit anything here. You edit the file in Git, through your normal
+review process; Stack shows what TruStacks read.
+
+## What you see
+
+### Tooling categories
+
+A card for each of twelve categories: CI/CD platform, Container registry,
+Image scanning, SAST / SCA, Secret scanning, SBOM + signing, GitOps
+controller, Service mesh / ingress, Secrets management, Observability,
+Ticketing / change-mgmt, and Compliance evidence. Each card is in one of
+these states:
+
+| Card says | Meaning |
+|---|---|
+| The provider name (declared) | You declared at least one tool. The primary one is shown. |
+| **not declared** | The profile was read, and this category is empty. The agents have no tool to ground a pipeline step in. |
+| **flagged by your last audit** | The profile could not be read here, but your most recent gap analysis found this category missing. |
+| **unknown** | The profile could not be read here and no audit has flagged the category. |
+
+For a category that is not declared, the card explains what that costs:
+
+- **Needed by N rules, lowers your maturity coverage**, with the rule ids
+  and suggested tools from your last gap analysis; or
+- **Your last gap analysis found no rule that needs this**; or
+- **Run a gap analysis to see what needs this →** if you have none.
+
+### Behaviors (self-attested)
+
+The `practices:` block of your profile, one line per key, marked
+**attested** (`true`) or **not attested**.
+
+### Tool-actions packs
+
+A table of the tools TruStacks has curated a pinned GitHub Action for, with
+the action reference and commit SHA. This table is **representative**, and
+labelled so (see Beta limits).
+
+## What it means
+
+- **Declaring is configuration.** Listing `trivy` under `image_scanning`
+  tells the DevOps Engineer to add a Trivy step to your pipeline, and only
+  tools you declare get steps. The agents never add tools you did not
+  declare; recommendations go into the gap analysis instead.
+- **A category you leave out is not neutral.** Rules that depend on it
+  count as unsatisfied, so the score understates what you run.
+- **Behaviors are claims.** Each `true` under `practices:` is a statement
+  about how your pipeline behaves. TruStacks counts a claim at half credit
+  until it can verify it from evidence, and at no credit if the evidence
+  contradicts it. See
+  [Verified, claimed and disputed](/concepts/verified-claimed-disputed).
+- **Credentials never live here.** The profile names tools, not secrets.
+
+## What to do here
+
+1. If a card says **not declared** for a tool you actually run, add it to
+   `environment-profile.yaml` in your platform repo and merge.
+2. Uncomment a `practices:` line only once it is true of your pipeline.
+3. Run a new [gap analysis](/guide/gap-analyses) to see the effect on your
+   score.
+
+The file format, every category and the five behavior keys are in the
+[environment profile reference](/reference/environment-profile).
+
+## How it connects
+
+- The profile is read by every [proposal](/guide/applications#proposals)
+  and every [gap analysis](/guide/gap-analyses).
+- What it declares, checked against [Rules](/guide/rules), becomes your
+  [Maturity](/guide/maturity) score.
+
+## Beta limits
+
+- **One profile on this screen.** If your Applications use different
+  platform repos, Stack cannot yet tell which profile to show, says so, and
+  falls back to what your last audit found. There is no Application picker
+  yet.
+- **The tool-actions table is sample data.** The real curated packs (Trivy,
+  Semgrep, Gitleaks, Syft and Cosign today) ship inside the runner and in
+  the public `trustacks-policy` repo; the screen does not read them live yet.
+  See [knowledge packs](/reference/knowledge-packs).
+- The note under Behaviors says the scorer counts every `true` as covered. That
+  is out of date: a `true` the evidence cannot confirm counts half, and one
+  the evidence contradicts counts nothing.
+- Only some categories carry scoring rules today. Declaring the others
+  still guides the agents and shows here, but may not move your score. The
+  [Maturity](/guide/maturity) page shows exactly which rows are scored.

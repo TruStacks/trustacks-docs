@@ -1,0 +1,113 @@
+---
+title: Gap analyses
+description: The Gap analyses screens. Run a scoring pass for one Application, watch the specialists weigh in, and read the report behind your maturity score.
+---
+
+import { Callout } from 'nextra/components'
+
+# Gap analyses
+
+**Where:** **Gap analyses** in the sidebar (`#/gaps`), a run's detail at
+`#/gaps/<id>`. You can also start one with `/gaps` in the
+[Activity chat](/guide/workspace#activity-the-chat), or from **Run a new gap
+analysis** on [Maturity](/guide/maturity).
+
+{/* screenshot-placeholder: Gap analyses list with the Application picker, "Run new gap analysis" button and three runs. Save as public/guide/gap-analyses.png */}
+
+A **gap analysis** answers *is this Application set up correctly?* It reads
+the Application's environment profile, checks it against the rules your
+runner enforces, asks the specialist agents for advice on what is missing,
+and produces a report with a maturity score. [Maturity](/guide/maturity)
+shows the newest report; this screen is the history and the detail.
+
+## The list
+
+### What you see
+
+- **Run new gap analysis**. If more than one Application has a platform
+  repo, a **choose an Application…** picker appears first; with exactly one,
+  it is chosen for you.
+- A table of runs: **id** (links to the detail), **status**, **created** and
+  a **summary** preview (or the error).
+
+If no Application has a platform repo yet, the screen says there is no
+environment profile to score and the button is disabled.
+
+## A run's detail
+
+{/* screenshot-placeholder: Gap analysis detail with the Activity log (Constitution, Coordinator, Baseline Security, SOC2 turns) and the report card with tier badge and category bars. Save as public/guide/gap-analysis-detail.png */}
+
+### What you see
+
+1. **A header** with the run id, status, the overlay (the platform repo the
+   profile was read from, or **none resolved**), created time and any error.
+2. **Activity**: the run as a conversation.
+   - The Coordinator loads the environment profile and the rule index.
+   - The **Constitution** reports the computed gaps: which rules need
+     tooling categories the profile does not declare.
+   - The Coordinator **delegates** to the specialists and each **replies**
+     in its own voice: **Baseline Security** on image scanning, SAST / SCA,
+     secret scanning and SBOM + signing; **SOC2** on the SOC2 control
+     families its findings map to (CC1 to CC9).
+   - The report is built.
+3. **The report**:
+   - **Maturity**: the tier badge and score, a **Tooling categories** bar,
+     a **Behaviors (self-attested)** bar, and a list of any `practices:`
+     keys in your profile that TruStacks does not recognise (those are not
+     scored).
+   - **Gap Analysis Report**: a written summary and observations about
+     your profile.
+   - **Coverage**: either *all required tooling categories are satisfied*,
+     or one card per unsatisfied category, with the rules that require it
+     and recommended tools with a rationale for each.
+
+A failed run offers a retry, which starts a new run.
+
+## What it means
+
+- **The score is computed, not written.** The runner computes the tier and
+  score deterministically from your profile and the rule index before the
+  Coordinator writes anything, and stamps it on the report. The language
+  model writes the prose and recommendations; it cannot change the number.
+- **One run, one Application.** A run reads exactly one environment profile,
+  the one in the chosen Application's platform repo. Different Applications
+  are scored separately.
+- **Specialists advise; they do not gate.** Their findings shape the
+  recommendations. Nothing in a gap analysis blocks a proposal.
+- **It reads declarations and evidence, not your code.** A gap analysis
+  does not open your service repos. Evidence about behaviors comes from the
+  constitution's verdicts on your latest judged proposal and from the Code
+  Reviewer's analysis (for example, whether tests exist).
+
+## What to do here
+
+1. Run a gap analysis after you first commit `environment-profile.yaml`, and
+   again whenever you change it or merge a significant proposal.
+2. Read the unsatisfied categories. For each, either declare a tool you
+   already run, or adopt one (the specialists' recommendations are a
+   starting point).
+3. Go to [Maturity](/guide/maturity) to act on the gaps: **Draft pipeline
+   PR** asks the crew to add a declared tool's step to your pipeline.
+
+## How it connects
+
+- Its input is the profile shown on [Stack](/guide/stack) and the rules on
+  [Rules](/guide/rules).
+- Its output drives [Maturity](/guide/maturity) and the
+  [Overview](/guide/overview) maturity header.
+- Each run also records evidence counted on
+  [Compliance](/guide/compliance).
+
+## Beta limits
+
+- The list has no Application column yet; open a run to see which platform
+  repo it read.
+- **Retry** on a failed run re-sends the run's platform repo, not its
+  Application. If you have two Applications sharing one platform repo,
+  start a new run from the list instead.
+- The **Behaviors (self-attested)** label predates verified scoring. Behaviors
+  are scored as verified, claimed or disputed; see
+  [Maturity](/guide/maturity).
+- SOC2 consultation requires a paid subscription (Developer tier) once
+  billing is live. While billing is not enabled, both specialists run for
+  every workspace.

@@ -1,0 +1,105 @@
+---
+title: Signals
+description: The Signals screen. Findings from external scanners land here, you triage them, and a governed fix goes through the same policy gate and human approval as any proposal.
+---
+
+import { Callout } from 'nextra/components'
+
+# Signals
+
+**Where:** **Signals** in the sidebar (`#/signals`).
+
+{/* screenshot-placeholder: Signals in live mode with the "Live · N from your sources" strip, a findings list, Triage / Dismiss buttons, the six-step governed loop and Transition history. Save as public/guide/signals.png */}
+
+Signals is where security findings meet the governed delivery loop.
+TruStacks is not a scanner and does not own the fix. Findings come from the
+tools you already run (Snyk, Trivy, Dependabot, GitHub Advanced Security, a
+SARIF file). TruStacks governs, validates and ships the fix through your
+pipeline. You approve, always. TruStacks re-proposes; it never auto-merges.
+
+<Callout type="warning">
+  **Signals is a preview.** The screen carries a *Direction* badge. When
+  your workspace has no findings, it shows **Representative** sample data,
+  clearly labelled, so you can see the intended experience. The sample
+  findings, crew conversation and diffs in that mode are illustrations, not
+  your data.
+</Callout>
+
+## Two modes
+
+### Representative mode (no findings yet)
+
+An amber strip reads **Representative**, explaining that connecting real
+finding sources is coming soon. Four sample findings (two CVEs, a hardcoded
+secret, a container running as root) show the full intended loop: which
+fixer authored the change, the crew's conversation about it, the diff, and
+where it sits in the six steps.
+
+### Live mode (your findings)
+
+When at least one real finding exists, a green strip reads **Live · N from
+your sources** and the sample data disappears.
+
+- **Incoming findings (left)**: each with a severity chip (CRIT, HIGH,
+  MED, LOW), title, source and age.
+- **The selected finding (right)**:
+  - a header card: the finding's id, source, fix source (if any) and when
+    it was detected;
+  - **actions**: **Triage** on a new finding; **Propose a fix** on a
+    triaged finding whose repo is connected; **Dismiss** on anything not
+    finished. Finished findings show **Validated** or **Dismissed** instead;
+  - **The governed loop**: six steps (Finding detected, Coordinator
+    triages, Crew proposes fix, Constitution decides, You approve, ArgoCD
+    ships + validates) with the current one highlighted;
+  - if the finding's repo is not governed by TruStacks yet, **This repo
+    isn't governed by TruStacks yet** with **Connect this repo →**;
+  - **Proposed fix**: who authored the fix, or a note that the crew has
+    not proposed one yet;
+  - **Transition history**: every state change, oldest first.
+
+## What it means
+
+- **Triage** says a human has looked at the finding and it is real.
+- **Propose a fix** starts a governed proposal for the service the finding
+  belongs to: the DevOps Engineer drafts the change, it is validated and
+  judged by the constitution, and a PR opens on your platform repo. It only
+  works when the finding's repo is connected as a service in an
+  Application, and that service has been analysed. Otherwise the app says
+  to connect the repo and run an analysis first.
+- **Dismiss** closes the finding with no further action. It stays in the
+  history.
+
+Findings are not a second policy. A proposed fix gets exactly the same
+validation, constitution check and human review as any other proposal.
+
+## What to do here
+
+1. Triage new findings.
+2. For a real issue in a connected service, **Propose a fix**, then review
+   the resulting proposal and PR. Signals does not link to the proposal yet;
+   find it on the service's **Proposals** tab under
+   [Applications](/guide/applications#proposals).
+3. Dismiss noise, so the [Overview](/guide/overview) queue only shows what
+   needs you.
+
+## How it connects
+
+- Untriaged findings and fixes awaiting approval appear on the
+  [Overview](/guide/overview) queue.
+- A proposed fix is a normal [proposal](/guide/applications#proposals).
+- **Connect this repo →** opens the [connect wizard](/guide/applications#connecting-repos).
+
+## Beta limits
+
+- **No intake connectors or upload button yet.** Findings arrive only
+  through the API (a SARIF upload endpoint and a generic findings endpoint).
+  Snyk, Trivy, Dependabot and GitHub Advanced Security integrations are
+  direction, not shipped.
+- **The approve-and-ship steps are not built on this screen.** In live
+  mode, the approve button reads **Approve & ship, coming soon** and is
+  disabled. Approval happens where it always does: on the pull request.
+- The live **Proposed fix** card still says governed-loop transitions
+  "land in a follow-on slice", even after **Propose a fix** has started a
+  real proposal. Trust the loop stepper and the transition history.
+- The red **3** badge next to Signals in the sidebar is a fixed design
+  preview, not a count of your findings.

@@ -1,0 +1,105 @@
+---
+title: Rules
+description: The Rules screen. A read-only inventory of every rule your runner enforces, constitution and overlay, with its description and Rego source.
+---
+
+import { Callout } from 'nextra/components'
+
+# Rules
+
+**Where:** **Rules** in the sidebar (`#/rules`); a specific rule at
+`#/rules/<rule_id>`. Rule ids cited elsewhere in the app (on proposals, gap
+reports and Maturity) link here.
+
+{/* screenshot-placeholder: Rules screen with the gate strip, filters, a rule list on the left and practice.workflow_has_test_step selected on the right. Save as public/guide/rules.png */}
+
+Rules is the inventory of the policy your proposals are judged against.
+It is read-only. Rules are authored as Rego in Git and delivered as signed
+bundles; this screen shows what your runner actually loaded.
+
+## What you see
+
+- **The gate**, as a strip: *Agent drafts → OPA evaluates → allow → PR /
+  deny → re-propose → You approve.*
+- **+ Draft a rule with the Coordinator**, which opens the
+  [Activity chat](/guide/workspace#drafting-a-rule).
+- **The list (left)**: a search box (rule id, description, package or
+  category), a source filter (**All**, **Constitution**, **Overlay**; a
+  source appears only if it has rules) and a kind filter (**All**,
+  **Structural**, **Behaviors**). Each row shows the rule id, a
+  `constitution` or `overlay` pill and the description.
+- **The detail (right)**:
+  - the rule id, source pill and a provenance badge (**Open · Apache-2.0**
+    for the constitution, **Your overlay** for yours) and the description;
+  - impact tiles (**proposals blocked**, **services affected**, **last
+    fired**), currently showing dashes;
+  - **Enforced outcome · Rego**: the rule's Rego source;
+  - **Paired recipe**: a placeholder, with the tooling categories the rule
+    would cover.
+
+## What it means
+
+**The constitution** is the set of rules TruStacks authors, signs and
+publishes from the public, Apache-2.0
+[`trustacks-policy`](https://github.com/TruStacks/trustacks-policy)
+repository. Every proposal must satisfy it. It is not waivable.
+
+**Your overlay** is rules your team adds. Overlay denies are added to the
+constitution's denies, so an overlay can only make the gate stricter, never
+looser.
+
+The **kind** filter separates two families:
+
+- **Structural** rules check the shape of a proposal: it only writes to
+  allowed paths, has no path traversal, includes a workflow, a Helm chart
+  or Kustomization as the renderer requires, an ArgoCD Application, and that
+  ArgoCD points at your canonical platform repo.
+- **Behaviors** rules check how the emitted artifacts behave: the workflow
+  has a test step and a lint step, production ArgoCD Applications use manual
+  sync, containers run as non-root, and actions are pinned to commit SHAs.
+  These are also the evidence behind the behavior rows on
+  [Maturity](/guide/maturity).
+
+Some rules never deny and only feed the score (for example, whether image
+scanning is declared). The [constitution reference](/reference/constitution)
+lists every rule.
+
+**Where the list comes from.** Each runner reports the rules it loaded. The
+control plane serves that list; it never reaches into your cluster to ask.
+
+## What to do here
+
+- When a proposal is **denied**, click the cited rule id to read exactly
+  what it checks.
+- Use the search to answer "is there a rule for X?" before writing one.
+- Pair this screen with [Overview → Policy in force](/guide/overview#policy-in-force),
+  which shows how often each rule actually refused a proposal.
+- To add a rule, draft it with the Coordinator and land it with the
+  `trustacks rule` CLI. See the
+  [policy authoring workshop](/workshops/policy-authoring).
+
+## How it connects
+
+- Every [proposal](/guide/applications#proposals) is judged against these
+  rules; denials cite them by id.
+- [Gap analyses](/guide/gap-analyses) and [Maturity](/guide/maturity) use
+  each rule's metadata (the categories and behaviors it scores).
+- The bundle a runner loads, and whether it was verified, is described in
+  the [policy state reference](/reference/policy-state).
+
+## Beta limits
+
+- **Source needs a recent runner.** Runners older than 0.2.14-rc24 report
+  which rules they enforce but not the Rego; the detail says so and suggests
+  upgrading on [Runners](/guide/runners).
+- **Impact tiles and paired recipes are not built.** They are labelled
+  *coming soon*. For real denial counts, use the Overview.
+- **Customer overlays on the hosted service.** There is no supported way
+  yet to deliver your own signed overlay bundle to a hosted runner, so a
+  hosted workspace normally shows constitution rules only.
+- **"deny → re-propose"** in the gate strip describes the loop, not an
+  automatic retry: after a deny, someone starts a new proposal.
+- If the list is empty, the empty state refers to `make policy-bundle`,
+  which is a local-development command. On the hosted service, an empty list
+  usually means your runner is older than the rule-reporting release;
+  upgrade it.

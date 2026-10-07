@@ -1,0 +1,307 @@
+---
+title: Applications, services and proposals
+description: The Applications screens. Create an Application, connect its platform and service repos, run analyses, promote them to proposals, and follow a pull request from gate to merge.
+---
+
+import { Callout } from 'nextra/components'
+
+# Applications, services and proposals
+
+**Where:** **Applications** in the sidebar (`#/applications`). Everything
+about a service (its analyses, its proposals, the pull requests they open)
+is reached from here, so the sidebar keeps **Applications** highlighted
+while you are on any of those pages.
+
+{/* screenshot-placeholder: Applications list with one Application card showing two services across dev and prod tiers with deploy-status chips. Save as public/guide/applications.png */}
+
+An **Application** is a set of services promoted together across tiers. It
+owns one platform repo (where pull requests land) and a list of target
+clusters. A **service** is a connected service repo bound to an
+Application. The concept page
+[Applications, repositories and services](/concepts/applications-repositories-services)
+explains why the model is shaped this way.
+
+## The Applications list
+
+### What you see
+
+- **Create an Application**: a name field and **Create**. Names are
+  lowercase letters, numbers and hyphens, because the name becomes the
+  `gitops/<name>/` directory in your platform repo and a Kubernetes
+  namespace. **It cannot be renamed later**; delete and recreate instead.
+- **View all services across applications →**: the flat services list (see
+  [below](#the-services-list)).
+- One card per Application: its renderer (helm or kustomize), service count
+  and tier order (for example `dev → prod`), then a grid with one row per
+  service and one column per target cluster tier. **Manage** opens the
+  detail page. **Delete** removes the Application after a confirmation.
+- Deploy-status chips in the grid (see [Deploy status](#deploy-status)).
+
+Deleting an Application removes only the TruStacks grouping and its
+bindings. Your repos, connection records and anything already merged into
+the platform repo are untouched.
+
+## Application detail
+
+**Where:** **Manage** on a card (`#/applications/<id>`).
+
+{/* screenshot-placeholder: Application detail with Renderer, GitOps root, Target clusters, Platform / GitOps repo and Member services cards. Save as public/guide/application-detail.png */}
+
+Five cards, top to bottom:
+
+| Card | What it controls |
+|---|---|
+| **Renderer** | **Helm** or **Kustomize**. How the DevOps Engineer emits deploy artifacts. Helm produces a chart per service per cluster. Kustomize produces one shared `base/` and an `overlays/<cluster>/` per target, with ArgoCD pointing at the overlay. |
+| **GitOps root** | Where this Application's artifacts land in the platform repo. Leave empty for the renderer default (`gitops/{application}/{cluster}/{service}` for Helm, `gitops/{application}/{service}` for Kustomize). `{service}` is always required; Helm requires `{cluster}` and Kustomize forbids it. **Save root** applies to the next proposal; files already written stay where they are until someone removes them. |
+| **Target clusters** | The clusters this Application deploys to, each with a tier: `dev`, `uat` or `prod`. Add with **cluster name**, **tier** and **Add cluster**, then **Save**. At least one is required. |
+| **Platform / GitOps repo** | Which connected repo receives this Application's pull requests. One per Application. **+ Connect a platform repo** opens the connect wizard with the Platform role preselected. |
+| **Member services** | The service repos in this Application, with **remove**, and an **add a service** picker of connected repos that are not yet members. |
+
+### What the tiers mean
+
+Tiers drive tier-scoped policy. The clearest example: the constitution
+requires ArgoCD Applications for `prod` clusters to use **manual sync**. So
+when a proposal for a prod cluster merges, ArgoCD does not deploy it until a
+person presses Sync. That is the human approval, applied a second time at
+the point of production.
+
+<Callout type="warning">
+  **Check the default cluster.** A new Application starts with one target
+  cluster named `local-k3d` at tier `dev`, a default that comes from local
+  development. Before your first proposal, replace it with your real cluster
+  names and tiers. The cluster name is woven into platform repo paths, so
+  changing it later moves where new artifacts land.
+</Callout>
+
+## Connecting repos
+
+**Where:** **+ Connect repo** on the services list, **+ Connect a platform
+repo** on an Application, step 3 of [Get set up](/guide/onboarding), or
+`/discover` in the [Activity chat](/guide/workspace#activity-the-chat).
+
+{/* screenshot-placeholder: Connect a repo dialog, role picker with Service repo and Platform repo cards. Save as public/guide/connect-repo.png */}
+
+The wizard runs in a dialog:
+
+1. **What role does this repo play?**
+   - **Service repo**: your application's source. The agents read it.
+   - **Platform repo**: where deploy PRs land (CI workflow, Helm charts or
+     Kustomize, ArgoCD Applications). The runner pushes branches and opens
+     PRs here.
+2. **Pick the host.** On the hosted product, choose **GitHub**, which uses
+   the shared TruStacks GitHub App. (**Gitea** is for self-hosted and local
+   development.)
+3. **Install the TruStacks GitHub App.** If your workspace has connected a
+   repo before, the dialog offers **Already installed, no need to go to
+   GitHub** and lets you pick from repos that installation can already
+   see. Otherwise **Install on GitHub** sends you to GitHub to choose which
+   repos to share; GitHub redirects you back to the repo picker.
+4. **Pick a repo**, the **Application** it belongs to, and a **service
+   name** (lowercase and hyphens). **Connect**.
+
+After connecting a service you land on its detail page; after connecting a
+platform repo you land on the Application, where the binding is set.
+
+<Callout type="info">
+  **About "read-only".** The GitHub App asks GitHub for the same permissions
+  on every repo you share with it: Contents (read and write), Workflows,
+  Pull requests and Metadata. The **read-only** checkbox in the wizard is a
+  TruStacks-side setting that tells the runner not to push to a service
+  repo. It does not change what GitHub grants. If that matters to you,
+  share only the repos TruStacks needs when you install the App. See
+  [Connect a repo](/reference/connect-a-repo).
+</Callout>
+
+If the dialog says **No Applications yet**, create one first: every
+service must belong to exactly one Application.
+
+## The services list
+
+**Where:** **View all services across applications →** (`#/services`).
+
+A table of every connected service repo with its **application**,
+**provider**, **repo** and **last activity**, filterable by Application.
+Use it when you know the repo but not which Application owns it. A platform
+repo shows as `platform`; a repo bound to no Application shows
+`(orphan)`.
+
+## Service detail
+
+**Where:** click a service anywhere (`#/services/<id>`).
+
+{/* screenshot-placeholder: Service detail with the Run a new analysis bar and the Analyses tab showing one done analysis with "promote →". Save as public/guide/service-detail.png */}
+
+- A header with the service name, provider, repo and profile id.
+- **Run a new analysis**: a **ref** field (default `main`) and **Run
+  analysis**.
+- Two tabs: **Analyses** and **Proposals**.
+
+### Analyses
+
+An **analysis** is one Code Reviewer run against the service at one ref.
+The Analyses tab lists them with status, ref, commit and created time.
+**open →** shows the run; **promote →** (on finished runs) opens the
+promote form.
+
+The analysis page (`#/analyses/<id>`) streams the run live as an
+**Activity** log: the Coordinator narrates start and clone, the Code
+Reviewer's tool calls and findings follow. A deterministic framework
+detector runs first, so when your repo matches a known framework
+(FastAPI, Spring Boot, .NET or Go) the analysis names it as a fact rather
+than a guess. When the run finishes, a **Repository Analysis** card shows
+framework, language, package manager, runtime version, entrypoints, and
+whether tests, a Dockerfile and CI are present, with a confidence value.
+
+An analysis describes; it changes nothing. A failed run offers a retry,
+which starts a new run and keeps the failed one as a record.
+
+### Promoting to a proposal
+
+On the Analyses tab, **promote →** opens a small form:
+
+- **overlay**: leave it at **(default: this Application's platform repo)**.
+  That is where your environment profile and any overlay rules are read
+  from.
+- **dry-run (skip PR)**: run the whole pipeline but do not open a pull
+  request. Useful to see what would be proposed.
+- **Promote to proposal** (or **Promote (dry-run)**).
+
+You land on the proposal page.
+
+### Proposals
+
+A **proposal** is one DevOps Engineer run built from one analysis. The
+Proposals tab lists them with status, ref, source analysis and created time.
+
+## A proposal, from your side
+
+**Where:** `#/proposals/<id>`.
+
+{/* screenshot-placeholder: Proposal detail timeline with Constitution "clean, no violations", an advisory gap row, the green "Pull request opened" banner and the Explanation card. Save as public/guide/proposal-detail.png */}
+
+The proposal page is the record of one governed change. Read it top to
+bottom:
+
+1. **Activity**: the run as a conversation between named speakers.
+   - The **Coordinator** narrates: started, cloned the service at a commit,
+     handed off the analysis, loaded the environment profile. If the
+     service's head has moved since the analysis, it warns **heads up,
+     analysis is stale**.
+   - The **DevOps Engineer** reads files from the service repo and from the
+     platform repo, then drafts each artifact (**drafted
+     `<path>`**) and **built the proposal**.
+   - The emitted artifacts are **validated** before any policy runs: Helm
+     or Kustomize must render, workflows must parse, names must be legal
+     Kubernetes names. A check that could not run counts as a failure. If
+     validation fails, the run stops with an error and no PR opens.
+   - The **Constitution** then speaks: **clean, no violations**, or
+     **denied** with each violated rule cited by id and message. A deny
+     stops the run. No PR opens.
+   - On allow, an **advisory** gap check follows: which tooling categories
+     your environment profile does not declare, and which rules need them.
+     It never blocks the PR.
+   - **opened a PR on `<branch>`** with a link. If your platform repo
+     already matches the proposal exactly, the run ends with "nothing to
+     change" instead.
+2. **Pull request opened** banner: the PR link, branch, base and head SHA.
+   (Or a **Dry run** banner if you skipped the PR.)
+3. **Explanation**: summary, blast radius, rollback, the rules cited, and
+   the environment profile entries the agent used.
+4. **Files**: a tab per emitted file with its full content.
+
+The PR itself carries the same reasoning for your reviewers: Summary, Blast
+radius, Rollback, Rule citations, Environment profile entries used,
+**Preservation notes** (what the agent kept of edits you made to files it
+had generated before), any **Files removed** (each naming the file that
+replaces it), and the list of files. See
+[Agents propose, policy decides, humans approve](/concepts/agents-propose-policy-decides)
+and the [proposal lifecycle reference](/reference/proposal-lifecycle).
+
+### What the first proposal contains
+
+For a service on GitHub Actions with the Helm renderer, expect:
+
+- a **reusable** CI workflow in the platform repo, named per service
+  (`.github/workflows/ci-<service>.yaml`), triggered only by
+  `workflow_call`;
+- a minimal Helm chart (Chart.yaml, values.yaml, a Deployment and a
+  Service) under the Application's GitOps root;
+- an ArgoCD `Application` per target cluster under `argo-apps/`.
+
+Only tools your environment profile declares get pipeline steps, and every
+`uses:` line is pinned to a commit SHA from a TruStacks-curated pack. A
+declared tool with no curated pack gets no step; the agent records it as a
+TODO instead of guessing. See the [platform repo layout](/reference/platform-repo-layout).
+
+### After the PR opens: the steps that are yours
+
+1. **Review and merge the PR** in GitHub. While it is open, the
+   [Overview](/guide/overview) shows **A pull request is ready for your
+   review**. The card clears when the PR is merged or closed.
+2. **Add the caller workflow to the service repo, once.** The pipeline
+   lives in the platform repo as a reusable workflow; the service repo needs
+   a small `.github/workflows/ci.yaml` that calls it. The proposal's summary
+   includes the snippet.
+3. **If the platform repo is private, grant Actions access once**, or the
+   service repo's first run fails with `workflow was not found`:
+
+   ```bash
+   # platform repo owned by an organisation
+   gh api --method PUT repos/<owner>/<platform-repo>/actions/permissions/access \
+     -f access_level=organization
+   # platform repo owned by a personal account: use access_level=user
+   ```
+4. **Point your ArgoCD at the platform repo** (a root Application for
+   `argo-apps/`, plus read credentials if the repo is private). TruStacks
+   emits the configuration; your ArgoCD runs it.
+5. **Sync production by hand.** Prod-tier Applications are emitted with
+   manual sync.
+
+### After the first deploy: image tag promotion
+
+When a service repo's default branch advances, TruStacks opens a new
+proposal that bumps the image tag in the platform repo. It goes through the
+same validation, policy gate and human review as any other proposal, so
+"why is production running this commit?" is always answered by a merged PR
+with a policy verdict and an approver.
+
+## Deploy status
+
+If you enable the runner's optional ArgoCD observer
+(`observer.enabled=true`), the runner reports sync and health for the
+ArgoCD Applications it can see, and the Applications screen shows them as
+chips: **healthy**, **progressing**, **degraded** (with ArgoCD's reason),
+**not deployed yet** (exists in Git, never synced; *Sync it in ArgoCD to
+deploy*), and **out of sync**. With the observer off, cells show a dash.
+TruStacks never renders an app it has not observed as healthy.
+
+## How it connects
+
+- A service needs a [runner](/guide/runners) and an
+  [LLM key](/guide/settings) before it can be analysed.
+- Proposals are judged by the rules on [Rules](/guide/rules), using the
+  stack on [Stack](/guide/stack).
+- Pending PRs and failed runs surface on [Overview](/guide/overview).
+- The Application is the unit [Maturity](/guide/maturity) scores, and
+  **Draft pipeline PR** on Maturity creates proposals that appear here.
+- A finding on [Signals](/guide/signals) can become a proposal for its
+  service.
+
+## Beta limits
+
+- **Kustomize is Beta.** The Kustomize renderer has not yet been run end
+  to end against a production platform repo. Helm is the more exercised
+  path.
+- **One repo is one service.** Monorepos with several deployables under
+  subdirectories are not modelled yet; a repo connects as one service.
+- **Deploy status is per Application, not per tier.** When an Application
+  has several services or clusters, statuses are listed under their ArgoCD
+  names in the card header rather than attributed to grid cells, because
+  TruStacks cannot yet map them exactly.
+- On the proposal page, the validation step and a "nothing to change"
+  ending currently render as raw event lines rather than formatted rows. The
+  PR's state (open, merged, closed) is tracked for the Overview queue but
+  not shown on the proposal page.
+- Errors on the service page show as an HTTP status (for example `HTTP
+  409`). The most common causes: the Application has no platform repo bound,
+  or the runner is not connected.

@@ -1,0 +1,127 @@
+---
+title: Runners
+description: The Runners screen. Enroll a runner in your cluster, see which runners are checking in, and upgrade them safely.
+---
+
+import { Callout } from 'nextra/components'
+
+# Runners
+
+**Where:** **Runners** in the sidebar (`#/settings/runners`). Step 2 of
+[Get set up](/guide/onboarding) embeds the same enrollment card.
+
+{/* screenshot-placeholder: Runners screen with the enrollment card (token + helm command), the upgrade card, and one connected runner row. Save as public/guide/runners.png */}
+
+The runner is the part of TruStacks that runs in *your* cluster. It clones
+your repos, runs the agents, evaluates policy and opens pull requests. This
+screen is where you enroll runners and keep them current.
+
+## What you see
+
+### Enroll a runner
+
+1. **Generate enrollment token** creates a token and shows it once
+   (**Shown once, copy it now**).
+2. Under it, **Install the runner in your cluster** shows a ready-to-run
+   command with the current published chart version as a badge:
+
+   ```bash
+   helm install trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+     --version <published version> \
+     -n "<your-namespace>" --create-namespace \
+     --set saas.enrollmentToken=<token>
+   ```
+
+   Copy the command from the app rather than from this page. The version
+   comes from the control plane and changes with each release.
+3. A status line polls every few seconds: **Waiting for your runner to
+   connect…** (with **Check now**) until a runner checks in, then **Runner
+   connected.**
+
+If the app cannot confirm the current chart version, the command omits
+`--version` and installs the latest published chart, and says so.
+
+### Upgrade a runner
+
+Shown once at least one runner is connected. It compares each connected
+runner's reported version with the latest published chart and tells you
+which are out of date, which are ahead (for example on a pre-release), and
+which have not reported a version. It always shows an upgrade command:
+
+```bash
+helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version <published version> \
+  -n <your-namespace> --reset-then-reuse-values
+```
+
+<Callout type="warning">
+  Use `--reset-then-reuse-values` (Helm 3.14 or newer), not
+  `--reuse-values`. Plain `--reuse-values` keeps the image tag you first
+  installed, so the upgrade reports success while the old runner keeps
+  running. `--reset-then-reuse-values` keeps your enrollment token and picks
+  up the new image. If a runner is already ahead of the published chart, the
+  card tells you to name the version you want rather than offering a
+  downgrade.
+</Callout>
+
+### Connected runners
+
+A list of every runner that has enrolled, each marked **connected** or
+**not seen**, with its version and last-seen time. **Remove** (then
+**Yes**) deletes a runner's record.
+
+## What it means
+
+- **Pull mode.** The runner only makes outbound HTTPS calls: it exchanges
+  the enrollment token for a session, then long-polls the control plane for
+  jobs. There is no inbound connection to your cluster and no VPN.
+- **Connected is liveness, not presence.** A row stays after its pod is
+  gone; only a runner that has checked in recently counts as connected. The
+  header count shows connected runners only.
+- **Your code is read inside your cluster.** The runner clones repos and
+  runs the agents there. What leaves the cluster is the pull request it
+  opens, the run events it reports to TruStacks, and what the agents send to
+  your configured LLM provider while they work (which includes file contents
+  they read).
+- **The token is stored only as a hash.** You can generate another token at
+  any time, for example to add a second runner.
+
+## What to do here
+
+- **First time:** generate a token, run the command against the cluster
+  and namespace you chose, and wait for **Runner connected.** Then check the
+  rollout on your side:
+
+  ```bash
+  kubectl -n <your-namespace> rollout status deploy/trustacks-runner-runner
+  ```
+
+  (With the release name `trustacks-runner`, the chart names the
+  deployment `trustacks-runner-runner`.)
+- **After a release:** use the upgrade card's command. Then confirm the
+  runner row shows the new version.
+- **If the Overview says no runner is checking in:** check the pod, its
+  logs, and egress from the namespace (the runner needs to reach
+  api.trustacks.com, ghcr.io, your LLM endpoint, GitHub and Sigstore).
+
+Chart values, RBAC and egress requirements are in the
+[runner chart reference](/reference/runner-chart).
+
+## How it connects
+
+- A missing or silent runner is the top item on [Overview](/guide/overview),
+  because nothing else can run.
+- The runner uses the key from [Settings](/guide/settings) and the repos
+  connected under [Applications](/guide/applications).
+- The runner reports which rules it enforces, which feeds
+  [Rules](/guide/rules) and the [Maturity](/guide/maturity) ceiling. Runners
+  from 0.2.14-rc24 also report each rule's Rego source, and pull and verify
+  the signed constitution at start-up; older runners use the copy baked into
+  their image. See [policy state](/reference/policy-state).
+
+## Beta limits
+
+- Removing a runner deletes its record in TruStacks. It does not uninstall
+  anything from your cluster; use `helm uninstall` for that.
+- Runners that predate version reporting show no version; the card says it
+  cannot tell whether they are current, and upgrading is safe.

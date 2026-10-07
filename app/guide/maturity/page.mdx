@@ -1,0 +1,145 @@
+---
+title: Maturity
+description: The Maturity screen. Your tier and score per Application, how much of it is verified, what is pulling it down, and what closing each gap takes.
+---
+
+import { Callout } from 'nextra/components'
+
+# Maturity
+
+**Where:** **Maturity** in the sidebar (`#/maturity`).
+
+{/* screenshot-placeholder: Maturity hero with a silver badge, the verified/credited/potential bar, the tooling and behavior bars, two open-gap cards and the Path to gold card. Save as public/guide/maturity.png */}
+
+Maturity answers *are we set up correctly, and what would make us better?*
+It reads your most recent completed [gap analysis](/guide/gap-analyses) and
+turns it into a score, a list of what is pulling the score down, and what
+closing each gap takes. It is part of the core product, separate from
+[Compliance](/guide/compliance).
+
+## What you see
+
+### Header
+
+- An **Application** picker, shown when more than one Application has been
+  scored. The default, **most recent run**, shows whichever ran last.
+- A scope line: **Scored from *app*'s EnvironmentProfile.** If your other
+  Applications declare their own profiles, it adds that they are not
+  included in this score.
+- **Run a new gap analysis →** (goes to [Gap analyses](/guide/gap-analyses)).
+
+If no gap analysis has completed, the screen says so and offers **Run a gap
+analysis**.
+
+### The hero
+
+- **The tier badge**: bronze below 60%, silver from 60%, gold from 90%.
+- **A three-part bar**:
+  - **verified**: rows TruStacks has confirmed from evidence. The only part
+    it stands behind.
+  - **credited**: the extra credit from claims it could not check (claims
+    count half).
+  - **potential**: where the score would be if every claim were verified.
+- **▲ / ▼ N pts since last run** (or *no change since last run*),
+  comparing with the previous run of the same Application only. A drop is
+  shown in amber, not red: a score becoming more honest is not a failure.
+- **Tooling categories** and **Behaviors** bars, one segment per scored row.
+- A list of any `practices:` keys in your profile that are not part of the
+  vocabulary. They are not scored; check for a typo.
+
+### Open gaps (left)
+
+*What's pulling the score down.*
+
+- **One card per unsatisfied tooling category**: the category, the rule
+  that requires it, the recommended tool and why. **Draft pipeline PR**
+  asks the crew to add that tool's step to your pipeline and opens a
+  proposal (**Watch the crew work →**). The card says plainly that your
+  score moves only once you also declare the tool in
+  `environment-profile.yaml`, because that declaration is yours to make.
+- **A behaviors card** (*N behaviors unearned*), split three ways:
+  - **You declared these, and what we found disagrees** (disputed);
+  - **You've declared these … and we couldn't verify them** (claimed,
+    counted half; nothing is wrong with them);
+  - **You have not declared these yet** (missing).
+
+If nothing is pulling the score down, the card says everything scored is
+covered.
+
+### Path to gold (right)
+
+What is left, in two voices:
+
+- **Yours**: tooling gaps the crew can open PRs for now, and behaviors that
+  need the practice in place and declared by you.
+- **Ours**: declared rows that count half until TruStacks sees them in your
+  pipeline, rows TruStacks has no way to observe yet (these can only ever
+  count half, and it names them), and the score that closing every gap on
+  the page would actually reach. If that ceiling is below 90%, it says gold
+  is not reachable yet and why.
+
+## What it means
+
+The score is built from **rows**. There are two kinds:
+
+- **Tooling categories**: *do you have the tool?* Declared under a category
+  in your profile.
+- **Behaviors**: *do you use it correctly?* Five keys under `practices:`:
+  `tests_in_ci`, `linting_in_ci`, `manual_promotion_to_prod`,
+  `non_root_containers` and `supply_chain_pinning`.
+
+Only rows that some rule scores appear. Each row has a status:
+
+| Status | Meaning | Weight |
+|---|---|---|
+| **verified** | Declared, and the evidence confirms it. | 1.0 |
+| **claimed** | Declared, and there is no evidence either way. | 0.5 |
+| **disputed** | Declared, and the evidence contradicts it. | 0 |
+| **missing** | Not declared. | 0 |
+
+The headline score is the weighted average; the tier comes from it. Evidence
+comes from what TruStacks can observe: the workflow content in your
+pipeline (a declared scanner is verified when its step is there) and the
+constitution's verdicts on your latest judged proposal (for example whether
+the workflow has a test step), plus the Code Reviewer's analysis. Missing
+evidence never demotes a claim; only contrary evidence does.
+
+The full model, and why it works this way, is in
+[Verified, claimed and disputed](/concepts/verified-claimed-disputed) and the
+[maturity scoring reference](/reference/maturity-scoring).
+
+## What to do here
+
+1. Start with **Open gaps**. For a tooling gap, **Draft pipeline PR**, review
+   and merge the PR, then declare the tool in your profile.
+2. For a missing behavior, put the practice in place, then add the line to
+   `practices:`. For a disputed one, read the note: the evidence disagrees
+   with your claim, so fix the pipeline or remove the claim.
+3. Run a new gap analysis and compare.
+
+<Callout type="info">
+  **Why the score may fall.** When TruStacks gains a way to verify a row,
+  or the rules gain a row, a score can drop without anything in your setup
+  changing. That is the score becoming more accurate. The verified segment
+  is the part you can show someone else with confidence.
+</Callout>
+
+## How it connects
+
+- The input comes from [Gap analyses](/guide/gap-analyses), the profile on
+  [Stack](/guide/stack), and the rules on [Rules](/guide/rules).
+- **Draft pipeline PR** creates a [proposal](/guide/applications#proposals).
+- The headline also appears on [Overview](/guide/overview).
+
+## Beta limits
+
+- **Per Application, no roll-up.** There is no organisation-wide score.
+- **Not every category is scored.** Several of the twelve tooling categories
+  have no scoring rule yet; declaring them guides the agents but does not
+  move the score.
+- **Gold needs a current runner.** The ceiling depends on the rule inventory
+  your runner reports. Reports from runs that predate the ceiling
+  calculation show no ceiling and ask you to run a new analysis.
+- Every tooling gap card is labelled **missing**, even when the underlying
+  status is disputed.
+- A "what we did not check" coverage view is planned, not built.

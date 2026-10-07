@@ -1,0 +1,134 @@
+---
+title: Workspace and Activity chat
+description: The Workspace crew canvas, and the Activity chat where you run a gap analysis, connect a repo, or draft a Rego rule with the Coordinator.
+---
+
+import { Callout } from 'nextra/components'
+
+# Workspace and Activity chat
+
+**Where:** **Workspace** in the sidebar (`#/workspace`). The Activity chat
+lives at `#/activity`; the sidebar keeps **Workspace** highlighted there.
+You reach the chat from **+ Draft a rule with the Coordinator** on
+[Rules](/guide/rules), or by going to `#/activity` directly.
+
+These two screens show the agents as a team of named coworkers rather than
+a function-call graph. Workspace *watches* a run. Activity is where you
+*start* things by talking to the Coordinator.
+
+## Workspace: the crew canvas
+
+{/* screenshot-placeholder: Workspace with the gradient run header, the flow canvas (Coordinator connected to DevOps Engineer and Constitution), the chat stream and the tool-call drawer. Save as public/guide/workspace.png */}
+
+### What you see
+
+- **A run header**: **Active run** or **Most recent run**, whether it is an
+  Analysis or a Proposal, its short id, and how many agents took part (or
+  are working).
+- **The flow canvas**: one node per agent that actually took part in the
+  run, with the lead agent on the left. Edges are drawn only for
+  delegations that happened; an active edge animates.
+- **The chat stream**: each event of the run as a line attributed to the
+  agent that produced it (for example *detected spring_boot*, *constitution
+  allow*, *opened a pull request on …*).
+- **Detail · tool call** (right): the most recent tool call on the run,
+  which agent made it and its full parameters.
+
+If nothing has ever run, Workspace says **No crew activity yet** and offers
+**Go to your services**.
+
+### What it means
+
+Workspace follows the newest analysis or proposal in your workspace and
+replays it from the start, so a finished run still shows its whole
+conversation. It chooses the run when you open the page and does not jump to
+a newer one while you read.
+
+Everything on the canvas is derived from the run's real events. A
+specialist that was not consulted is not drawn.
+
+## Activity: the chat
+
+{/* screenshot-placeholder: Activity chat with a /gaps run in progress, Coordinator and Baseline Security turns, and the crew panel on the right. Save as public/guide/activity.png */}
+
+### What you see
+
+- A chat with the **Coordinator**, which greets you.
+- An input with a hint row: **Try /gaps, /discover, /rule new.** Clicking a
+  command runs it.
+- A **crew panel** on the right listing the Coordinator, Code Reviewer,
+  DevOps Engineer, Baseline Security, SOC2 and the Constitution, each with a
+  status line (for example **Running gap analysis**, **Consulting**,
+  **Idle**). A specialist pulses while the Coordinator is consulting it.
+
+The input is disabled while a run is in progress.
+
+### The commands
+
+| Command | What it does |
+|---|---|
+| `/gaps` | Runs a fresh gap analysis right in the chat. Each event appears as a turn: the Constitution reports the computed gaps, the Coordinator delegates to **Baseline Security** and **SOC2**, and each specialist replies in its own voice. It ends with a summary (tier badge, coverage bars, the report summary) and **View the full report →**. `/audit` still works as an alias. |
+| `/discover` | Takes you to the services list to connect a repo (**+ Connect repo**). |
+| `/rule new <rule_id>` | Starts drafting an overlay rule with that id. The Coordinator asks what the rule should deny; your next message is the description. |
+| `/rule new <plain-English description>` | Starts drafting from prose. The Coordinator proposes a rule id and drafts the Rego. |
+| `/rule new` | Explains the usage. |
+
+### Drafting a rule
+
+When a draft finishes, the chat shows the Rego as a file block headed
+`rules/<rule_id>/<rule_id>.rego` with **Copy** and **Download**, and a
+reminder of how to land it: `trustacks rule test`, `trustacks rule lint`,
+`trustacks rule sign`.
+
+The Coordinator drafts against your environment profile and the existing
+rule index, so the rule fits your stack. It does not run the rule.
+
+<Callout type="warning">
+  **Drafts are ephemeral.** Nothing is saved to your repos and nothing goes
+  live from the chat. A draft becomes a rule only when someone on your team
+  copies it into an overlay repo checkout, tests it, and lands it with the
+  `trustacks rule` CLI. Today that CLI works against local and self-hosted
+  control planes, not the hosted service, and there is no supported path
+  yet for delivering a customer overlay to a hosted runner. On the hosted
+  product, treat the chat as a way to draft and review Rego. See the
+  [policy authoring workshop](/workshops/policy-authoring).
+</Callout>
+
+Choose a rule id in `<namespace>.<name>` form, lowercase with underscores,
+for example `acme.requires_runbook_link`. TruStacks-reserved namespaces
+(`proposal`, `argocd`, `constitution`, `trustacks`) are refused.
+
+### What it means
+
+The chat is the conversational way into the same operations the tabular
+screens expose. A gap analysis started here is the same run you would start
+from [Gap analyses](/guide/gap-analyses) and appears in its list.
+
+## What to do here
+
+- Open **Workspace** while a proposal runs to watch the crew work, and to
+  inspect exactly what a tool call sent.
+- Use `/gaps` in **Activity** to run an analysis and see how the
+  specialists reason about your gaps.
+- Use `/rule new` to turn a piece of team knowledge ("every workflow must
+  set top-level permissions") into a reviewed Rego draft.
+
+## How it connects
+
+- `/gaps` → [Gap analyses](/guide/gap-analyses) and
+  [Maturity](/guide/maturity)
+- `/discover` → [Applications → connecting repos](/guide/applications#connecting-repos)
+- `/rule new` → [Rules](/guide/rules) and the
+  [policy authoring workshop](/workshops/policy-authoring)
+
+## Beta limits
+
+- **Free-form chat is not wired yet.** Anything that is not a slash command
+  gets a placeholder reply. The Activity header's "talk in natural
+  language" describes where this is going, not what it does today. The
+  placeholder reply still mentions `/audit`, the older name for `/gaps`.
+- **The Workspace input bar does nothing yet.** Use Activity for commands.
+- **`/gaps` in the chat cannot pick an Application.** If you have more
+  than one Application with a platform repo, start the analysis from
+  [Gap analyses](/guide/gap-analyses), where you choose which one.
+- The sidebar's **Crew online** strip is a static roster, not live status.
