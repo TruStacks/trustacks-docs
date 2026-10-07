@@ -67,9 +67,10 @@ rollback, the rules cited, the profile entries used, preservation notes,
 and any files removed. Your reviewer merges or closes it, under your
 repository's own protections.
 
-For production there is a second human step: ArgoCD Applications for prod
-clusters are emitted with manual sync, so merging does not deploy. Someone
-presses Sync.
+Deploying is a second human step. Every ArgoCD Application TruStacks emits
+uses manual sync, so merging does not deploy; someone presses Sync. For a
+cluster named `prod` the constitution also denies a proposal that turns
+automated sync on.
 
 ## Read-and-preserve
 

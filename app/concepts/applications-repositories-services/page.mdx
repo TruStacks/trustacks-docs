@@ -1,6 +1,6 @@
 ---
 title: Applications, repositories and services
-description: How TruStacks models what you deliver. An Application owns its repos and a platform repo; a service is a connected repo; every repo belongs to exactly one Application.
+description: How TruStacks models what you deliver. An Application owns its service repos and a platform repo; a service is a connected repo; every service repo belongs to exactly one Application.
 ---
 
 import { Callout } from 'nextra/components'
@@ -47,9 +47,10 @@ A connected repo is a record of a Git repository TruStacks can reach
 through the TruStacks GitHub App. It becomes a **service** when it is bound
 to an Application as a service repo.
 
-**Today, a service is a repo.** One service repo is one deployable. If your
-repo is a monorepo with several deployables in subdirectories, it still
-connects as one service; modelling services at a path inside a repo is
+**Today, a service is a repo.** TruStacks models one connected service repo
+as one service, however many deployables it contains. If your repo is a
+monorepo with several deployables in subdirectories, it connects as one
+service; modeling services at a path inside a repo is
 planned but not built.
 
 The platform repo is also a connected repo, bound to the Application in the
