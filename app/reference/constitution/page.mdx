@@ -1,6 +1,6 @@
 ---
 title: Constitution
-description: The 16 rules every TruStacks proposal is judged against. Gate rules, behaviour rules, and posture rules, how each feeds the maturity score, and how the signed policy reaches your runner from the public trustacks-policy repository.
+description: The 16 rules every TruStacks proposal is judged against. Gate rules, behavior rules, and posture rules, how each feeds the maturity score, and how the signed policy reaches your runner from the public trustacks-policy repository.
 ---
 
 import { Callout } from 'nextra/components'
@@ -9,7 +9,7 @@ import { Callout } from 'nextra/components'
 
 The constitution is the Rego policy TruStacks writes and every proposal is
 judged against. It is Apache 2.0, lives in the public
-[`trustacks-policy`](https://github.com/TruStacks/trustacks-policy)
+<a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>
 repository, and is published as a signed OCI artifact. Free at all tiers.
 
 The runner evaluates it with OPA inside your cluster, after the DevOps
@@ -23,7 +23,7 @@ Sixteen rules in three kinds. The kind decides what a rule can do.
 | Kind | Can refuse a proposal | Feeds the maturity score |
 |---|---|---|
 | **Gate** | Yes | No |
-| **Behaviour** | Yes | Yes, as a practice row |
+| **Behavior** | Yes | Yes, as a practice row |
 | **Posture** | No, never | Yes, as a tooling row |
 
 ### Gate rules
@@ -42,7 +42,7 @@ Is the artifact the right shape, in the right place?
 
 Only the renderer check that matches your Application's renderer applies.
 
-### Behaviour rules
+### Behavior rules
 
 Is the artifact doing the right thing? Each one maps to a practice key in
 your [environment profile](/reference/environment-profile).
@@ -51,7 +51,7 @@ your [environment profile](/reference/environment-profile).
 |---|---|---|
 | `practice.workflow_has_test_step` | Every workflow has a `run:` step that runs tests: `pytest`, `npm test`, `yarn test`, `pnpm test`, `dotnet test`, `go test`, or a Maven `test`/`verify` or Gradle `test`/`check`/`build`. | `tests_in_ci` |
 | `practice.workflow_has_lint_step` | Every workflow has a lint or static-analysis step: `ruff`, `eslint`, `biome`, `golangci-lint`, `go vet`, `staticcheck`, `dotnet format`, `checkstyle`, `spotless`, `spotbugs`, `pmd`, or `-Dlint`. | `linting_in_ci` |
-| `practice.argocd_prod_requires_manual_sync` | An Application under `argo-apps/argo-apps-prod/` has no `spec.syncPolicy.automated`. | `manual_promotion_to_prod` |
+| `practice.argocd_prod_requires_manual_sync` | An Application under `argo-apps/argo-apps-prod/` (a target cluster named `prod`) has no `spec.syncPolicy.automated`. The rule matches the directory, not the cluster's tier. | `manual_promotion_to_prod` |
 | `practice.dockerfile_runs_as_nonroot` | Every Dockerfile in the proposal has a `USER` that is not `root` or `0`. | `non_root_containers` |
 | `practice.workflow_pins_action_versions` | Every third-party `uses:` pins a full 40-character commit SHA. `actions/*` and local `./` actions are exempt. | `supply_chain_pinning` |
 
@@ -116,7 +116,8 @@ reports why. See [Policy in force](/reference/policy-in-force).
 
 <Callout type="warning">
   **Runner versions.** Signed-policy pull for hosted runners ships in runner
-  `0.2.14-rc24` and later. Earlier runners, including `0.2.13`, enforce the
+  `0.2.14-rc24` and later, which are pre-releases; no stable release includes
+  it yet. Earlier runners, including `0.2.13`, enforce the
   copy baked into the runner image and do not verify a signature at start.
 </Callout>
 

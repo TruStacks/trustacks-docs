@@ -89,7 +89,7 @@ How it talks to the control plane:
 
 - **The constitution** is the TruStacks-authored Rego policy every proposal
   is judged against: 16 rules today, published from the public
-  [`trustacks-policy`](https://github.com/TruStacks/trustacks-policy)
+  <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>
   repository and signed with Sigstore. See [the constitution
   reference](/reference/constitution).
 - **Overlay rules** are yours. Their denies are added to the constitution's
@@ -116,8 +116,11 @@ How it talks to the control plane:
 - **SOC2** (specialist, Developer tier) maps gaps to SOC 2 control families.
   See [Specialist Packs](/reference/specialist-packs).
 
-Agents never merge, never push to a default branch, and never hold cluster
-or cloud credentials. The runner opens pull requests. You decide what merges.
+Agents do not merge or push to a default branch, and never hold cluster or
+cloud credentials. The runner opens pull requests. You decide what merges.
+The GitHub App does have Contents write on the repos you grant, so protect
+their default branches and keep the TruStacks app off the bypass list to
+have GitHub enforce this too.
 
 ## The environment profile
 
