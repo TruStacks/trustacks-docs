@@ -12,7 +12,7 @@ export default {
   'specialist-packs': 'Specialist Packs',
   'runner-helm-chart': 'Runner Helm chart',
   'llm-provider': 'LLM provider (BYO key)',
-  'runner-cli': 'Runner CLI',
+  'runner-cli': 'Rule CLI',
   'policy-linter': 'Policy linter',
   'mcp-server': 'Integration model',
   'supply-chain': 'Supply-chain verification',

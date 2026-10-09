@@ -212,8 +212,8 @@ cosign verify \
 
 Policy versions independently of the product (the `1.x` line); the runner
 follows the `1` tag. Bundles published before policy `1.0.0` were signed by
-`trustacks-mvp/.github/workflows/publish-policy.yml`, and runners accept that
-identity too for one release cycle while it is retired.
+`trustacks-mvp/.github/workflows/publish-policy.yml`. That identity is retired:
+runners from `0.2.14-rc26` accept only the `trustacks-policy` identity.
 
 Images also carry an SPDX SBOM and build provenance. More in
 [supply-chain verification](/reference/supply-chain).

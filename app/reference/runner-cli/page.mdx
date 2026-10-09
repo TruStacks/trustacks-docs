@@ -1,23 +1,23 @@
 ---
-title: Runner CLI
-description: Command reference for the trustacks CLI. Overlay rule authoring that works anywhere, plus review, plan, gaps, and application commands for local and self-hosted control planes.
+title: Rule CLI
+description: "The trustacks rule command. Write, test, lint and sign policy rules on your own machine; the command-line tool for TruStacks' rules engine."
 ---
 
 import { Callout } from 'nextra/components'
 
-# Runner CLI
+# Rule CLI
 
-The `trustacks` CLI ships inside the runner image. It has two halves:
+`trustacks rule` is the command-line tool for TruStacks policy. It writes,
+tests, lints and signs rules in a local checkout, with no control plane and no
+account. It is how a rule drafted by `/rule new` in the app becomes a real,
+tested rule.
 
-- **`trustacks rule`** works on a local checkout of your overlay rules. It
-  needs no control plane at all.
-- **`review`, `plan`, `gaps`, and `application`** drive a control plane.
-
-<Callout type="warning">
-  **The control-plane commands do not work against hosted TruStacks.** They
-  send no sign-in credentials, so `api.trustacks.com` rejects them. They are
-  for local development and self-hosted control planes. On hosted, use the web
-  app for the same actions.
+<Callout type="info">
+  The runner image also contains `review`, `plan`, `gaps` and `application`
+  commands. Those are **internal development tools** for local TruStacks
+  stacks: they send no sign-in credentials and do not work against hosted
+  TruStacks. They are not a supported customer interface and are not
+  documented here. On hosted, use the web app.
 </Callout>
 
 ## Running it
@@ -39,9 +39,8 @@ same.
 
 - Exit code `0` on success, `1` on any failure.
 - Output is for people (Rich formatting). There is no JSON output mode.
-- There is no config file and no `login` command. Control-plane commands read
-  `--cp-url`, which defaults to the `TRUSTACKS_CP_URL` environment variable and
-  then to `http://cp.localtest.me:8080` (the local development stack).
+- There is no config file and no `login` command: `trustacks rule` works on
+  local files only.
 
 ## Overlay rules: `trustacks rule`
 
@@ -116,58 +115,6 @@ checked against the naming standard first. It does **not** run `lint` or
   runners do not load overlay bundles yet, and per-customer signing keys are
   not built. See [the constitution page](/reference/constitution#your-own-rules).
 </Callout>
-
-## Control-plane commands
-
-Local and self-hosted only (see the warning above). Each takes `--cp-url`.
-
-### `trustacks review`
-
-```bash
-trustacks review <profile> [--ref REF | -r REF] [--max-steps N]
-```
-
-Runs the Code Reviewer against a connection profile (name or UUID) and
-streams progress. `--ref` defaults to `main`; `--max-steps` to `25`. Prints
-the analysis ID you pass to `plan`.
-
-### `trustacks plan`
-
-```bash
-trustacks plan <analysis_id> [--overlay PROFILE] [--max-steps N] [--dry-run]
-```
-
-Promotes a completed analysis to a proposal and streams the run: artifact
-validation, the policy check, the advisory gap check, and the pull request.
-`--overlay` is the overlay connection profile (default `overlay-gitea`);
-`--max-steps` defaults to `40`. `--dry-run` produces the proposal without
-opening a pull request.
-
-### `trustacks gaps`
-
-```bash
-trustacks gaps run [--overlay PROFILE]
-trustacks gaps list
-trustacks gaps show <gap_analysis_id>
-```
-
-`run` starts a gap analysis and streams it; `list` shows recent runs;
-`show` renders one report: the summary, profile observations, and each
-unsatisfied tooling category. The maturity score is in the web app.
-
-### `trustacks application`
-
-```bash
-trustacks application list
-trustacks application show <name-or-id>
-trustacks application create <name> [--renderer helm|kustomize]
-                                    [--target-cluster NAME]
-                                    [--target-tier dev|uat|prod]
-                                    [--platform-profile PROFILE]
-```
-
-`create` defaults to `--renderer helm`, `--target-cluster local-k3d`, and
-`--target-tier dev`. It sets one target cluster; add more in the web app.
 
 ## Not in the CLI
 
