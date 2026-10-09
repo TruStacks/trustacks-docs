@@ -87,9 +87,9 @@ rule index, so the rule fits your stack. It does not run the rule.
   **Drafts are ephemeral.** Nothing is saved to your repos and nothing goes
   live from the chat. A draft becomes a rule only when someone on your team
   copies it into an overlay repo checkout, tests it, and lands it with the
-  `trustacks rule` CLI. Today that CLI works against local and self-hosted
-  control planes, not the hosted service, and there is no supported path
-  yet for delivering a customer overlay to a hosted runner. On the hosted
+  `trustacks rule` CLI, which writes, tests, lints and signs rules on local
+  files. There is no supported path yet for delivering a customer overlay to
+  a hosted runner. On the hosted
   product, treat the chat as a way to draft and review Rego. See the
   [policy authoring workshop](/workshops/policy-authoring).
 </Callout>

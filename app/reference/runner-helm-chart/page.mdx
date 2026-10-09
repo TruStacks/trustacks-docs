@@ -113,7 +113,7 @@ Where the runner gets the constitution, and how it verifies it. See
 | `policyBundle.bundleRef` | `ghcr.io/trustacks/policy/constitution:1` | The signed constitution to pull. |
 | `policyBundle.verify` | `true` | Verify the signature before loading. Turning this off loads the bundle unverified and the runner reports it as unverified. |
 | `policyBundle.insecure` | `false` | Plain HTTP to the registry. Local development only. |
-| `policyBundle.keyless.certificateIdentityRegexp` | Both policy publishing identities (see [Supply-chain verification](/reference/supply-chain#one-cycle-overlap-on-the-policy-identity)) | Which workflow may have signed the bundle. |
+| `policyBundle.keyless.certificateIdentityRegexp` | `trustacks-policy`'s `publish.yml` only, from `0.2.14-rc26` (rc24–rc25 also accepted the retired `trustacks-mvp` signer; see [Supply-chain verification](/reference/supply-chain#policy-bundles-signed-before-100)) | Which workflow may have signed the bundle. |
 | `policyBundle.keyless.certificateOidcIssuer` | `https://token.actions.githubusercontent.com` | OIDC issuer for the signing certificate. |
 | `policyBundle.overlayRef` | `""` | Overlay bundle. Not supported on hosted yet. |
 

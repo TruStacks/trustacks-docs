@@ -70,17 +70,18 @@ cosign verify \
 Your runner does the same check at start, inside your cluster, before it
 loads the bundle. See [Policy in force](/reference/policy-in-force).
 
-### One-cycle overlap on the policy identity
+### Policy bundles signed before 1.0.0
 
 Policy bundles before `1.0.0` (the `0.x` and `0.2.14-rcN` versions) were
 signed by a different workflow,
 `https://github.com/TruStacks/trustacks-mvp/.github/workflows/publish-policy.yml`.
-For one release cycle the runner accepts **both** identities, so a runner
-pointed at either line still verifies. After that the old identity is
-retired and only `trustacks-policy` · `publish.yml` is accepted.
+Runners on `0.2.14-rc24` and `rc25` accepted both identities for one release
+cycle. **That identity is retired:** from `0.2.14-rc26` the runner accepts only
+`trustacks-policy` · `publish.yml`, and nothing is signed with the old one
+any more. Use it only to verify an old bundle you already hold.
 
 If your own admission policy or audit scripts pin the old identity, move them
-to the new one now.
+to the new one.
 
 <Callout type="info">
   **Identity strings are case-sensitive.** The org segment is
