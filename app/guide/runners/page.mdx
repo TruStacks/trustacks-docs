@@ -1,6 +1,6 @@
 ---
 title: Runners
-description: The Runners screen. Enroll a runner in your cluster, see which runners are checking in, and upgrade them safely.
+description: The Runners screen. Enroll a runner in your cluster, see which runners are checking in, upgrade them safely, and revoke a leaked enrollment token.
 ---
 
 import { Callout } from 'nextra/components'
@@ -68,7 +68,68 @@ helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
 
 A list of every runner that has enrolled, each marked **connected** or
 **not seen**, with its version and last-seen time. **Remove** (then
-**Yes**) deletes a runner's record.
+**Yes**) deletes a runner's record and its registered key.
+
+<Callout type="warning">
+  **Removing a runner does not cut it off on its own.** While its enrollment
+  token is still valid, a removed runner simply enrolls again at its next
+  session renewal, within about 15 minutes, and reappears in the list. To
+  cut off one specific runner, revoke the tokens (below) **and** remove it.
+  A revoked token can renew only runners that are still registered, so the
+  removed one stays out, and your other runners on 0.2.14-rc26 or later stay
+  connected.
+</Callout>
+
+### Revoke enrollment tokens
+
+Below the runner list. Use it if an enrollment token got out: committed to
+a repo, pasted in chat, or held by someone who has left. Anyone with a
+valid token can enroll a runner that receives this workspace's jobs and
+credentials. You need to be a workspace owner.
+
+1. **Revoke and generate a new token** opens a confirm step that lists
+   what happens next. Confirm with **Revoke and generate a new token**
+   again, or **Cancel**.
+2. Every enrollment token for the workspace is revoked at once, and one
+   replacement is minted. The app says how many old tokens it revoked and
+   shows the new token once (**Shown once, copy it now**).
+3. **Give it to each runner you already run** shows an upgrade command
+   that carries the new token:
+
+   ```bash
+   helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+     --version <version> \
+     -n "<your-namespace>" --reset-then-reuse-values \
+     --set saas.enrollmentToken=<new token>
+   ```
+
+   Copy the command from the app, where the version and the new token are
+   already filled in. Run it once per install. **Install a new runner** shows the install
+   command with the new token.
+
+What revoking does:
+
+- **A revoked token can never enroll a new runner**, including for anyone
+  who kept a copy.
+- **Runners on 0.2.14-rc26 or later stay connected.** A runner renews its
+  session about every 15 minutes. Under a revoked token it can still renew,
+  but only for its own registered runner, on its own key, and the new
+  session comes back sealed to that key. A copy of the token is no use
+  without the runner's private key. These runners keep working without the
+  upgrade command, but they need the new token to enroll again if a
+  reinstall loses their identity Secret.
+- **Older runners disconnect** at their next renewal, within about 15
+  minutes, until you run the upgrade command against them. The chart
+  mounts the token Secret as a volume, so a running pod picks up the new
+  value at its next renewal.
+- **It does not remove any runner.** A runner someone already enrolled with
+  the leaked token holds a registered key, like yours does, and can keep
+  renewing on it. Check the runner list for any you don't recognise and
+  **Remove** them. After the revoke, a removed runner cannot come back.
+
+If you supply the token from a Secret you manage
+(`saas.enrollmentTokenSecret`), put the new token in that Secret instead of
+passing `--set saas.enrollmentToken`.
 
 ## What it means
 
@@ -84,7 +145,8 @@ A list of every runner that has enrolled, each marked **connected** or
   your configured LLM provider while they work (which includes file contents
   they read).
 - **The token is stored only as a hash.** You can generate another token at
-  any time, for example to add a second runner.
+  any time, for example to add a second runner. Tokens are reusable and do
+  not expire; they stop working only when you revoke them.
 
 ## What to do here
 
@@ -100,6 +162,9 @@ A list of every runner that has enrolled, each marked **connected** or
   deployment `trustacks-runner-runner`.)
 - **After a release:** use the upgrade card's command. Then confirm the
   runner row shows the new version.
+- **If a token leaked:** revoke and generate a new one, run the upgrade
+  command it gives you against each install, then remove any runner in the
+  list you don't recognise.
 - **If the Overview says no runner is checking in:** check the pod, its
   logs, and egress from the namespace (the runner needs to reach
   api.trustacks.com, ghcr.io, your LLM endpoint, GitHub and Sigstore).
@@ -124,8 +189,13 @@ Chart values, RBAC and egress requirements are in the
 
 - Removing a runner deletes its record in TruStacks. It does not uninstall
   anything from your cluster (use `helm uninstall` for that), and it does
-  not revoke the enrollment token, which stays valid. There is no
-  self-serve token revocation yet; see
+  not revoke the enrollment token, which stays valid until you revoke it
+  under **Revoke enrollment tokens**. See
   [Runner install](/installation/cluster#uninstall).
+- Revoking is all or nothing: it revokes every token in the workspace.
+  Removing a runner alone does not cut it off while its token is valid; to
+  cut off one runner, revoke and then remove it.
+- A removed runner's current session stays valid until it expires, up to
+  about 15 minutes.
 - Runners that predate version reporting show no version; the card says it
   cannot tell whether they are current, and upgrading is safe.

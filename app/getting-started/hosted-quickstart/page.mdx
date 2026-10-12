@@ -434,7 +434,7 @@ Once the loop is running, these happen without another setup step:
 | Symptom | Likely cause and fix |
 |---|---|
 | Runner pod stuck in `Init` | Check the init containers: `kubectl -n "$NAMESPACE" describe pod -l app.kubernetes.io/name=runner`. Usually an image pull blocked by egress; see [network requirements](/installation/cluster#network-requirements). |
-| Runner running but never shows connected | `kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner`. Look for enrollment errors. Confirm the cluster can reach `api.trustacks.com` over HTTPS and that the token was pasted whole. Tokens do not expire, so a token from earlier is still valid. |
+| Runner running but never shows connected | `kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner`. Look for enrollment errors. Confirm the cluster can reach `api.trustacks.com` over HTTPS and that the token was pasted whole. Tokens do not expire, so a token from earlier is still valid unless someone revoked it on **Runners**; a revoked token can't enroll a runner, so use its replacement. |
 | Connect wizard says "Create an Application first" | Create one (step 4). |
 | GitHub install returns to the app but shows no repos | The App was installed without access to those repos. Change the repo selection in GitHub under your account or organization's installed GitHub Apps, then retry. |
 | Analysis fails with an LLM error | Re-enter the key in Settings. Check the provider shows as configured, not pending. A pending key means your runner has not collected it yet; confirm the runner is connected. |
@@ -479,10 +479,11 @@ Once the loop is running, these happen without another setup step:
 
    <Callout type="warning">
      **Removing a runner does not revoke its enrollment token.** Tokens are
-     reusable and do not expire, and there is no self-serve way to revoke one
-     yet. Delete every copy you hold (Helm values files, CI variables, the
-     `trustacks-runner-enrollment` Secret if you created one), and if a token
-     may have leaked, contact TruStacks to have it revoked.
+     reusable and do not expire. Delete every copy you hold (Helm values
+     files, CI variables, the `trustacks-runner-enrollment` Secret if you
+     created one). If a token may have leaked, revoke it on **Runners** with
+     **Revoke and generate a new token**; see
+     [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
    </Callout>
 
 3. Uninstall the TruStacks GitHub App from your account or organization in
