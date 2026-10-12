@@ -266,10 +266,10 @@ kubectl -n "$NAMESPACE" get deploy trustacks-runner-runner \
 
 <Callout type="warning">
   **Removing a runner does not revoke its enrollment token.** Removing it in
-  the app deletes the runner's registered key, so nothing more is sealed to
-  it; the token itself stays valid, because tokens are reusable and do not
-  expire. Anyone holding a valid token can enroll a runner into your
-  workspace. Delete every copy you hold (Helm values files, CI variables, the
+  the app deletes the runner's registered key, but the token itself stays
+  valid, because tokens are reusable and do not expire. A runner still
+  running with a valid token enrolls again at its next session renewal.
+  Anyone holding a valid token can enroll a runner into your workspace. Delete every copy you hold (Helm values files, CI variables, the
   Secret, an external secret store). If a token may have leaked, revoke it
   yourself on **Runners** with **Revoke and generate a new token**; see
   [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).

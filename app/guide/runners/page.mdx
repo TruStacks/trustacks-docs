@@ -68,9 +68,17 @@ helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
 
 A list of every runner that has enrolled, each marked **connected** or
 **not seen**, with its version and last-seen time. **Remove** (then
-**Yes**) deletes a runner's record and its registered key. Removing a
-runner is how you cut off one specific runner: it can no longer renew its
-session, under any token.
+**Yes**) deletes a runner's record and its registered key.
+
+<Callout type="warning">
+  **Removing a runner does not cut it off on its own.** While its enrollment
+  token is still valid, a removed runner simply enrolls again at its next
+  session renewal, within about 15 minutes, and reappears in the list. To
+  cut off one specific runner, revoke the tokens (below) **and** remove it.
+  A revoked token can renew only runners that are still registered, so the
+  removed one stays out, and your other runners on 0.2.14-rc26 or later stay
+  connected.
+</Callout>
 
 ### Revoke enrollment tokens
 
@@ -95,7 +103,8 @@ credentials. You need to be a workspace owner.
      --set saas.enrollmentToken=<new token>
    ```
 
-   Run it once per install. **Install a new runner** shows the install
+   Copy the command from the app, where the version and the new token are
+   already filled in. Run it once per install. **Install a new runner** shows the install
    command with the new token.
 
 What revoking does:
@@ -114,8 +123,9 @@ What revoking does:
   mounts the token Secret as a volume, so a running pod picks up the new
   value at its next renewal.
 - **It does not remove any runner.** A runner someone already enrolled with
-  the leaked token holds a registered key, like yours does. Check the
-  runner list for any you don't recognise and **Remove** them.
+  the leaked token holds a registered key, like yours does, and can keep
+  renewing on it. Check the runner list for any you don't recognise and
+  **Remove** them. After the revoke, a removed runner cannot come back.
 
 If you supply the token from a Secret you manage
 (`saas.enrollmentTokenSecret`), put the new token in that Secret instead of
@@ -182,8 +192,9 @@ Chart values, RBAC and egress requirements are in the
   not revoke the enrollment token, which stays valid until you revoke it
   under **Revoke enrollment tokens**. See
   [Runner install](/installation/cluster#uninstall).
-- Revoking is all or nothing: it revokes every token in the workspace. To
-  cut off one runner, remove it instead.
+- Revoking is all or nothing: it revokes every token in the workspace.
+  Removing a runner alone does not cut it off while its token is valid; to
+  cut off one runner, revoke and then remove it.
 - A removed runner's current session stays valid until it expires, up to
   about 15 minutes.
 - Runners that predate version reporting show no version; the card says it

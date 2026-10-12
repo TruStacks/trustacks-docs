@@ -71,16 +71,20 @@ The Runners page shows the runner as connected once it has enrolled.
   the new token. The app gives you the command:
 
   ```bash
+  NEW_TOKEN=...   # the replacement token the app showed you once
   helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
     --version "$VERSION" \
     -n "$NAMESPACE" --reset-then-reuse-values \
     --set saas.enrollmentToken="$NEW_TOKEN"
   ```
 
-  If you manage the Secret yourself, update its `enrollment-token` key
-  instead. The chart mounts the Secret as a volume, so a running pod reads
-  the new value at its next renewal. Deleting a runner on the Runners page
-  cuts off that one runner; it does not retire the token. See
+  If you manage the Secret yourself, update the key named by
+  `saas.enrollmentTokenSecret.key` (`enrollment-token` by default) instead.
+  The chart mounts the Secret as a volume, so a running pod reads the new
+  value at its next renewal. Deleting a runner on the Runners page does not
+  retire the token, and while the token is valid the deleted runner enrolls
+  again at its next renewal. To cut off one runner, revoke, then delete it.
+  See
   [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
 - **Where it lives.** With `--set saas.enrollmentToken=...` the chart creates
   the Secret `trustacks-runner-enrollment` for you, and the token is also
