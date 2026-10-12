@@ -244,8 +244,11 @@ control plane separately checks whether proposal pull requests have merged.
 
 ## Other GitOps controllers
 
-Proposals always include an ArgoCD Application; the constitution requires
-one. Flux and other controllers are not supported today.
+Proposals for a Kubernetes target always include an ArgoCD Application;
+the constitution requires one (`proposal.has_argocd_application`). Flux and
+other controllers are not supported today. An ECS Fargate target (Beta) has
+no GitOps controller: its deploy workflow applies the merged task
+definition.
 
 ## Where to go next
 
