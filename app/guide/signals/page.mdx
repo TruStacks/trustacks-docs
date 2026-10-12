@@ -14,7 +14,8 @@ import { Callout } from 'nextra/components'
 Signals is where security findings meet the governed delivery loop.
 TruStacks is not a scanner and does not own the fix. Findings come from the
 tools you already run (Snyk, Trivy, Dependabot, GitHub Advanced Security, a
-SARIF file). TruStacks governs, validates and ships the fix through your
+SARIF file), or are observed in GitHub by your runner's read-only
+[MCP Signals](/reference/mcp-server#mcp-signals) source. TruStacks governs, validates and ships the fix through your
 pipeline. You approve, always. TruStacks re-proposes; it never auto-merges.
 
 <Callout type="warning">
@@ -41,10 +42,13 @@ When at least one real finding exists, a green strip reads **Live · N from
 your sources** and the sample data disappears.
 
 - **Incoming findings (left)**: each with a severity chip (CRIT, HIGH,
-  MED, LOW), title, source and age.
+  MED, LOW), title, source and age. A finding an MCP source observed shows
+  its source as **MCP feed · github**.
 - **The selected finding (right)**:
-  - a header card: the finding's id, source, fix source (if any) and when
-    it was detected;
+  - a header card: the finding's id, source, **observed by** (for example
+    `mcp:github`, for a finding seen by a read-only source in your runner
+    and re-checked every sweep), fix source (if any) and when it was
+    detected;
   - **actions**: **Triage** on a new finding; **Propose a fix** on a
     triaged finding whose repo is connected; **Dismiss** on anything not
     finished. Finished findings show **Validated** or **Dismissed** instead;
@@ -91,10 +95,13 @@ validation, constitution check and human review as any other proposal.
 
 ## Beta limits
 
-- **No intake connectors or upload button yet.** Findings arrive only
-  through the API (a SARIF upload endpoint and a generic findings endpoint).
-  Snyk, Trivy, Dependabot and GitHub Advanced Security integrations are
-  direction, not shipped.
+- **One intake connector, no upload button yet.** Besides the API (a SARIF
+  upload endpoint and a generic findings endpoint), findings arrive from the
+  read-only GitHub source when MCP Signals is on: open Dependabot,
+  code-scanning and secret-scanning alerts on repos connected to an
+  Application. Each alert enters Signals once, however many sweeps see it.
+  Repos added only through `extraRepos` never produce findings. Snyk and
+  Trivy integrations are direction, not shipped.
 - **The approve-and-ship steps are not built on this screen.** In live
   mode, the approve button reads **Approve & ship, coming soon** and is
   disabled. Approval happens where it always does: on the pull request.

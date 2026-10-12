@@ -67,6 +67,44 @@ told:
 - **The Code Reviewer's analysis**, for example whether the service has
   tests at all.
 
+## Declared, observed, verified
+
+There is a third kind of fact between your declaration and the score: an
+**observation**. With [MCP Signals](/reference/mcp-server#mcp-signals) on,
+your runner looks at the systems your tools report into, read-only and
+inside your cluster, and records what it sees: GitHub Actions ran green on
+the default branch three hours ago; Dependabot alerts are disabled; Semgrep
+uploaded code-scanning results.
+
+| | What it is | Who says so |
+|---|---|---|
+| **Declared** | A claim in your environment profile | You |
+| **Observed** | What a read-only source saw, with the source and its age | Your runner |
+| **Verified** | The scored status: verified, claimed, disputed or missing | The gap analysis |
+
+An observation is evidence, not a verdict. Each one is **observed** (we
+looked, and it holds), **absent** (we looked, and it does not) or
+**unknown** (we could not look: a missing token permission, a rate limit).
+Absent is a real finding. Unknown is our blind spot and, like any missing
+evidence, never demotes you.
+
+An observation changes a row only through an **evidence rule** that names
+one source, one category, one provider and the exact condition. Declared
+`github_actions` with a green run on the default branch in the last 30 days
+would be verified; no run in 30 days on any repo we could see would be
+disputed. A Semgrep upload never verifies a declared CodeQL.
+
+<Callout type="info">
+  **Shadow mode today.** The evidence rules are not live yet. The
+  [Stack](/guide/stack) screen shows each row's observations and what the
+  score *would be* with them, marked **not applied**. Your score does not
+  change until the rules go live. When they do, expect some rows to move
+  down first, because some declarations will turn out to be disputed.
+</Callout>
+
+TruStacks never turns an observation into a declaration. If a source sees a
+tool you did not declare, the declaration is still yours to make.
+
 Some rows have no evidence source yet. Those can only ever count half. The
 [Maturity](/guide/maturity) screen names them and calculates the highest
 score you can actually reach (the *ceiling*), so it never promises a gold
@@ -118,9 +156,11 @@ whole design exists to avoid. See
   tiers and the ceiling in detail.
 - [Environment profile reference](/reference/environment-profile): every
   category and the five behavior keys.
+- [Stack](/guide/stack): declared, observed and verified side by side.
 
 <Callout type="info">
   These decisions are recorded in TruStacks' architecture decision records
-  ADR-0046 (maturity is per Application and must be earned) and ADR-0050
-  (one scoring vocabulary, and a declared tool must be observed).
+  ADR-0046 (maturity is per Application and must be earned), ADR-0050
+  (one scoring vocabulary, and a declared tool must be observed) and ADR-0061
+  (MCP Signals: declared versus observed).
 </Callout>

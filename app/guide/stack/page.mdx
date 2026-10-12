@@ -1,6 +1,6 @@
 ---
 title: Stack
-description: The Stack screen. What your environment profile declares, per tooling category, and what each undeclared category costs you.
+description: The Stack screen. Your toolchain by platform-engineering plane, with what you declared, what a read-only source observed, and what TruStacks verified, per tooling category.
 ---
 
 import { Callout } from 'nextra/components'
@@ -9,24 +9,77 @@ import { Callout } from 'nextra/components'
 
 **Where:** **Stack** in the sidebar (`#/stack`).
 
-{/* screenshot-placeholder: Stack grid with CI/CD platform and GitOps controller declared, Image scanning flagged by the last audit, and the Behaviors list. Save as public/guide/stack.png */}
+{/* screenshot-placeholder: Stack with the Declared · Observed · Verified header, a connected GitHub source slot, the shadow banner, and the Security Plane cards with Observed and Verified lines. Save as public/guide/stack.png */}
 
-Stack is a read-only view of your **environment profile**: the
-`environment-profile.yaml` file at the root of your platform repo, where you
-declare the tools you run and the behaviors you attest to. Every agent reads
-that file before acting, and your maturity score is computed from it.
+Stack is the blueprint view of your toolchain. It answers *which teams
+actually run secret scanning?* without a Slack thread. For each tooling
+category it shows three facts side by side, never blended:
 
-You do not edit anything here. You edit the file in Git, through your normal
-review process; Stack shows what TruStacks read.
+- **Declared**: what your **environment profile** says. That is the
+  `environment-profile.yaml` file at the root of your platform repo, where
+  you declare the tools you run and the behaviors you attest to. Every agent
+  reads it before acting.
+- **Observed**: what a read-only source running in your cluster saw, with
+  the source and how long ago.
+- **Verified**: the status your latest gap analysis gave the category:
+  verified, claimed, disputed or missing.
+
+A declaration is a claim. An observation is evidence. The gap between them
+is the point of the screen.
+
+You do not edit anything here. You edit the profile in Git, through your
+normal review process, and you connect sources in your own cluster; Stack
+shows what TruStacks read.
 
 ## What you see
 
+### Declared · Observed · Verified
+
+The header above the categories:
+
+- **Application**: a picker, when you have more than one. It scopes the
+  Observed and Verified lines to that Application's repos and its latest gap
+  analysis.
+- **Source slots**: one per source your runner reports, for example
+  **github**, with its status, server version, the age of its last sweep,
+  and how many observations and audited calls it made (and how many calls
+  were refused or observations quarantined). Statuses:
+
+  | Slot says | Meaning |
+  |---|---|
+  | **connected · read-only verified** | The source started, and every tool its server offered was on our read-only allowlist. |
+  | **refused — the server offered a tool we do not allow** | The runner refused to start the source. Nothing was called. |
+  | **last sweep failed** | The last sweep errored. The cards keep **showing the last good sweep**, with its age, rather than going blank. |
+  | **credential missing** | The source is on, but its Secret is not there. |
+
+  With no source reporting, the header says **No signal source connected
+  yet**.
+- **Shadow · not applied**: your current coverage and tier, and what they
+  *would be* if the observations counted (or **Observations would not change
+  it.**). **Nothing changes until the evidence rules go live.** The banner is shown so you can see the effect
+  before it lands; it never changes your score.
+- **Also observed, not connected to any Application**: repos the source
+  watched (through `extraRepos`) that TruStacks does not govern.
+
+### Planes
+
+The twelve categories are grouped by the platformengineering.org reference
+architecture's planes:
+
+| Plane | Categories | Shown as **not modelled** |
+|---|---|---|
+| Developer Control Plane | Ticketing / change-mgmt | Developer portal / catalog, Workload spec, IDE / CDE, AI coding & review |
+| Integration & Delivery Plane | CI/CD platform, Container registry, GitOps controller | Platform orchestrator, Dependency-update bots |
+| Resource Plane | Service mesh / ingress | Clusters / compute, IaC, Databases / storage, DNS |
+| Observability Plane | Observability | FinOps, Incident management |
+| Security Plane | Image scanning, SAST / SCA, Secret scanning, SBOM + signing, Secrets management, Compliance evidence | Admission policy, IAM, Runtime security |
+
+A *not modelled* chip is part of the reference architecture that TruStacks
+does not model yet. It is never shown as something you are missing.
+
 ### Tooling categories
 
-A card for each of twelve categories: CI/CD platform, Container registry,
-Image scanning, SAST / SCA, Secret scanning, SBOM + signing, GitOps
-controller, Service mesh / ingress, Secrets management, Observability,
-Ticketing / change-mgmt, and Compliance evidence. Each card is in one of
+A card for each category. The headline is what you **declared**, in one of
 these states:
 
 | Card says | Meaning |
@@ -42,6 +95,75 @@ For a category that is not declared, the card explains what that costs:
   and suggested tools from your last gap analysis; or
 - **Your last gap analysis found no rule that needs this**; or
 - **Run a gap analysis to see what needs this →** if you have none.
+
+Under the headline, every card has two more lines:
+
+- **Observed:** each observation as a short fact, its status, the source,
+  the repo and its age. For example *GitHub Actions: 14 runs in 30d*,
+  *Dependabot alerts: disabled*, *Semgrep: results uploaded*,
+  *Secret scanning: 2 open alerts*. A status is one of:
+  - **observed**: we looked, and it holds;
+  - **absent**: we looked, and it does not, for example the feature is
+    turned off. This is a real finding;
+  - **unknown**: *could not look*, for example the token lacks a permission
+    or GitHub rate-limited us. It is our blind spot, not your gap, and it
+    never counts against you.
+
+  With nothing to show, the line says **no source connected**, **nothing
+  reported yet**, or **no source can observe this yet**.
+- **Verified:** the status from your latest gap analysis, or **no gap
+  analysis yet**. If an observation would change it, a hint follows:
+  **would be verified (shadow, not applied)**, with the evidence rule and
+  why.
+
+Today one source exists, GitHub, and it can observe four categories: CI/CD
+platform, SAST / SCA, Secret scanning and Image scanning. On those cards,
+until a source is connected, **Connect a source →** opens the recipe below.
+
+### Connect a source
+
+**Connect a source →** shows the recipe for the GitHub source. It never
+offers a token field: the token stays in your cluster and never reaches
+TruStacks.
+
+1. Create a **fine-grained** personal access token. Repository access: only
+   the repos you connect. Repository permissions, each **Read-only**:
+   Actions, Contents, Metadata, Pull requests, Issues, Dependabot alerts,
+   Code scanning alerts, Secret scanning alerts. No write permission
+   anywhere.
+2. Store it in your runner's namespace:
+
+   ```bash
+   read -rs GH_TOKEN && \
+   kubectl -n <runner-namespace> create secret generic trustacks-mcp-github \
+     --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+   ```
+
+3. Turn the source on:
+
+   ```bash
+   helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+     --version <version> \
+     -n <runner-namespace> --reset-then-reuse-values \
+     --set mcpSignals.enabled=true \
+     --set mcpSignals.sources.github.enabled=true
+   ```
+
+The runner needs HTTPS egress to `api.github.com`. Observations appear after
+its first sweep, which runs when the pod starts and then every six hours.
+It needs runner `0.2.14-rc27` or later. Every value is in the
+[Runner Helm chart reference](/reference/runner-helm-chart#mcpsignals).
+
+<Callout type="info">
+  The app's recipe shows the Helm command against a chart repo named
+  `trustacks/runner` and a placeholder release name. If you installed from
+  the OCI chart as in the [install guide](/installation/cluster), use the
+  command above, with your release name and the version you run.
+</Callout>
+
+A fine-grained token has exactly one resource owner (a user or an
+organization). Repos owned by two different owners need two tokens, and a
+runner reads one token per source today.
 
 ### Behaviors (self-attested)
 
@@ -67,14 +189,30 @@ labeled so (see Beta limits).
   until it can verify it from evidence, and at no credit if the evidence
   contradicts it. See
   [Verified, claimed and disputed](/concepts/verified-claimed-disputed).
-- **Credentials never live here.** The profile names tools, not secrets.
+- **Credentials never live here.** The profile names tools, not secrets,
+  and a source's token lives in a Secret in your cluster.
+- **An observation is evidence, not a verdict.** It moves a row from claimed
+  to verified only through an evidence rule that names one source, one
+  category, one provider and the exact condition. For example, CI/CD
+  platform `github_actions` would be verified when a run on the default
+  branch ran and passed within 30 days. A Semgrep upload does not verify a
+  declared CodeQL. In this release those rules run in **shadow**: you see
+  what they would do, and your score does not change.
+- **Observation is read-only and model-free.** The runner runs GitHub's
+  official MCP server in read-only mode, refuses its write tools, and runs a
+  fixed list of read calls. No model decides what to call, and nothing a
+  tool returns is ever turned into the next call. See
+  [Integration model](/reference/mcp-server#mcp-signals).
 
 ## What to do here
 
 1. If a card says **not declared** for a tool you actually run, add it to
    `environment-profile.yaml` in your platform repo and merge.
-2. Uncomment a `practices:` line only once it is true of your pipeline.
-3. Run a new [gap analysis](/guide/gap-analyses) to see the effect on your
+2. If you declared a tool and the source observes it **absent** (for
+   example *Secret scanning: disabled*), either turn it on or correct the
+   declaration. The observation is what an auditor would find.
+3. Uncomment a `practices:` line only once it is true of your pipeline.
+4. Run a new [gap analysis](/guide/gap-analyses) to see the effect on your
    score.
 
 The file format, every category and the five behavior keys are in the
@@ -86,13 +224,21 @@ The file format, every category and the five behavior keys are in the
   and every [gap analysis](/guide/gap-analyses).
 - What it declares, checked against [Rules](/guide/rules), becomes your
   [Maturity](/guide/maturity) score.
+- Open alerts the GitHub source observes (Dependabot, code scanning, secret
+  scanning) on your connected repos arrive in [Signals](/guide/signals) as
+  findings.
 
 ## Beta limits
 
 - **One profile on this screen.** If your Applications use different
   platform repos, Stack cannot yet tell which profile to show, says so, and
-  falls back to what your last audit found. There is no Application picker
-  yet.
+  falls back to what your last audit found. The Application picker scopes
+  the Observed and Verified lines, not the Declared headline.
+- **Shadow only.** Observations do not change your score in this release.
+- **One source, four categories.** GitHub is the only source. The other
+  eight categories say **no source can observe this yet**. Showing tools
+  nobody declared (an *undeclared* cell) and an org-wide matrix across
+  Applications are planned.
 - **The tool-actions table is sample data.** The real curated packs (Trivy,
   Semgrep, Gitleaks, Syft and Cosign today) ship inside the runner and in
   the public `trustacks-policy` repo; the screen does not read them live yet.
