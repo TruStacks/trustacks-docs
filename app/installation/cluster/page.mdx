@@ -66,8 +66,11 @@ connected, with its version.
 ## The enrollment token
 
 The token ties the runner to your workspace. It is **reusable and does not
-expire**: the runner presents it again whenever it re-enrolls, so it must stay
-available to the pod. On our side it is stored only as a hash.
+expire**: the runner presents it again each time it renews its session (about
+every 15 minutes), so it must stay available to the pod. On our side it is
+stored only as a hash. It stops working only when you revoke it, on
+**Runners** with **Revoke and generate a new token**
+(see [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens)).
 
 There are two ways to supply it.
 
@@ -264,13 +267,13 @@ kubectl -n "$NAMESPACE" get deploy trustacks-runner-runner \
 
 <Callout type="warning">
   **Removing a runner does not revoke its enrollment token.** Removing it in
-  the app deletes the runner's registered key, so nothing more is sealed to
-  it; the token itself stays valid, because tokens are reusable and do not
-  expire. There is no self-serve way to revoke a token yet. Delete every copy
-  you hold (Helm values files, CI variables, the Secret, an external secret
-  store), and if a token may have leaked, contact TruStacks to have it
-  revoked. Anyone holding a valid token can enroll a runner into your
-  workspace.
+  the app deletes the runner's registered key, but the token itself stays
+  valid, because tokens are reusable and do not expire. A runner still
+  running with a valid token enrolls again at its next session renewal.
+  Anyone holding a valid token can enroll a runner into your workspace. Delete every copy you hold (Helm values files, CI variables, the
+  Secret, an external secret store). If a token may have leaked, revoke it
+  yourself on **Runners** with **Revoke and generate a new token**; see
+  [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
 </Callout>
 
 ## Where to go next

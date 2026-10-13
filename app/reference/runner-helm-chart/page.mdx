@@ -61,9 +61,31 @@ The Runners page shows the runner as connected once it has enrolled.
 
 ### The enrollment token
 
-- **Reusable, does not expire.** The runner presents it again whenever it
-  re-enrolls. Treat it like a password. To retire it, delete the runner on the
-  Runners page and enroll a new one.
+- **Reusable, does not expire.** The runner presents it again each time it
+  renews its session, about every 15 minutes. Treat it like a password.
+- **Revoking it.** **Revoke and generate a new token** on **Settings →
+  Runners** revokes every token in the workspace and mints one replacement.
+  A revoked token can never enroll a new runner. Runners on 0.2.14-rc26 or
+  later keep renewing on their own registered key (the session is sealed to
+  that key); older runners disconnect at their next renewal until they get
+  the new token. The app gives you the command:
+
+  ```bash
+  NEW_TOKEN=...   # the replacement token the app showed you once
+  helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+    --version "$VERSION" \
+    -n "$NAMESPACE" --reset-then-reuse-values \
+    --set saas.enrollmentToken="$NEW_TOKEN"
+  ```
+
+  If you manage the Secret yourself, update the key named by
+  `saas.enrollmentTokenSecret.key` (`enrollment-token` by default) instead.
+  The chart mounts the Secret as a volume, so a running pod reads the new
+  value at its next renewal. Deleting a runner on the Runners page does not
+  retire the token, and while the token is valid the deleted runner enrolls
+  again at its next renewal. To cut off one runner, revoke, then delete it.
+  See
+  [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
 - **Where it lives.** With `--set saas.enrollmentToken=...` the chart creates
   the Secret `trustacks-runner-enrollment` for you, and the token is also
   stored in the Helm release. To keep it out of the release, create the Secret
@@ -289,9 +311,10 @@ does not track. Then delete the runner on **Settings → Runners**. Removing the
 TruStacks GitHub App from your org is separate, in your GitHub settings.
 
 <Callout type="warning">
-  **Uninstalling does not revoke the enrollment token.** It is reusable,
-  does not expire, and has no self-serve revocation yet. Delete your copies
-  of it, and if it may have leaked, contact TruStacks to have it revoked.
+  **Uninstalling does not revoke the enrollment token.** It is reusable and
+  does not expire. Delete your copies of it, and if it may have leaked,
+  revoke it on **Settings → Runners** with **Revoke and generate a new
+  token**; see [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
 </Callout>
 
 ## Verify before you install

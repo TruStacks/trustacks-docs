@@ -14,7 +14,7 @@ makes every screen in the product easier to read.
 Application  1 ──── N  repositories  ──── a service repo is a Service
      │
      ├── one platform repo  (where PRs land; holds environment-profile.yaml)
-     └── target clusters    (each tagged dev, uat or prod)
+     └── deployment targets (each with a name, a tier and a kind)
 ```
 
 ## Application
@@ -24,8 +24,11 @@ is the unit that owns delivery decisions:
 
 - **one platform repo**, the GitOps repository where TruStacks opens pull
   requests and where your `environment-profile.yaml` lives;
-- **target clusters**, each with a tier (`dev`, `uat`, `prod`), which shape
-  tier-scoped policy such as manual sync for production;
+- **deployment targets** (**Target clusters** in the app), each with a
+  name, a tier (`dev`, `uat`, `prod`) and a kind (`kubernetes`, or
+  `ecs-fargate` in Beta). The tier shapes tier-scoped policy such as the
+  human approval of a promotion to prod; the kind decides what a deploy
+  looks like there (see [below](#prod-is-prod-whatever-the-target));
 - **a renderer**, Helm or Kustomize, and optionally a GitOps root template
   that says where in the platform repo its artifacts go;
 - **its member services**.
@@ -36,10 +39,39 @@ namespace, so it cannot be renamed. Pick something durable, like
 
 **Why the Application is the unit.** Tooling decisions are made per
 delivery system, not per company and not per repo. You pick one platform
-repo, one GitOps layout and one set of clusters for a group of services
+repo, one GitOps layout and one set of targets for a group of services
 that ship together. So maturity is scored per Application, the environment
 profile is read per Application (from its platform repo), and future
 access control is per Application.
+
+## Prod is prod, whatever the target
+
+A deployment target has three properties, and they answer different
+questions:
+
+| Property | Answers | Values |
+|---|---|---|
+| **name** | What do you call it? | Yours: `gke-us-east`, `live`, `orders-prod` |
+| **tier** | How much does it matter if this breaks? | `dev`, `uat` or `prod`, closed |
+| **kind** | What does a deploy physically look like there? | `kubernetes` (default) or `ecs-fargate` (Beta) |
+
+**`prod` has one meaning on every kind:** the target serves real users or
+real data, so promotion into it needs a human's approval. Policy decides
+prod from the tier, never from the name or the kind. A practice such as
+`manual_promotion_to_prod` names the intent; each kind has its own way of
+implementing it:
+
+- on **Kubernetes**, an ArgoCD Application without automated sync, which the
+  constitution enforces on a prod target. What we read is what runs, so it
+  can be **verified**;
+- on **ECS Fargate**, a deploy job that names a GitHub environment. That is a
+  reference to a gate, not the gate: whether the environment has required
+  reviewers is a repository setting TruStacks does not read. So it can only
+  ever be **claimed**.
+
+The tier has no default, because declaring a target `prod` is what turns
+protection on. The kind defaults to Kubernetes, because it is configuration,
+not a claim about you.
 
 ## Repositories and services
 

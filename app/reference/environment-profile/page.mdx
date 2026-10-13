@@ -128,8 +128,8 @@ A value outside the list fails validation.
 |---|---|---|
 | `tests_in_ci` | CI runs your tests | `practice.workflow_has_test_step` |
 | `linting_in_ci` | CI runs a linter or static analysis | `practice.workflow_has_lint_step` |
-| `manual_promotion_to_prod` | Production deploys need a human to sync | `practice.argocd_prod_requires_manual_sync` |
-| `non_root_containers` | Containers run as a non-root user | `practice.dockerfile_runs_as_nonroot` |
+| `manual_promotion_to_prod` | A human approves promotion to prod | `practice.argocd_prod_requires_manual_sync` (Kubernetes). On an ECS Fargate target no rule can confirm it, so it stays claimed. |
+| `non_root_containers` | Containers run as a non-root user | `practice.dockerfile_runs_as_nonroot`, and `practice.ecs_task_runs_as_nonroot` on ECS Fargate |
 | `supply_chain_pinning` | Third-party CI actions are pinned to a commit SHA | `practice.workflow_pins_action_versions` |
 
 `true` is a claim. `false` or absent is not a claim. A key that matches no rule

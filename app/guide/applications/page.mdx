@@ -53,20 +53,50 @@ Five cards, top to bottom:
 |---|---|
 | **Renderer** | **Helm** or **Kustomize**. How the DevOps Engineer emits deploy artifacts. Helm produces a chart per service per cluster. Kustomize produces one shared `base/` and an `overlays/<cluster>/` per target, with ArgoCD pointing at the overlay. |
 | **GitOps root** | Where this Application's artifacts land in the platform repo. Leave empty for the renderer default (`gitops/{application}/{cluster}/{service}` for Helm, `gitops/{application}/{service}` for Kustomize). `{service}` is always required; Helm requires `{cluster}` and Kustomize forbids it. **Save root** applies to the next proposal; files already written stay where they are until someone removes them. |
-| **Target clusters** | The clusters this Application deploys to, each with a tier: `dev`, `uat` or `prod`. Add with **cluster name**, **tier** and **Add cluster**, then **Save**. At least one is required. |
+| **Target clusters** | The deployment targets this Application deploys to. Each has a name, a tier (`dev`, `uat` or `prod`) and a kind, shown as fixed text: **Kubernetes** or **ECS Fargate**. Add with **cluster name**, **tier** and **Add cluster**, then **Save**. A target you add here is Kubernetes. At least one is required. |
 | **Platform / GitOps repo** | Which connected repo receives this Application's pull requests. One per Application. **+ Connect a platform repo** opens the connect wizard with the Platform role preselected. |
 | **Member services** | The service repos in this Application, with **remove**, and an **add a service** picker of connected repos that are not yet members. |
 
 ### What the tiers mean
 
-Tiers drive tier-scoped policy. The clearest example is manual sync for
-production. Every ArgoCD Application TruStacks emits uses **manual sync**, so
-when a proposal merges, ArgoCD does not deploy it until a person presses
-Sync. That is the human approval, applied a second time at the point of
-deployment. For a cluster named `prod`, the constitution also denies any
-proposal that turns automated sync on; the rule matches the
-`argo-apps/argo-apps-prod/` directory, so a `prod`-tier cluster with another
-name is not covered by that check.
+**Prod is prod, whatever the target.** A tier answers *how much does it
+matter if this breaks?*, and `prod` means the same thing on every kind of
+target: it serves real users or real data, so promotion into it needs a
+human's approval. Name your targets whatever you call them (`staging`,
+`live`, `gke-us-east`); the tier, not the name, is what policy reads.
+
+The kind decides *how* that approval is enforced:
+
+- **Kubernetes.** Every ArgoCD Application TruStacks emits uses **manual
+  sync**, so when a proposal merges, ArgoCD does not deploy it until a
+  person presses Sync. That is the human approval, applied a second time at
+  the point of deployment. When the target's tier is `prod`, whatever it is
+  named, the constitution also denies any proposal that turns automated
+  sync on. (Runners older than `0.2.14-rc25` send no tier, so for them the
+  rule only covers a cluster named `prod`.)
+- **ECS Fargate (Beta).** Merging deploys, so the pull request review is the
+  approval. On a `prod` target the constitution requires the deploy job to
+  name a GitHub environment, which can hold the deploy for reviewers where
+  your GitHub plan offers them. TruStacks does not read whether it does, so
+  this practice scores as claimed, never verified. See
+  [ECS Fargate layout](/reference/platform-repo-layout#ecs-fargate-layout-beta).
+
+### Target kinds
+
+A target's **kind** is what a deploy physically is there. It selects which
+files TruStacks emits and which rules apply; it never changes what a tier
+means.
+
+| Kind | What TruStacks emits | Status |
+|---|---|---|
+| Kubernetes | A Helm chart or Kustomize overlay, and an ArgoCD Application | Default |
+| ECS Fargate | A task definition, a blank `deploy-target.json` binding, and a deploy workflow | Beta |
+
+There is no kind selector in the app yet: the page shows each target's kind
+read-only, and a Fargate target is set through the control-plane API. A
+proposal is built for the Application's **first** target, so mixing kinds in
+one Application does not work yet. ECS Fargate is in Beta: no customer has
+run it end to end against a real AWS account. If you want to try it, tell us.
 
 <Callout type="warning">
   **Check the default cluster.** A new Application starts with one target
@@ -230,6 +260,11 @@ For a service on GitHub Actions with the Helm renderer, expect:
 - a minimal Helm chart (Chart.yaml, values.yaml, a Deployment and a
   Service) under the Application's GitOps root;
 - an ArgoCD `Application` per target cluster under `argo-apps/`.
+
+For an ECS Fargate target (Beta), the chart and the ArgoCD Application are
+replaced by a task definition, a blank `deploy-target.json` you fill in, and
+a deploy workflow that runs when the pull request merges. TruStacks never
+creates your AWS resources; the pull request lists what you need.
 
 Only tools your environment profile declares get pipeline steps, and every
 `uses:` line is pinned to a commit SHA from a TruStacks-curated pack. A

@@ -1,6 +1,6 @@
 ---
 title: Knowledge packs
-description: The curated YAML the agents read. Framework packs for Dockerfile and CI shape, tool-action packs that pin each tool's GitHub Action to a commit SHA, and renderer packs that define Helm and Kustomize layouts. All Apache 2.0 in trustacks-policy.
+description: The curated YAML the agents read. Framework packs for Dockerfile and CI shape, tool-action packs that pin each tool's GitHub Action to a commit SHA, and renderer packs that define Helm and Kustomize layouts, and target-kind packs that define non-Kubernetes deploy shapes such as ECS Fargate. All Apache 2.0 in trustacks-policy.
 ---
 
 import { Callout } from 'nextra/components'
@@ -8,7 +8,7 @@ import { Callout } from 'nextra/components'
 # Knowledge packs
 
 Packs are curated YAML that ground the agents in known-good shapes instead of
-whatever a model remembers. There are three families. All of them are Apache
+whatever a model remembers. There are four families. All of them are Apache
 2.0 and public in
 <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer"><code>trustacks-policy</code></a>.
 
@@ -17,6 +17,7 @@ whatever a model remembers. There are three families. All of them are Apache
 | Framework | `frameworks/` | What should a Dockerfile and CI workflow look like for this stack? | Analysis still runs; the proposal has no reference shape and usually stops at validation |
 | Tool-action | `tool-actions/` | Which GitHub Action, at which exact commit, runs this tool? | No pipeline step for that tool |
 | Renderer | `renderers/` | Which files go where for Helm or Kustomize, and how is that checked? | The proposal stops; there is no fallback layout |
+| Target kind | `target-kinds/` | What does a deploy look like on a target that is not Kubernetes? | The proposal stops before cloning anything; it is never authored as Kubernetes instead |
 
 <Callout type="info">
   **Packs ship inside the runner image today.** The copies in
@@ -97,6 +98,35 @@ Application points at, and the command that proves they render.
 | `kustomize` | `gitops/{application}/{service}` | `overlays/{cluster}` | `kustomize build` |
 
 See [Platform repo layout](/reference/platform-repo-layout) for the full trees.
+Renderer packs describe Kubernetes targets only. A Fargate target has no
+renderer, whatever the Application's renderer setting says.
+
+## Target-kind packs
+
+A deployment target has a **kind**: what a deploy physically is there.
+Kubernetes is described by the renderer packs above. Every other kind gets
+one target-kind pack, named after the kind. There is one today.
+
+| Pack | Status | Emits per service, per target |
+|---|---|---|
+| `ecs-fargate` | Beta | `task-definition.json`, a blank `deploy-target.json`, and `.github/workflows/deploy-<service>-<target>.yaml` |
+
+A target-kind pack carries:
+
+- the default root (`gitops/{application}/{cluster}/{service}` for Fargate),
+  where `{cluster}` is the target name and is required;
+- the hardened task-definition skeleton the agent adapts within;
+- the binding fields, each with its purpose and the format the pre-emit
+  check enforces;
+- the deploy workflow template, which the agent copies as is;
+- the deploy action, whose presence is what makes a workflow a *deploy
+  workflow* to the constitution.
+
+The actions a target kind requires (`actions/checkout`,
+`aws-actions/configure-aws-credentials`,
+`aws-actions/amazon-ecs-deploy-task-definition`) are pinned to commit SHAs
+in the pack itself, not in tool-action packs: you do not choose them, the
+kind does. See [ECS Fargate layout](/reference/platform-repo-layout#ecs-fargate-layout-beta).
 
 ## Contributing a pack
 
