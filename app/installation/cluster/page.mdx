@@ -104,7 +104,7 @@ The chart reads `saas.enrollmentTokenSecret.name` (default
 | `saas.enrollmentTokenSecret.name` / `.key` | `trustacks-runner-enrollment` / `enrollment-token` | Where the runner reads the token |
 | `observer.enabled` | `false` | Read-only ArgoCD deploy-status reporting (see below) |
 | `observer.argocdNamespace` | `argocd` | Namespace your ArgoCD Application resources live in |
-| `mcpSignals.enabled`, `mcpSignals.sources.github.enabled` | `false` | Read-only GitHub observations for the Stack screen, with a token you put in a Secret (see [`mcpSignals.*`](/reference/runner-helm-chart#mcpsignals)) |
+| `mcpSignals.enabled`, `mcpSignals.sources.github.enabled` | `false` | Read-only GitHub observations for the Stack screen, and open alerts as findings in Signals, with a token you put in a Secret (see [`mcpSignals.*`](/reference/runner-helm-chart#mcpsignals)) |
 | `resources` | requests 50m CPU / 128Mi, limits 500m / 512Mi | Pod resources |
 | `imagePullSecrets` | none | For pulling through a private mirror |
 | `deployKeyLoader.image` | `alpine/k8s:1.31.4` | Image for one init container; override to use a mirror |
