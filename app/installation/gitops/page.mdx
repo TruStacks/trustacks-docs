@@ -177,12 +177,17 @@ Every ArgoCD Application TruStacks writes uses **manual sync**, with
 Merging a pull request updates Git; it does not change what is running until
 someone syncs.
 
-For a target cluster named `prod` this is policy, not just a default: the
-constitution denies a proposal that sets automated sync on an Application
-under `argo-apps/argo-apps-prod/`. The rule matches that directory, not the
-cluster's tier, so a `prod`-tier cluster with another name gets manual sync
-from the DevOps Engineer but no constitution check on it. Enabling automated
-sync anywhere else is your decision, made in your own reviewed change.
+For a target cluster with tier `prod` this is policy, not just a default:
+the constitution denies a proposal that sets automated sync on that
+cluster's Application, whatever the cluster is named. Runners older than
+`0.2.14-rc25` do not send the tier, so for them the check falls back to a
+cluster literally named `prod` (`argo-apps/argo-apps-prod/`). Enabling
+automated sync anywhere else is your decision, made in your own reviewed
+change.
+
+This page is about Kubernetes targets. An ECS Fargate target (Beta) has no
+ArgoCD: merging deploys through a workflow in the platform repo. See
+[ECS Fargate layout](/reference/platform-repo-layout#ecs-fargate-layout-beta).
 
 ## How a change reaches the cluster
 
@@ -239,8 +244,11 @@ control plane separately checks whether proposal pull requests have merged.
 
 ## Other GitOps controllers
 
-Proposals always include an ArgoCD Application; the constitution requires
-one. Flux and other controllers are not supported today.
+Proposals for a Kubernetes target always include an ArgoCD Application;
+the constitution requires one (`proposal.has_argocd_application`). Flux and
+other controllers are not supported today. An ECS Fargate target (Beta) has
+no GitOps controller: its deploy workflow applies the merged task
+definition.
 
 ## Where to go next
 

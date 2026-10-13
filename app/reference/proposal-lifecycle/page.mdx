@@ -38,6 +38,10 @@ Analysis ──▶ Promote to proposal ──▶ DevOps Engineer emits files
 
 Every step appears on the proposal's timeline (`#/proposals/<id>`).
 
+The diagram is for a Kubernetes target. For an ECS Fargate target (Beta),
+merging the pull request is the deploy and there is no ArgoCD sync or deploy
+observation yet; see [ECS Fargate targets](#ecs-fargate-targets-beta).
+
 <figure className="ts-shot ts-shot--pending">
   <figcaption>proposal detail timeline showing artifact validation, policy check, gap check, and pull request opened</figcaption>
 </figure>
@@ -49,7 +53,13 @@ service repo in your runner and reports framework, language, runtime,
 dependencies, entrypoints, and whether the repo has tests, a Dockerfile, and
 CI. When it finishes, **Promote to proposal** starts the DevOps Engineer.
 
-The service must belong to an Application with at least one target cluster.
+The service must belong to an Application with at least one deployment
+target (a **target cluster** in the app). The proposal is built for the
+Application's first target: its name, its tier (`dev`, `uat` or `prod`) and
+its kind (`kubernetes` or `ecs-fargate`). The kind decides which files the
+DevOps Engineer can emit at all: a Fargate run is never offered the Helm,
+Kustomize or ArgoCD tools, and a Kubernetes run is never offered the task
+definition tool.
 
 ## The DevOps Engineer emits
 
@@ -71,7 +81,23 @@ Does the output actually work? Each check, by name on the timeline:
 | `workflow_parses` | A workflow or ArgoCD Application is not valid YAML |
 | `action_sourced` | A `uses:` action is not pinned to a full commit SHA, or does not come from a curated pack |
 | `k8s_identifier` | A name or label breaks Kubernetes naming rules (RFC 1123), or a Helm release name is too long |
-| `image_reference` | The image repository is not the one TruStacks supplied |
+| `image_reference` | The image repository is not the one TruStacks supplied (in Helm values or an ECS task definition) |
+| `task_definition_valid` | ECS Fargate: the task definition is not a JSON object; a required field is missing; it is not `FARGATE` with `awsvpc`; container names repeat; cpu and memory are not a valid Fargate pair; a port is out of range or `hostPort` differs from `containerPort`; `privileged` is set; or a key is unknown or mis-cased |
+| `binding_valid` | ECS Fargate: `deploy-target.json` does not have exactly the expected keys, or a value that is set does not match its format |
+
+**Mis-cased keys are refused for a reason.** The AWS SDK inside the deploy
+action silently drops a task-definition key it does not recognise. So
+`readOnlyRootFilesystem: true` (capital O) registers a *writable* root
+filesystem and looks right in review. The check names the key and its
+correct spelling. Unit forms such as `"1 vCPU"` and `"2 GB"` are normalised,
+not refused, and the 32 vCPU sizes (61440, 122880 and 249856 MiB) are
+accepted.
+
+**What cannot be proven offline, and is not claimed:** that the image
+exists, that your roles, cluster and service exist, that the IAM is right,
+that the CPU architecture matches the image, and that the service runs on
+Fargate. The deploy waits for the service to stabilise, so these fail
+visibly at deploy time rather than hanging.
 
 **A check that could not run counts as a failure.** If a tool is missing or a
 pack did not load, the proposal stops as unverified rather than passing
@@ -139,6 +165,29 @@ verdict, and an approver.
 The tag is the service commit SHA. If the deployed tag is older than the
 newest commit, that is usually an open promotion pull request waiting for
 review.
+
+## ECS Fargate targets (Beta)
+
+Steps 1 to 4 are the same. After that:
+
+- **Merging deploys.** The deploy workflow runs on the push to `main` that
+  the merge makes, applies the committed task definition, and waits for the
+  ECS service to stabilise. There is no Sync step, so the pull request review
+  is the human approval. On a `prod`-tier target the deploy job must name a
+  GitHub environment; required reviewers on that environment, where your
+  GitHub plan offers them, add a second approval.
+- **The first merge's deploy fails until you fill in `deploy-target.json`.**
+  TruStacks emits it blank. The failed run names the missing key.
+- **No deploy observation yet.** The runner's observer watches ArgoCD only.
+  Check the deploy workflow's run in GitHub Actions.
+- **Tag promotion works the same way.** A new service commit produces a
+  proposal with the new commit-SHA tag in the task definition, and merging
+  it deploys. If you merge before CI has pushed the image, the deploy job
+  fails visibly instead of waiting.
+- **Rollback is a revert pull request.**
+
+See [ECS Fargate layout](/reference/platform-repo-layout#ecs-fargate-layout-beta)
+for the files and your AWS prerequisites.
 
 ## Where to go next
 

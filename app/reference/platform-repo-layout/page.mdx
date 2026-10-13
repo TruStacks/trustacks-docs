@@ -1,6 +1,6 @@
 ---
 title: Platform repo layout
-description: Where TruStacks writes in your platform repo. The three allowed paths, Helm and Kustomize layouts, argo-apps per cluster, the reusable CI workflow and the caller you add to each service repo, and the one-time Actions access grant for private platform repos.
+description: Where TruStacks writes in your platform repo. The three allowed paths, Helm and Kustomize layouts, argo-apps per cluster, the ECS Fargate layout (Beta), the reusable CI workflow and the caller you add to each service repo, and the one-time Actions access grant for private platform repos.
 ---
 
 import { Callout } from 'nextra/components'
@@ -10,6 +10,13 @@ import { Callout } from 'nextra/components'
 Your platform repo is the GitOps repo your ArgoCD watches. TruStacks proposes
 changes to it as pull requests. This page shows what lands where.
 
+What lands depends on the **kind** of the Application's deployment target.
+A `kubernetes` target (the default) gets a Helm chart or Kustomize overlay
+and an ArgoCD Application. An `ecs-fargate` target (Beta) gets a task
+definition and a deploy workflow instead; see
+[ECS Fargate layout](#ecs-fargate-layout-beta). Every kind gets the same
+reusable CI workflow.
+
 ## Allowed paths
 
 Every file in a proposal must live under one of three prefixes. The
@@ -17,9 +24,11 @@ constitution rule `proposal.allowed_paths` refuses anything else, and
 `proposal.no_path_traversal` refuses absolute paths and `..`.
 
 ```text
-gitops/              deploy artifacts (Helm chart or Kustomize base + overlays)
+gitops/              deploy artifacts (Helm chart, Kustomize base + overlays,
+                     or an ECS task definition and its binding)
 argo-apps/           ArgoCD Application manifests, one directory per cluster
-.github/workflows/   the reusable CI workflow, one per service
+.github/workflows/   the reusable CI workflow, one per service, and for ECS
+                     Fargate targets a deploy workflow per service per target
 ```
 
 `environment-profile.yaml` also lives at the repo root. TruStacks reads it but
@@ -82,10 +91,11 @@ Each Application:
   (Kustomize);
 - sets `syncOptions: [CreateNamespace=true]`;
 - has **no automated sync**. Merging a pull request does not deploy; someone
-  syncs in ArgoCD. For `argo-apps/argo-apps-prod/` (a target cluster named
-  `prod`), the constitution enforces this
-  (`practice.argocd_prod_requires_manual_sync`). The rule matches that
-  directory, not the cluster's tier.
+  syncs in ArgoCD. When the proposal's target cluster has tier `prod`,
+  whatever it is named, the constitution enforces this
+  (`practice.argocd_prod_requires_manual_sync`). Runners older than
+  `0.2.14-rc25` do not send the tier, so for them the rule falls back to a
+  cluster literally named `prod` (`argo-apps/argo-apps-prod/`).
 
 To have ArgoCD pick these up, apply one root Application of your own that
 points at `argo-apps/`. If the platform repo is private, ArgoCD needs read
@@ -99,8 +109,8 @@ The pipeline is a **reusable workflow** in the platform repo, one per service:
 .github/workflows/ci-<service>.yaml     # on: workflow_call, nothing else
 ```
 
-It has two jobs, `test` and `build`. `build` pushes the image the chart
-references. It triggers only through `workflow_call`, never on push or pull
+It has two jobs, `test` and `build`. `build` pushes the image the chart (or
+the ECS task definition) references. It triggers only through `workflow_call`, never on push or pull
 request, because it builds your service, not the GitOps repo it is stored in.
 
 ### The caller in your service repo
@@ -154,6 +164,177 @@ gh api --method PUT \
 
 Public platform repos need nothing.
 
+## ECS Fargate layout (Beta)
+
+For a deployment target whose kind is `ecs-fargate`, TruStacks emits three
+files per service, per target, plus the same reusable CI workflow as above:
+
+```text
+gitops/<application>/<target>/<service>/
+├── task-definition.json     # the workload: image, user, hardening, port, cpu/memory, logging
+└── deploy-target.json       # which AWS account, region, roles, cluster and service (yours to fill in)
+.github/workflows/deploy-<service>-<target>.yaml   # applies the merged task definition
+```
+
+<Callout type="warning">
+  **ECS Fargate is in Beta.** It is validated offline and gated by the
+  constitution, and its end-to-end path is tested with a stubbed model, but
+  no customer has run it against a real AWS account yet. Tell us before you
+  rely on it, and tell us what you find.
+</Callout>
+
+The GitOps root must contain `{cluster}` (the target name), so two targets
+never share one task definition. A Kustomize-shaped root is refused with a
+message rather than silently replaced.
+
+### The task definition
+
+Built from a hardened skeleton the agent adapts within (port, cpu and
+memory, non-secret environment, CPU architecture) and never strips:
+
+- `requiresCompatibilities: ["FARGATE"]` and `networkMode: "awsvpc"`;
+- a non-root `user`, taken from the framework pack's Dockerfile, otherwise
+  the distroless `nonroot` UID `65532`;
+- `readonlyRootFilesystem: true`, with a writable `tmp` volume mounted at
+  `/tmp`;
+- `linuxParameters.capabilities.drop: ["ALL"]` and `initProcessEnabled`;
+- `awslogs` logging in `non-blocking` mode, to a log group named in the file;
+- the image from your declared registry, tagged with the service commit SHA.
+
+The family is `<application>-<service>-<target>`. Role ARNs and the log
+region are not in the committed file; the deploy workflow binds them from
+`deploy-target.json`.
+
+**TruStacks does not render the image at deploy time.** The committed task
+definition carries the image, and the deploy applies exactly that file, so
+what runs is what was reviewed in Git.
+
+### The binding: `deploy-target.json`
+
+Facts about your AWS account, committed next to the task definition so that
+retargeting a deploy is a reviewed pull request, not an edit in GitHub
+settings.
+
+| Key | What it is |
+|---|---|
+| `aws_account_id` | The 12-digit account the target lives in. The deploy refuses any other. |
+| `aws_region` | The region of the ECS cluster (also the log region). |
+| `deploy_role_arn` | The IAM role GitHub Actions assumes through OIDC to deploy this target. |
+| `ecs_cluster` | The ECS cluster name or ARN. |
+| `ecs_service` | The existing ECS service this task definition updates. |
+| `execution_role_arn` | The task execution role (image pull, logs, secret retrieval). |
+| `task_role_arn` | Optional. The role your application runs as. |
+
+**It arrives blank, and you fill it in.** TruStacks writes the skeleton only
+when the file does not exist yet, and never when it could not read your
+platform repo, so a binding you filled in is never overwritten. Every value
+is yours to set: a value we filled in would be a claim about your account
+that you never made. Until it is filled in and merged, the deploy fails and
+names the missing key and the file.
+
+### The deploy workflow
+
+`deploy-<service>-<target>.yaml` runs on a push to `main` that touches that
+target's task definition or binding, and on manual dispatch. **Merging the
+pull request is the deploy.** The governed trigger is the reviewed merge,
+the same way ArgoCD watching `main` is for Kubernetes.
+
+What it does:
+
+- runs with `permissions: {}` at the top, and `contents: read` plus
+  `id-token: write` on the job; `actions/checkout` with
+  `persist-credentials: false`; one deploy at a time per target;
+- **refuses to deploy a commit that is not the head of `main`**, so
+  re-running an old run cannot roll back outside Git;
+- reads the binding, refusing a blank required key or a value with
+  characters outside `[A-Za-z0-9:/_.@+=,-]`;
+- authenticates to AWS with OIDC: the role from the binding,
+  `allowed-account-ids` pinned to your account, and a session name carrying
+  the run id;
+- binds the roles and region into a temporary copy of the task definition
+  and writes its SHA-256 to the job summary;
+- **warns**, without failing, when your ECS service has no deployment
+  circuit breaker with rollback;
+- deploys with `aws-actions/amazon-ecs-deploy-task-definition` and waits up
+  to 20 minutes for the service to stabilise, inside a 30-minute job
+  timeout.
+
+Every deploy job declares `environment: <target>` on every tier. Your deploy
+role's trust policy pins to it.
+
+**Prod on a Fargate target.** Merging deploys, so the pull request review is
+the human approval of a promotion to prod. On a `prod`-tier target the
+constitution denies a deploy job without an `environment:`
+(`practice.workflow_prod_deploy_requires_environment`). That makes a second
+gate *possible*: required reviewers on that GitHub environment hold the
+deploy until someone approves it. TruStacks reads the workflow, not your
+environment's protection rules, and on private repositories required
+reviewers depend on your GitHub plan (at the time of writing, Enterprise
+Cloud). So for a Fargate Application, `manual_promotion_to_prod` scores as
+**claimed** at most, from your own attestation, never verified.
+
+Every action is pinned to a full commit SHA curated in the target-kind pack:
+`actions/checkout` v6.1.0, `aws-actions/configure-aws-credentials` v6.3.0,
+and `aws-actions/amazon-ecs-deploy-task-definition` v2.6.3.
+
+**Rollback is a revert pull request.** The revert touches the task
+definition, so merging it redeploys the previous one.
+
+### What you provide in AWS
+
+TruStacks does not create AWS infrastructure. The pull request lists these
+as prerequisites; you create and run them:
+
+- **The ECS cluster and an existing ECS service.** The deploy updates a
+  service; it never creates one. Turn on the service's deployment circuit
+  breaker with rollback, or a failed deploy will not roll itself back.
+- **The IAM OIDC provider for GitHub**, and a **deploy role** whose trust
+  policy pins more than `sub`: `aud`,
+  `token.actions.githubusercontent.com:repository_id` and
+  `repository_owner_id`, `ref` = `refs/heads/main`, `job_workflow_ref` = the
+  deploy workflow at `refs/heads/main`, and `environment`. The ID-based keys
+  matter for repositories created or renamed after 2026-07-15, whose
+  subject claims no longer match the `repo:<owner>/<repo>:environment:<env>`
+  form.
+- **The deploy role's permissions**, scoped tightly:
+
+  | Permission | Resource | Condition |
+  |---|---|---|
+  | `ecs:RegisterTaskDefinition` | `task-definition/<family>:*` | `ecs:privileged = false` |
+  | `ecs:UpdateService`, `ecs:DescribeServices` | the one service ARN | `UpdateService` conditioned on `ecs:task-definition` |
+  | `iam:PassRole` | the execution and task roles only | `iam:PassedToService = ecs-tasks.amazonaws.com` |
+
+- **The task execution role:** image pull, `logs:CreateLogStream` and
+  `logs:PutLogEvents`, `secretsmanager:GetSecretValue` and
+  `ssm:GetParameters` only on the secrets you reference, and `kms:Decrypt`
+  for customer-managed keys.
+- **The CloudWatch log group** named in the task definition, created by you
+  with the retention you want.
+- **If your app writes to `/tmp`:** a Fargate bind mount starts root-owned,
+  so your image must create `/tmp` owned by the runtime user and declare
+  `VOLUME ["/tmp"]`.
+
+### Honest limits
+
+- **Tags are not image identity.** The task definition carries a commit-SHA
+  tag, and a tag can be overwritten by anyone who can push to your registry.
+  ECS resolves the tag at deploy time. Until deploys pin a digest, what
+  TruStacks can claim is a *reviewed tag* and a *reviewed task definition*,
+  not a reviewed image, and reverting a task definition does not guarantee
+  the bytes that ran before.
+- **No continuous reconciliation.** ECS has no equivalent of ArgoCD's sync
+  loop. A change made outside Git (for example `aws ecs update-service`)
+  goes unnoticed until the next merge.
+- **No deploy status yet.** The read-only deploy observer watches ArgoCD
+  only, so a Fargate proposal shows merged, not healthy.
+- **Scoring is still Kubernetes-shaped.** A Fargate-only Application still
+  gets Kubernetes rows such as `gitops_controller` in its gap report, and
+  only one Fargate rule (`ecs_task_runs_as_nonroot`) feeds the score. Per-kind
+  scoring is planned.
+- **Not in scope:** Terraform, CDK or CloudFormation for your clusters,
+  services, networking, IAM or log groups; setting up your AWS account;
+  Lambda, App Runner, ECS on EC2 and other targets.
+
 ## Your edits are kept
 
 Before writing any file, the DevOps Engineer reads the existing version from
@@ -169,3 +350,4 @@ and the pull request says so.
 - [Proposal lifecycle](/reference/proposal-lifecycle) · what checks run before a PR opens
 - [Connect a repo](/reference/connect-a-repo) · binding the platform repo
 - [Knowledge packs](/reference/knowledge-packs) · where the layouts are defined
+- [Constitution](/reference/constitution) · the ECS Fargate rules

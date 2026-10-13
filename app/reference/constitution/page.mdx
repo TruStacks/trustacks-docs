@@ -1,6 +1,6 @@
 ---
 title: Constitution
-description: The 16 rules every TruStacks proposal is judged against. Gate rules, behavior rules, and posture rules, how each feeds the maturity score, and how the signed policy reaches your runner from the public trustacks-policy repository.
+description: The 24 rules every TruStacks proposal is judged against, including eight for ECS Fargate targets. Gate rules, behavior rules, and posture rules, how each feeds the maturity score, and how the signed policy reaches your runner from the public trustacks-policy repository.
 ---
 
 import { Callout } from 'nextra/components'
@@ -18,7 +18,9 @@ repo. A proposal with any deny never becomes a pull request.
 
 ## The rules
 
-Sixteen rules in three kinds. The kind decides what a rule can do.
+Twenty-four rules in three kinds. The kind decides what a rule can do.
+Eight of them apply only to ECS Fargate targets (Beta), and four only to
+Kubernetes targets; see [Which targets a rule applies to](#target-kinds).
 
 | Kind | Can refuse a proposal | Feeds the maturity score |
 |---|---|---|
@@ -35,12 +37,15 @@ Is the artifact the right shape, in the right place?
 | `proposal.allowed_paths` | Every file lives under `gitops/`, `argo-apps/`, or `.github/workflows/`. |
 | `proposal.no_path_traversal` | No path is absolute or contains a `..` segment. |
 | `proposal.has_workflow` | The proposal includes at least one `.github/workflows/*.yaml` file. |
-| `proposal.has_helm_chart` | Helm renderer: at least one `Chart.yaml` under `gitops/`. |
-| `proposal.has_kustomization` | Kustomize renderer: at least one `kustomization.yaml` under `gitops/`. |
-| `proposal.has_argocd_application` | At least one `argo-apps/argo-apps-<cluster>/<service>-application.yaml`. |
+| `proposal.has_helm_chart` | Kubernetes, Helm renderer: at least one `Chart.yaml` under `gitops/`. |
+| `proposal.has_kustomization` | Kubernetes, Kustomize renderer: at least one `kustomization.yaml` under `gitops/`. |
+| `proposal.has_argocd_application` | Kubernetes: at least one `argo-apps/argo-apps-<cluster>/<service>-application.yaml`. |
 | `argocd.repoURL_is_canonical` | Every ArgoCD Application's `spec.source.repoURL` equals your platform repo URL. |
+| `proposal.has_ecs_task_definition` | ECS Fargate: a `gitops/<application>/<target>/<service>/task-definition.json`. |
+| `proposal.has_ecs_deploy_workflow` | ECS Fargate: a workflow that deploys the task definition with `aws-actions/amazon-ecs-deploy-task-definition`. |
 
-Only the renderer check that matches your Application's renderer applies.
+Only the renderer check that matches your Application's renderer applies,
+and only on a Kubernetes target. A Fargate target has no renderer.
 
 ### Behavior rules
 
@@ -49,11 +54,63 @@ your [environment profile](/reference/environment-profile).
 
 | Rule ID | What it checks | Practice |
 |---|---|---|
-| `practice.workflow_has_test_step` | Every workflow has a `run:` step that runs tests: `pytest`, `npm test`, `yarn test`, `pnpm test`, `dotnet test`, `go test`, or a Maven `test`/`verify` or Gradle `test`/`check`/`build`. | `tests_in_ci` |
-| `practice.workflow_has_lint_step` | Every workflow has a lint or static-analysis step: `ruff`, `eslint`, `biome`, `golangci-lint`, `go vet`, `staticcheck`, `dotnet format`, `checkstyle`, `spotless`, `spotbugs`, `pmd`, or `-Dlint`. | `linting_in_ci` |
-| `practice.argocd_prod_requires_manual_sync` | An Application under `argo-apps/argo-apps-prod/` (a target cluster named `prod`) has no `spec.syncPolicy.automated`. The rule matches the directory, not the cluster's tier. | `manual_promotion_to_prod` |
+| `practice.workflow_has_test_step` | Every CI workflow has a `run:` step that runs tests: `pytest`, `npm test`, `yarn test`, `pnpm test`, `dotnet test`, `go test`, or a Maven `test`/`verify` or Gradle `test`/`check`/`build`. | `tests_in_ci` |
+| `practice.workflow_has_lint_step` | Every CI workflow has a lint or static-analysis step: `ruff`, `eslint`, `biome`, `golangci-lint`, `go vet`, `staticcheck`, `dotnet format`, `checkstyle`, `spotless`, `spotbugs`, `pmd`, or `-Dlint`. | `linting_in_ci` |
+| `practice.argocd_prod_requires_manual_sync` | Kubernetes: when the proposal's target cluster has tier `prod`, its ArgoCD Application has no `spec.syncPolicy.automated`, whatever the cluster is named. Runners older than `0.2.14-rc25` send no tier, so the rule falls back to `argo-apps/argo-apps-prod/` (a cluster named `prod`). | `manual_promotion_to_prod` |
 | `practice.dockerfile_runs_as_nonroot` | Every Dockerfile in the proposal has a `USER` that is not `root` or `0`. | `non_root_containers` |
 | `practice.workflow_pins_action_versions` | Every third-party `uses:` pins a full 40-character commit SHA. `actions/*` and local `./` actions are exempt. | `supply_chain_pinning` |
+| `practice.ecs_task_runs_as_nonroot` | ECS Fargate: every container sets `user`, and it is not `root`, `0`, `root:*` or `0:*`. (AWS Security Hub ECS.20) | `non_root_containers` |
+| `practice.ecs_task_readonly_root_filesystem` | ECS Fargate: every container sets `readonlyRootFilesystem: true`, spelled exactly that way. (ECS.5) | none yet |
+| `practice.ecs_task_secrets_not_in_environment` | ECS Fargate: no `environment` entry whose name or value looks like a credential, and every `secrets[].valueFrom` is a full Secrets Manager or SSM ARN. (Stricter than ECS.8) | none yet |
+| `practice.ecs_task_image_is_pinned` | ECS Fargate: every image has a digest or a non-floating tag (not `latest`, `main`, `prod` and the like, and not untagged). A no-floating-tags check, not a pin: see below. | none yet |
+| `practice.ecs_task_configures_logging` | ECS Fargate: every container sets `logConfiguration.logDriver`. (ECS.9) | none yet |
+| `practice.workflow_prod_deploy_requires_environment` | ECS Fargate, `prod`-tier target: every job that runs `amazon-ecs-deploy-task-definition` declares a non-empty `environment:`. | none, deliberately |
+
+The test-step and lint-step rules judge **CI** workflows. A Fargate deploy
+workflow applies an artifact and has no suite to run, so it is skipped; the
+CI workflow beside it is still judged.
+
+**Why most Fargate rules score nothing yet.** A practice key is a row on
+every customer's score. Adding one that only Fargate can check would add a
+row Kubernetes customers could only self-attest, and lower their coverage
+for a check that does not apply to them. So these rules **refuse** bad
+Fargate proposals today and **score** nothing. `ecs_task_runs_as_nonroot` is
+the exception: its intent is the same as the Dockerfile rule's and it is
+enforced in the artifact, so it feeds `non_root_containers`.
+
+**Why the prod-environment rule never scores.** It proves the deploy job
+*names* a GitHub environment. Whether that environment has required
+reviewers is a repository setting TruStacks does not read, and on private
+repositories it depends on your GitHub plan. If the rule's silence counted
+as "a human approves promotion to prod: verified", the score would claim
+something nobody checked. For a Fargate Application, that practice can only
+be **claimed**, by your attestation.
+
+**Tags are not image identity.** A commit-SHA tag can be overwritten by
+anyone who can push to your registry, and ECS resolves the tag when it
+deploys. `ecs_task_image_is_pinned` guarantees there is no floating tag. It
+does not guarantee the image that runs is the one that was reviewed. Until
+deploys pin a digest, that guarantee does not exist.
+
+### Which targets a rule applies to [#target-kinds]
+
+Every rule declares the target kinds it applies to in its metadata
+(`target_kinds`), beside the tiers it applies to (`tier_scope`). A rule
+without `target_kinds` applies to every kind.
+
+| `target_kinds` | Rules |
+|---|---|
+| `kubernetes` | `proposal.has_helm_chart`, `proposal.has_kustomization`, `proposal.has_argocd_application`, `practice.argocd_prod_requires_manual_sync` |
+| `ecs-fargate` | `proposal.has_ecs_task_definition`, `proposal.has_ecs_deploy_workflow`, the five `practice.ecs_task_*` rules, `practice.workflow_prod_deploy_requires_environment` |
+| any | everything else |
+
+`argocd.repoURL_is_canonical` declares no kind, but it only inspects ArgoCD
+Applications, so it never fires on a Fargate proposal. The runner tells the
+policy which kind and tier a proposal targets (`input.context.target`). A
+target with no kind is Kubernetes, so policy judges older runners exactly as
+before. A policy bundle older than 1.3.0 knows nothing about Fargate and
+refuses a Fargate proposal for having no ArgoCD Application: it fails
+closed.
 
 ### Posture rules
 
@@ -89,7 +146,8 @@ Two rule fields drive the [maturity score](/reference/maturity-scoring):
   `gitops_controller` (from `proposal.has_argocd_application`), and the four
   posture categories.
 - `practice_dimensions` puts a practice row on the scorecard: the five
-  practice keys above.
+  practice keys above. Two rules feed `non_root_containers` (the Dockerfile
+  rule and the ECS task rule); the other Fargate rules feed none yet.
 
 Gate rules with neither field are enforcement only. They never move your
 score.
@@ -101,7 +159,7 @@ The constitution is published from the `trustacks-policy` repository.
 | | |
 |---|---|
 | Artifact | `ghcr.io/trustacks/policy/constitution` |
-| Current version | `1.0.0`, also tagged `1` and `latest` |
+| Current version | `1.3.0`, also tagged `1` and `latest` |
 | Signed by | `https://github.com/TruStacks/trustacks-policy/.github/workflows/publish.yml@refs/tags/v<version>` |
 | Signing | Sigstore keyless, Rekor transparency log entry per release |
 
