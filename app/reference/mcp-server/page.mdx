@@ -1,6 +1,6 @@
 ---
 title: Integration model
-description: How TruStacks agents reach code, policy, and your systems today. Tools built into the runner, the GitHub App, and no third-party connectors. MCP is on the roadmap, not shipped.
+description: How TruStacks agents reach code, policy, and your systems today. Tools built into the runner, the GitHub App, and one read-only MCP source the runner uses to observe GitHub. No agent talks to MCP servers.
 ---
 
 import { Callout } from 'nextra/components'
@@ -9,13 +9,16 @@ import { Callout } from 'nextra/components'
 
 TruStacks agents reach the outside world through a short, fixed list of
 tools built into the runner. There is no plugin layer and no third-party
-connector to configure. This page says what exists today and what does not.
+connector for an agent to use. This page says what exists today and what
+does not.
 
 <Callout type="info">
-  **No MCP server or MCP clients ship today.** TruStacks does not expose a
-  Model Context Protocol server, and the runner does not connect to
-  third-party MCP servers. MCP is on the roadmap. Earlier versions of this
-  page described it as shipped; that was wrong.
+  **One MCP source ships, for observation only.** From runner
+  `0.2.14-rc27`, the runner can run GitHub's official MCP server, read-only,
+  inside your cluster, to observe what your repos actually run (see
+  [MCP Signals](#mcp-signals)). It is opt-in and off by default. That is the
+  only MCP connection: **no agent talks to an MCP server**, there is no chat
+  over MCP sources, and TruStacks does not expose an MCP server of its own.
 </Callout>
 
 ## What the agents can touch
@@ -28,6 +31,7 @@ connector to configure. This page says what exists today and what does not.
 | The constitution and packs | Read from the runner's disk, inside the runner process | DevOps Engineer, Coordinator, the OPA gate |
 | Your LLM provider | HTTPS to Anthropic or OpenRouter with your key | Every agent |
 | Your ArgoCD (optional) | Read-only watch of Application status, when the observer is on | The runner, not an agent |
+| Your GitHub repos' Actions runs and security features (optional) | GitHub's MCP server, read-only, with a token you put in your cluster, when MCP Signals is on | The runner, not an agent |
 
 Each agent gets only the tools it needs. The Code Reviewer can read; it
 cannot emit. The DevOps Engineer can read and emit artifacts; it cannot push,
@@ -35,12 +39,69 @@ merge, or call any API. The runner, not the agent, writes the branch and
 opens the pull request, and only after the proposal passes pre-emit checks
 and the constitution.
 
+## MCP Signals
+
+Your environment profile says what you run. MCP Signals checks it against
+what your systems report: did the declared CI actually run, are Dependabot
+alerts on, which tool uploaded code-scanning results. The first and only
+source today is **GitHub**, through
+<a href="https://github.com/github/github-mcp-server" target="_blank" rel="noopener noreferrer">GitHub's official MCP server</a>.
+
+**Where it runs.** In your runner pod, inside your cluster. The server
+binary ships inside the runner image, pinned by digest and covered by the
+runner's SBOM and signature. Each sweep (at start, then every six hours by
+default) starts it as a short-lived child process. The token is a
+read-only fine-grained GitHub token in a Secret you create; it is handed
+only to that child process and never reaches TruStacks. The control plane
+has no MCP client and never calls an MCP server for you.
+
+**Read-only, three times over, each failing closed:**
+
+1. **The token.** Read-only repository permissions. GitHub enforces this;
+   it is the real boundary.
+2. **The server.** Started with `--read-only`, lockdown mode (on by
+   default), and only our allowlisted tools.
+3. **The runner.** Before calling anything it reads the server's tool list.
+   If any tool is not marked read-only, or is not on the allowlist, the
+   runner **refuses to start the source**. It also refuses, and audits, any
+   call that is not on the allowlist.
+
+**No model in the loop.** The sweep is ordinary code running a fixed list of
+read calls, with arguments taken only from TruStacks' own configuration
+(your connected repo names). Nothing a tool returns can choose the next
+call, so text planted in an issue or a workflow name has no agent to
+persuade. Workflow logs are not read at all.
+
+**Output is parsed, never interpreted.** Results become structured
+observations: counts, on/off states, conclusions, tool names and repo names,
+each checked against a pattern. Free text is not copied. A secret-scanning
+alert's secret is never read. The control plane checks every observation
+again when it arrives (known source, closed vocabularies, a repo that
+belongs to your workspace) and quarantines, without storing, anything that
+fails.
+
+**Every call is audited**: the tool, its arguments, the outcome, the
+duration, and the size and SHA-256 of the result. The result itself stays in
+your cluster.
+
+**Could not look is not absent.** *Dependabot alerts are disabled* is a
+finding. A missing token permission, a rate limit or an expired token is
+*unknown*, and unknown never counts against you.
+
+What you see: per-category **Observed** lines and a shadow score on
+[Stack](/guide/stack), and open Dependabot, code-scanning and
+secret-scanning alerts on your connected repos as findings in
+[Signals](/guide/signals), marked as observed by `mcp:github`. Setup:
+[`mcpSignals.*`](/reference/runner-helm-chart#mcpsignals).
+
 ## What is not connected
 
-TruStacks does not talk to your observability, ticketing, scanner, or
-secrets-manager APIs. Declaring Datadog or Jira in your
+Besides the read-only GitHub source above, TruStacks does not talk to your
+observability, ticketing, scanner, or secrets-manager APIs. Declaring
+Datadog or Jira in your
 [environment profile](/reference/environment-profile) tells the agents what
-you run; it does not connect anything.
+you run; it does not connect anything. Changes to your systems happen only
+through a pull request a human merges, never through an MCP call.
 
 For findings from your scanners, upload SARIF to **Signals**
 (`POST /api/findings/sarif`). Uploaded findings can be triaged and turned
@@ -56,9 +117,11 @@ becomes a pull request, and a human decides whether it merges.
 
 ## Roadmap
 
-Exposing the constitution and your rules over MCP, so other agents can ask
-"would this change pass?", is a direction we want to take. It is not built,
-and this page will change when it is.
+More read-only sources for MCP Signals (for example ArgoCD and managed GKE),
+run the same way: in your runner, with your credential, behind the same
+three read-only layers. Exposing the constitution and your rules over MCP,
+so other agents can ask "would this change pass?", is a separate direction
+we want to take. Neither is built, and this page will change when they are.
 
 ## Where to go next
 

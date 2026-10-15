@@ -134,7 +134,9 @@ reads it. See [Environment profile](/reference/environment-profile).
 Agents use a small set of tools built into the runner: read a file, list a
 directory, emit an artifact. They reach GitHub through the runner's own git
 client with a short-lived installation token. There are no third-party
-integrations to connect today. See [Integration model](/reference/mcp-server).
+integrations for agents to use. Separately, the runner can observe your
+GitHub repos through GitHub's MCP server, read-only and with no model
+involved, if you turn MCP Signals on. See [Integration model](/reference/mcp-server).
 
 ## Properties you can check
 

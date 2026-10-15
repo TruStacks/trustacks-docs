@@ -1,6 +1,6 @@
 ---
 title: Runner Helm chart
-description: Reference for the TruStacks runner chart at oci://ghcr.io/trustacks/charts/runner. Install, values (saas, observer, policyBundle), the RBAC it creates, the egress it needs, upgrades with --reset-then-reuse-values, uninstall, and verification.
+description: Reference for the TruStacks runner chart at oci://ghcr.io/trustacks/charts/runner. Install, values (saas, observer, mcpSignals, policyBundle), the RBAC it creates, the egress it needs, upgrades with --reset-then-reuse-values, uninstall, and verification.
 ---
 
 import { Callout } from 'nextra/components'
@@ -125,6 +125,76 @@ up healthy.
 --set observer.enabled=true --set observer.argocdNamespace=argocd
 ```
 
+### `mcpSignals.*` [#mcpsignals]
+
+Optional, off by default, runner `0.2.14-rc27` or later. When on, the runner
+observes your GitHub repos read-only through GitHub's official MCP server
+and reports structured facts (*Dependabot alerts: disabled*, *CI ran green
+3h ago*) to the [Stack](/guide/stack) screen, and open alerts to
+[Signals](/guide/signals). Hosted (SaaS) mode only: the chart refuses to
+render `mcpSignals.enabled=true` without `saas.enabled=true`.
+
+| Value | Default | Meaning |
+|---|---|---|
+| `mcpSignals.enabled` | `false` | Turn on MCP Signals. A source also needs its own `enabled`. |
+| `mcpSignals.sweepIntervalSeconds` | `21600` (6 hours) | Time between sweeps. The runner enforces a 300-second floor. The first sweep runs when the pod starts. |
+| `mcpSignals.sources.github.enabled` | `false` | Turn on the GitHub source. |
+| `mcpSignals.sources.github.credentialSecret` | `trustacks-mcp-github` | The Secret holding your token. You create it; the chart never does. |
+| `mcpSignals.sources.github.credentialKey` | `token` | Key inside that Secret. |
+| `mcpSignals.sources.github.lockdown` | `true` | GitHub's lockdown mode: hides public-repo content from users without push access. A best-effort content filter, not a boundary. On, and not relied on. |
+| `mcpSignals.sources.github.extraRepos` | `[]` | Repos to observe beyond the ones you connected in TruStacks, for example `["acme/orders-api"]`. Inventory only: they show on Stack but never become Signals findings. |
+
+**The token.** A fine-grained personal access token, resource owner the user
+or organization that owns the repos, *Only select repositories*, and these
+repository permissions, all **Read-only**: Actions, Contents, Metadata, Pull
+requests, Issues, Dependabot alerts, Code scanning alerts, Secret scanning
+alerts. Nothing else, and no write permission. Create the Secret yourself,
+keeping the token out of your shell history:
+
+```bash
+read -rs GH_TOKEN && \
+kubectl -n "$NAMESPACE" create secret generic trustacks-mcp-github \
+  --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+```
+
+Then turn the source on:
+
+```bash
+helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+  --version "$VERSION" \
+  -n "$NAMESPACE" --reset-then-reuse-values \
+  --set mcpSignals.enabled=true \
+  --set mcpSignals.sources.github.enabled=true
+```
+
+Check the first sweep:
+
+```bash
+kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -E 'mcp.sweep_done|mcp.source_refused'
+```
+
+**How the credential is handled.** The Secret is mounted into the runner pod
+as a read-only file, not an environment variable. The runner reads it when it
+starts the MCP server and passes it only to that child process's
+environment. It is never logged (the server's stderr is redacted for token
+shapes and for the literal value), never sent to TruStacks, and never a tool
+argument.
+
+**What runs.** The GitHub MCP server binary ships inside the runner image,
+pinned by digest, so it is in the runner's SBOM and under its cosign
+signature; nothing is pulled at run time. Each sweep starts it as a
+short-lived child process in read-only mode, limited to the read tools on
+our allowlist. If the server offers any tool that is not marked read-only or
+not on the allowlist, the runner refuses to start the source. See
+[Integration model](/reference/mcp-server#mcp-signals) for the full safety
+model.
+
+**Egress.** The GitHub source needs HTTPS (443) to `api.github.com`, which
+the runner already reaches for your repos. A Kubernetes NetworkPolicy cannot
+match a hostname: under default-deny egress, use your CNI's FQDN policy
+(Cilium `toFQDNs`, Calico DNS policy) or allow the `api` CIDRs GitHub
+publishes at `https://api.github.com/meta`.
+
 ### `policyBundle.*`
 
 Where the runner gets the constitution, and how it verifies it. See
@@ -200,7 +270,7 @@ reachable only inside your cluster. It needs outbound HTTPS to:
 | `ghcr.io` (and its blob storage) | Runner image, chart, policy bundle |
 | `docker.io` | The `alpine/k8s` image used by the deploy-key init container |
 | `api.anthropic.com` or `openrouter.ai` | Your LLM provider |
-| `github.com`, `api.github.com` | Clone your repos, push the proposal branch, open the PR |
+| `github.com`, `api.github.com` | Clone your repos, push the proposal branch, open the PR; with MCP Signals on, the read-only GitHub observations |
 | Sigstore's TUF and Rekor endpoints (`tuf-repo-cdn.sigstore.dev`, `rekor.sigstore.dev`) | Keyless signature verification of the policy bundle |
 
 There is no mTLS tunnel and nothing to allow inbound.

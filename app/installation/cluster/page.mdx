@@ -104,6 +104,7 @@ The chart reads `saas.enrollmentTokenSecret.name` (default
 | `saas.enrollmentTokenSecret.name` / `.key` | `trustacks-runner-enrollment` / `enrollment-token` | Where the runner reads the token |
 | `observer.enabled` | `false` | Read-only ArgoCD deploy-status reporting (see below) |
 | `observer.argocdNamespace` | `argocd` | Namespace your ArgoCD Application resources live in |
+| `mcpSignals.enabled`, `mcpSignals.sources.github.enabled` | `false` | Read-only GitHub observations for the Stack screen, and open alerts as findings in Signals, with a token you put in a Secret (see [`mcpSignals.*`](/reference/runner-helm-chart#mcpsignals)) |
 | `resources` | requests 50m CPU / 128Mi, limits 500m / 512Mi | Pod resources |
 | `imagePullSecrets` | none | For pulling through a private mirror |
 | `deployKeyLoader.image` | `alpine/k8s:1.31.4` | Image for one init container; override to use a mirror |
@@ -147,7 +148,7 @@ The runner needs **outbound HTTPS (443)** only. Nothing inbound.
 | `api.trustacks.com` | Enrollment, jobs, results, sealed credentials |
 | `ghcr.io` (and its blob storage, `pkg-containers.githubusercontent.com`) | The runner image, the chart, and the policy bundle |
 | `registry-1.docker.io` and `auth.docker.io` | The `alpine/k8s` init container image, unless you override `deployKeyLoader.image` |
-| `github.com`, `api.github.com` | Clone your repos, push branches, open pull requests |
+| `github.com`, `api.github.com` | Clone your repos, push branches, open pull requests; with MCP Signals on, the read-only GitHub observations |
 | `api.anthropic.com` or `openrouter.ai` | The LLM provider you configured |
 | Sigstore: `tuf-repo-cdn.sigstore.dev`, `rekor.sigstore.dev` | Keyless verification of the policy bundle at start-up |
 
