@@ -6,7 +6,7 @@ export default {
   settings: 'Settings (LLM provider)',
   applications: 'Applications, services and proposals',
   stack: 'Stack',
-  workspace: 'Workspace and Activity chat',
+  workspace: 'Workspace',
   'gap-analyses': 'Gap analyses',
   maturity: 'Maturity',
   rules: 'Rules',

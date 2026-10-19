@@ -1,151 +1,173 @@
 ---
-title: Workspace and Activity chat
-description: The Workspace crew canvas, and the Activity chat where you run a gap analysis, connect a repo, or draft a Rego rule with the Coordinator.
+title: Workspace
+description: Ask TruStacks about your setup in plain language and get answers cited to your own records; run a gap analysis; draft a Rego rule and check what it would have blocked.
 ---
 
 import { Callout } from 'nextra/components'
 
-# Workspace and Activity chat
+# Workspace
 
-**Where:** **Workspace** in the sidebar (`#/workspace`). The Activity chat
-lives at `#/activity`; the sidebar keeps **Workspace** highlighted there.
-You reach the chat from **Open the Coordinator chat** at the bottom of
-Workspace, from **+ Draft a rule with the Coordinator** on
-[Rules](/guide/rules), or by going to `#/activity` directly.
+**Where:** **Workspace** in the sidebar (`#/activity`). The older crew canvas
+is one click away via **Crew view** in the header (`#/workspace`).
 
-These two screens show the agents as a team of named coworkers rather than
-a function-call graph. Workspace *watches* a run. Activity is where you
-*start* things by talking to the Coordinator.
+The Workspace is a chat with the **Coordinator**. Ask it about your setup in
+plain language, or run a slash command. Every answer shows the records it came
+from, and the Coordinator can't change anything: buttons in an answer only open
+a page or start something you would start yourself.
 
-## Workspace: the crew canvas
-
-{/* screenshot-placeholder: Workspace with the gradient run header, the flow canvas (Coordinator connected to DevOps Engineer and Constitution), the chat stream and the tool-call drawer. Save as public/guide/workspace.png */}
+{/* screenshot-placeholder: Workspace with a question ("Why am I bronze, and what would get me to silver?"), the cited answer with its Sources chips, and the Open the gap report / Run a gap analysis buttons. Save as public/guide/workspace.png */}
 <figure className="ts-shot ts-shot--pending">
-  <figcaption>Workspace with the gradient run header, the flow canvas (Coordinator connected to DevOps Engineer and Constitution), the chat stream and the tool-call drawer.</figcaption>
+  <figcaption>Workspace with a question ("Why am I bronze, and what would get me to silver?"), the cited answer with its Sources chips, and the Open the gap report / Run a gap analysis buttons.</figcaption>
   <span className="ts-shot__file">Save as <code>public/guide/workspace.png</code></span>
 </figure>
 
-### What you see
+## Ask about your setup
 
-- **A run header**: **Active run** or **Most recent run**, whether it is an
-  Analysis or a Proposal, its short id, and how many agents took part (or
-  are working).
-- **The flow canvas**: one node per agent that actually took part in the
-  run, with the lead agent on the left. Edges are drawn only for
-  delegations that happened; an active edge animates.
-- **The chat stream**: each event of the run as a line attributed to the
-  agent that produced it (for example *detected spring_boot*, *constitution
-  allow*, *opened a pull request on …*).
-- **Detail · tool call** (right): the most recent tool call on the run,
-  which agent made it and its full parameters.
-- **Open the Coordinator chat** (bottom): a link to the Activity chat, where
-  you ask the crew a question or run `/gaps` or `/rule new`.
+Type a question and press Enter. Good first questions:
 
-If nothing has ever run, Workspace says **No crew activity yet** and offers
-**Go to your services**.
+- *Why am I bronze, and what would get me to silver?*
+- *Why was my last proposal denied?*
+- *Which of my rules are about production?*
 
-### What it means
+The Coordinator answers from a snapshot of your own records, taken when you ask:
 
-Workspace follows the newest analysis or proposal in your workspace and
-replays it from the start, so a finished run still shows its whole
-conversation. It chooses the run when you open the page and does not jump to
-a newer one while you read.
+- your Application and its services;
+- the latest gap report and every scored row, with its status and evidence note;
+- your recent proposals and the constitution's verdict on each;
+- the rules in force;
+- your open findings.
 
-Everything on the canvas is derived from the run's real events. A
-specialist that was not consulted is not drawn.
+### What you see in an answer
 
-## Activity: the chat
+- **The answer**: short, with the numbers quoted exactly as your gap report
+  and the constitution recorded them. The Coordinator never computes a score
+  or a verdict itself; to change a score, run a new gap analysis.
+- **Sources**: one chip per record the answer relies on, for example
+  **Gap report: bronze, 23%** or **tests_in_ci: missing**. Each chip opens
+  that record. The label is written by TruStacks from the record itself, not
+  by the model.
+- **Buttons**, when they help: **Run a gap analysis**, **Open the gap
+  report**, **Open the proposal**, **Open the rule** or **Draft a rule**.
+  Each button opens a page or starts the same thing you would start yourself.
+  Approving and merging stay with you.
+- **Not in your records**: when your records don't hold the answer, it says
+  so instead of guessing. Those questions are kept so we can see what
+  people need.
 
-{/* screenshot-placeholder: Activity chat with a /gaps run in progress, Coordinator and Baseline Security turns, and the crew panel on the right. Save as public/guide/activity.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Activity chat with a /gaps run in progress, Coordinator and Baseline Security turns, and the crew panel on the right.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/activity.png</code></span>
-</figure>
+Follow-up questions continue the conversation (*"and what about gold?"*).
 
-### What you see
+<Callout type="info">
+  **Answers run on your runner, with your LLM key**, like every other agent
+  run. Asking needs runner **0.2.15** or later. With an older runner, the
+  chat says *No connected runner can answer questions yet. Upgrade your
+  runner…* and links to [Runners](/guide/runners).
+</Callout>
 
-- A chat with the **Coordinator**, which greets you.
-- An input with a hint row: **Try /gaps, /discover, /rule new.** Clicking a
-  command runs it.
-- A **crew panel** on the right listing the Coordinator, Code Reviewer,
-  DevOps Engineer, Baseline Security, SOC2 and the Constitution, each with a
-  status line (for example **Running gap analysis**, **Consulting**,
-  **Idle**). A specialist pulses while the Coordinator is consulting it.
-
-The input is disabled while a run is in progress.
-
-### The commands
+## The commands
 
 | Command | What it does |
 |---|---|
-| `/gaps` | Runs a fresh gap analysis right in the chat. Each event appears as a turn: the Constitution reports the computed gaps, the Coordinator delegates to **Baseline Security** and **SOC2**, and each specialist replies in its own voice. It ends with a summary (tier badge, coverage bars, the report summary) and **View the full report →**. `/audit` still works as an alias. |
-| `/discover` | Takes you to the services list to connect a repo (**+ Connect repo**). |
-| `/rule new <rule_id>` | Starts drafting an overlay rule with that id. The Coordinator asks what the rule should deny; your next message is the description. |
-| `/rule new <plain-English description>` | Starts drafting from prose. The Coordinator proposes a rule id and drafts the Rego. |
-| `/rule new` | Explains the usage. |
+| `/gaps` | Runs a fresh gap analysis in the chat. The Constitution reports the gaps, the Coordinator consults **Baseline Security** and **SOC2**, and the run ends with a summary and **View the full report →**. `/audit` still works. |
+| `/discover` | Takes you to your services to connect a repo. |
+| `/rule new <plain-English description>` | Drafts an overlay rule from your description. The Coordinator proposes a rule id and writes the Rego. |
+| `/rule new <rule_id>` | Starts a draft with an id you choose; your next message is what the rule should deny. |
 
-### Drafting a rule
+## Drafting a rule
 
-When a draft finishes, the chat shows the Rego as a file block headed
-`rules/<rule_id>/<rule_id>.rego` with **Copy** and **Download**, and a
-reminder of how to land it: `trustacks rule test`, `trustacks rule lint`,
-`trustacks rule sign`.
+The draft arrives as a file block, `rules/<rule_id>/<rule_id>.rego`, with
+**Copy** and **Download**, the Coordinator's reasoning, and a reminder of the
+CLI steps to land it.
 
-The Coordinator drafts against your environment profile and the existing
-rule index, so the rule fits your stack. It does not run the rule.
+{/* screenshot-placeholder: A finished rule draft in the Workspace: the Rego file block with Copy and Download, and the "Would it have blocked my recent proposals?" result listing each proposal as "passes this rule" or "would be blocked". Save as public/guide/workspace-rule-draft.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>A finished rule draft in the Workspace: the Rego file block with Copy and Download, and the "Would it have blocked my recent proposals?" result listing each proposal as "passes this rule" or "would be blocked".</figcaption>
+  <span className="ts-shot__file">Save as <code>public/guide/workspace-rule-draft.png</code></span>
+</figure>
+
+### Check what a draft would have blocked
+
+Under every finished draft: **Would it have blocked my recent proposals?**
+
+TruStacks replays your Application's 10 most recent proposals through the
+policy engine twice: once with the rules you have today, and once with the
+draft added. You see, for each proposal:
+
+- **would be blocked**, with the draft's own message; or
+- **passes this rule**;
+- and, if the policy already refused it for another reason, *(already
+  refused by …)*.
+
+The policy engine decides every line; the assistant isn't involved. Use this
+before you land a rule:
+
+- **It blocks nothing you expected it to?** The draft may not be looking where
+  your changes are. In the walkthrough for this guide, a draft that treated
+  "production deploy" as one particular deploy action blocked 0 of 10
+  proposals, because the service deploys a different way.
+- **It blocks everything?** It may be too broad, or it may ask for something
+  no proposal can provide.
+
+The check refuses a draft that wouldn't actually be enforced. For example, a
+draft whose package isn't `overlay.<name>` would load but never be consulted,
+and it says so instead of reporting "blocks nothing".
+
+Proposals from runner 0.2.15 on record exactly what the policy check was told
+about their target, so a replay sees the same thing. Older proposals are
+replayed with your Application's current target settings, and the result
+notes that.
 
 <Callout type="warning">
-  **Drafts are ephemeral.** Nothing is saved to your repos and nothing goes
-  live from the chat. A draft becomes a rule only when someone on your team
-  copies it into an overlay repo checkout, tests it, and lands it with the
-  `trustacks rule` CLI, which writes, tests, lints and signs rules on local
-  files. There is no supported path yet for delivering a customer overlay to
-  a hosted runner. On the hosted
-  product, treat the chat as a way to draft and review Rego. See the
+  **A draft is not live.** Nothing is saved to your repos and nothing is
+  enforced from the chat. On the hosted service there is no supported way yet
+  to deliver your own rules to your runner: [ADR-0065](https://github.com/TruStacks/trustacks-mvp/pull/668)
+  proposes loading them from your platform repo. Today a draft lands through
+  the `trustacks rule` CLI in a local environment; see the
   [policy authoring workshop](/workshops/policy-authoring).
 </Callout>
 
-Choose a rule id in `<namespace>.<name>` form, lowercase with underscores,
-for example `acme.requires_runbook_link`. TruStacks-reserved namespaces
-(`argocd`, `constitution`, `posture`, `practice`, `proposal`, `trustacks`)
-are refused.
+Rule ids are `<namespace>.<name>`, lowercase with underscores, for example
+`acme.requires_runbook_link`. TruStacks-reserved namespaces (`argocd`,
+`constitution`, `posture`, `practice`, `proposal`, `trustacks`) are refused.
+Keep the draft's `package overlay.<name>` line as written: the runner refuses
+an overlay with a package outside `overlay.`.
 
-When you paste a draft into your overlay, keep its `package overlay.<…>`
-line as the Coordinator wrote it. From runner 0.2.14, a rule whose package is
-not under `overlay.` is refused by `trustacks rule lint` and `rule sign`, and
-the runner rejects the whole overlay. See
-[your own rules](/reference/constitution#your-own-rules).
+## Your conversation is kept for 24 hours
 
-### What it means
+Leave the Workspace and come back, and the conversation is still there,
+including anything that finished while you were away. A question still being
+answered picks up where it was.
 
-The chat is the conversational way into the same operations the tabular
-screens expose. A gap analysis started here is the same run you would start
-from [Gap analyses](/guide/gap-analyses) and appears in its list.
+What is kept is a list of references to your questions, gap analyses and rule
+drafts, in your browser, per workspace and per user. The content is reloaded
+from TruStacks when you return. **New conversation** clears it.
 
-## What to do here
+## Crew view
 
-- Open **Workspace** while a proposal runs to watch the crew work, and to
-  inspect exactly what a tool call sent.
-- Use `/gaps` in **Activity** to run an analysis and see how the
-  specialists reason about your gaps.
-- Use `/rule new` to turn a piece of team knowledge ("every workflow must
-  set top-level permissions") into a reviewed Rego draft.
+**Crew view** (header, top right) shows the newest analysis or proposal as a
+flow of the agents that took part: who delegated to whom, each event in the
+voice of the agent that produced it, and the most recent tool call with its
+full parameters. A specialist that wasn't consulted isn't drawn.
+**Back to the chat** returns here.
 
 ## How it connects
 
-- `/gaps` → [Gap analyses](/guide/gap-analyses) and
-  [Maturity](/guide/maturity)
-- `/discover` → [Applications → connecting repos](/guide/applications#connecting-repos)
+- Answers and their sources → [Gap analyses](/guide/gap-analyses),
+  [Maturity](/guide/maturity), [Applications and proposals](/guide/applications),
+  [Rules](/guide/rules)
+- `/gaps` → [Gap analyses](/guide/gap-analyses)
 - `/rule new` → [Rules](/guide/rules) and the
   [policy authoring workshop](/workshops/policy-authoring)
 
 ## Beta limits
 
-- **Free-form chat is not wired yet.** Anything that is not a slash command
-  gets a placeholder reply. The Activity header's "talk in natural
-  language" describes where this is going, not what it does today. The
-  placeholder reply still mentions `/audit`, the older name for `/gaps`.
-- **`/gaps` in the chat cannot pick an Application.** If you have more
-  than one Application with a platform repo, start the analysis from
-  [Gap analyses](/guide/gap-analyses), where you choose which one.
+- **Answers only know your records.** The snapshot holds scores, verdicts,
+  rules and findings, not file contents. A question about what is in a file
+  gets *Not in your records*.
+- **The chat doesn't pick an Application.** With more than one Application,
+  answers speak to what is common to all of them, and `/gaps` asks you to
+  start the run from [Gap analyses](/guide/gap-analyses), where you choose.
+- **Rule drafting is single-pass.** You can't refine a draft turn by turn
+  yet, and the Coordinator doesn't yet check that a rule is satisfiable or
+  scope it to a tier. That is the next slice
+  ([#674](https://github.com/TruStacks/trustacks-mvp/issues/674)).
 - The sidebar's **Crew online** strip is a static roster, not live status.

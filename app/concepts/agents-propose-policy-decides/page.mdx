@@ -24,7 +24,7 @@ part of the system with a separate job, and none of them can do another's.
 |---|---|---|
 | **Code Reviewer** | Reads a service repo and produces a typed analysis: framework, language, package manager, runtime, entrypoints, whether there are tests, a Dockerfile, CI. A deterministic detector runs first, so known frameworks (FastAPI, Spring Boot, .NET, Go) are facts, not guesses. Changes nothing. | Analyses |
 | **DevOps Engineer** | Turns an analysis plus your environment profile into a proposal: a reusable CI workflow, a Helm chart or Kustomize base and overlays, and ArgoCD Applications, each with an explanation and rule citations. Only builds what your profile declares. | Proposals |
-| **Coordinator** | The conversational lead. Runs gap analyses, consults specialists, drafts Rego rules with you in chat, and narrates runs. Does not write delivery artifacts. | Activity chat, gap analyses |
+| **Coordinator** | The conversational lead. Answers questions about your setup with citations to your own records, runs gap analyses, consults specialists, drafts Rego rules with you in chat, and narrates runs. Does not write delivery artifacts or decide verdicts. | Workspace chat, gap analyses |
 | **Baseline Security** | A specialist the Coordinator consults on image scanning, SAST / SCA, secret scanning and SBOM + signing. Returns typed findings grounded in your stack. | Gap analyses |
 | **SOC2** | A specialist the Coordinator consults for SOC2 control-family findings (CC1 to CC9) and the evidence an auditor would ask for. Paid add-on once billing is live. | Gap analyses |
 

@@ -21,9 +21,11 @@ judgment.
   to a **hosted** runner. Set up with [Local development](/contributing/local-dev)
   first (`make up`, then `make seed`).
 
-  **On the hosted product?** You can still do Part A (drafting in the
-  Activity chat) and Part B's review and tests on your own machine. The
-  rule will not run on your hosted runner yet.
+  **On the hosted product?** Parts A, B and B2 work there: draft the rule
+  in the Workspace chat, review it, and check what it would have blocked
+  against your real recent proposals. Landing it (Parts C and D) needs the
+  local environment until [ADR-0065](https://github.com/TruStacks/trustacks-mvp/pull/668)
+  ships hosted delivery from your platform repo.
 </Callout>
 
 ## What you will build
@@ -62,8 +64,8 @@ rules/<rule_id>/<rule_id>_test.rego   # opa tests
 
 ## Part A. Draft the rule with the Coordinator
 
-1. In the app, open the Activity chat: **Rules → + Draft a rule with the
-   Coordinator** (or go to `#/activity`).
+1. In the app, open **Workspace** in the sidebar (or **Rules → + Draft a
+   rule with the Coordinator**).
 2. Type:
 
    ```text
@@ -121,6 +123,42 @@ deny contains msg if {
 	}
 }
 ```
+
+## Part B2. Check what it would have blocked
+
+Under the finished draft, click **Would it have blocked my recent
+proposals?**
+
+TruStacks replays your Application's 10 most recent proposals through the
+policy engine, with the rules you have today and with your draft added, and
+lists each one as **would be blocked** (with your rule's message) or **passes
+this rule**. The policy engine decides each line; the assistant isn't
+involved.
+
+{/* screenshot-placeholder: The impact check under a rule draft: "This rule would have blocked N of your 10 most recent proposals", each proposal listed by service and time as "would be blocked" or "passes this rule". Save as public/guide/workshop-policy-impact.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>The impact check under a rule draft: "This rule would have blocked N of your 10 most recent proposals", each proposal listed by service and time as "would be blocked" or "passes this rule".</figcaption>
+  <span className="ts-shot__file">Save as <code>public/guide/workshop-policy-impact.png</code></span>
+</figure>
+
+Read the result as a review of your rule:
+
+- **It blocks proposals you expected it to block.** Good: that's the gap the
+  rule closes.
+- **It blocks nothing, though you expected it to.** The rule may not be
+  looking where your changes are. When this workshop was written, a draft
+  that defined a "production deploy job" as one particular deploy action
+  blocked 0 of 10 proposals, because the service deploys a different way.
+  Tighten the description and draft again.
+- **It blocks everything.** The rule may be too broad, or it may ask for
+  something no proposal can contain. A rule must check what the gate can
+  see: the proposed files, the target (cluster, tier, kind) and your
+  EnvironmentProfile. A ticket number in another system isn't something a
+  proposal carries. Check for a change-approval step in the pipeline instead.
+
+If the check refuses the draft, for example because its package isn't
+`package overlay.<name>` and the gate would never consult it, the message
+says so. Fix the draft before landing it.
 
 ## Part C. Land it with the CLI
 
@@ -262,7 +300,7 @@ The person who knew this rule no longer has to be the one who remembers it.
 
 - [Rule CLI reference](/reference/runner-cli): every `trustacks rule`
   option.
-- [Rules](/guide/rules) and [Workspace and Activity chat](/guide/workspace):
+- [Rules](/guide/rules) and [Workspace](/guide/workspace):
   the screens used here.
 - [Constitution reference](/reference/constitution): the rules your overlay
   adds to.

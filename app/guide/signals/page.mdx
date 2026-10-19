@@ -162,9 +162,42 @@ your sources**.
     ships + validates) with the current one highlighted;
   - if the finding's repo is not governed by TruStacks yet, **This repo
     isn't governed by TruStacks yet** with **Connect this repo →**;
-  - **Proposed fix**: who authored the fix, or a note that the crew has
-    not proposed one yet;
+  - **Proposed fix**: before a fix is proposed, what the finding's stage
+    means and what moves it on. Once **Propose a fix** has run, the card
+    shows that proposal (see below);
   - **Transition history**: every state change, oldest first.
+
+### The Proposed fix card
+
+{/* screenshot-placeholder: A finding's Proposed fix card after Propose a fix: the DevOps Engineer's one-line summary, "Constitution: allowed. Every rule passed.", "The change · 6 files" with the file list, "How the crew got here", and the green Review & merge the PR button. Save as public/guide/signals-fix-card.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>A finding's Proposed fix card after Propose a fix: the DevOps Engineer's one-line summary, "Constitution: allowed. Every rule passed.", "The change · 6 files" with the file list, "How the crew got here", and the green Review &amp; merge the PR button.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/guide/signals-fix-card.png</code></span>
+</figure>
+
+After **Propose a fix**, the card follows the real proposal:
+
+- **While it drafts**: *The DevOps Engineer is drafting the fix…*, and the
+  stepper advances on its own.
+- **The summary**: the DevOps Engineer's one-line description, with
+  **The DevOps Engineer's explanation** to expand when there is more.
+- **The constitution's verdict**:
+  - **allowed** (green);
+  - **denied** (red), listing each rule that refused it, linked to the rule,
+    with *No pull request was opened*;
+  - **Not checked** (amber) if the policy check didn't run. That is never
+    shown as allowed.
+- **The change**: every file the fix adds or changes, in full; click a file
+  to expand it. The pull request has the line-by-line diff.
+- **How the crew got here**: the proposal's run log.
+- **Review & merge the PR**: opens the real pull request. You approve by
+  merging it on GitHub, and TruStacks sees the merge within about a minute and
+  moves the finding to **shipping**. Once ArgoCD reports the app synced and
+  healthy, it becomes **validated**. A merged or closed PR says so on the
+  card.
+
+There is no approve button in TruStacks: approving *is* merging, in the tool
+where you review code.
 
 ## What it means
 
@@ -184,10 +217,9 @@ validation, constitution check and human review as any other proposal.
 ## What to do here
 
 1. Triage new findings.
-2. For a real issue in a connected service, **Propose a fix**, then review
-   the resulting proposal and PR. Signals does not link to the proposal yet;
-   find it on the service's **Proposals** tab under
-   [Applications](/guide/applications#proposals).
+2. For a real issue in a connected service, **Propose a fix**. Watch the
+   card: check the verdict and the change, then **Review & merge the PR** (or
+   close it if you don't want it). **Open the proposal** shows the full run.
 3. Dismiss noise, so the [Overview](/guide/overview) queue only shows what
    needs you.
 
@@ -207,9 +239,14 @@ validation, constitution check and human review as any other proposal.
   Signals once, however many sweeps see it. Repos added only through
   `extraRepos` never produce findings. Snyk and Trivy integrations are
   direction, not shipped; their output arrives today as SARIF.
-- **The approve-and-ship steps are not built on this screen.** The
-  approve button on **Proposed fix** reads **Approve & ship, coming soon** and is
-  disabled. Approval happens where it always does: on the pull request.
-- The live **Proposed fix** card still says governed-loop transitions
-  "land in a follow-on slice", even after **Propose a fix** has started a
-  real proposal. Trust the loop stepper and the transition history.
+- **The pull request doesn't name the finding yet.** A fix opened from Signals
+  addresses the finding, but the PR title and body don't say which finding it
+  resolves ([#685](https://github.com/TruStacks/trustacks-mvp/issues/685)).
+- **The card finds the proposal among your 100 most recent proposals.** In a
+  very busy workspace an older fix may not show; it is still on the service's
+  **Proposals** tab.
+- **A denied fix leaves the finding at "Constitution decides".** Fix the
+  cause (or the rule) and propose again.
+- Before release 0.2.15-rc5, a just-uploaded or just-triaged finding could
+  show **Connect this repo** with **Propose a fix** hidden until you reloaded
+  the page. Reload if you see that on an older release.

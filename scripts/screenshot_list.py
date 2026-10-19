@@ -15,6 +15,11 @@ from pathlib import Path
 
 # Where to find the screen, and what state it needs, keyed by file name.
 NOTES: dict[str, tuple[str, str]] = {
+    "workspace-rule-draft.png": ("#/activity, after `/rule new <description>`", "Click \"Would it have blocked my recent proposals?\" and wait for the result."),
+    "signals-fix-card.png": ("#/signals, a finding after Propose a fix", "Wait for the verdict; expand one file under The change."),
+    "workshop-signals-upload.png": ("#/signals › SARIF upload › Upload", "Use public/samples/dockerfile-root.sarif with your repo name."),
+    "workshop-signals-verdict.png": ("#/signals, the workshop finding", "After Propose a fix finishes (about two minutes)."),
+    "workshop-policy-impact.png": ("#/activity, a finished rule draft", "After the impact check returns."),
     "01-register.png": ("auth.trustacks.com sign-in", "Signed out."),
     "02-team-profile.png": ("#/onboarding, step 1", ""),
     "03-enroll-runner.png": ("#/settings/runners, or onboarding step 2", "Redact the token, including inside the command."),
@@ -47,8 +52,7 @@ NOTES: dict[str, tuple[str, str]] = {
     "signals-connect-connected.png": ("… › I've run them", "BetaOrg1 is already connected, so this shows within seconds."),
     "signals-sarif-upload.png": ("#/signals › SARIF upload › Upload", "Upload a real scan, e.g. semgrep or trivy SARIF of a dogfood repo."),
     "stack.png": ("#/stack", "BetaOrg1's GitHub source is connected, so the Observed lines are real."),
-    "workspace.png": ("#/workspace", "Needs a recent run."),
-    "activity.png": ("#/activity", "Run /gaps and capture mid-run."),
+    "workspace.png": ("#/activity", "Ask \"Why am I bronze, and what would get me to silver?\" and wait for the answer."),
     "team.png": ("#/settings/team", "Open the invite form; blur real emails."),
 }
 

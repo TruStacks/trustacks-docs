@@ -1,0 +1,148 @@
+---
+title: Signals workshop — from a finding to a merged fix
+description: On the hosted product, bring a scanner finding into Signals, triage it, let the crew propose a governed fix, read the constitution's verdict, and approve it by merging the pull request.
+---
+
+import { Callout } from 'nextra/components'
+
+# Signals workshop: from a finding to a merged fix
+
+You'll take one security finding through the whole governed loop on the
+hosted product:
+
+1. A scanner reports a finding.
+2. You triage it.
+3. The crew proposes a fix.
+4. The constitution decides.
+5. **You approve by merging the pull request.**
+6. ArgoCD ships it.
+
+This is the loop TruStacks sells: *agents propose, policy decides, humans
+approve.* About 15 minutes. Each step below was run on app.trustacks.com
+when this page was written; the outcomes described are what happened.
+
+<Callout type="info">
+  **You need:** a workspace with a runner connected (0.2.15 or later), an
+  LLM key configured, and an Application with a service repo and a GitHub
+  platform repo connected through the TruStacks GitHub App. The
+  [TruStacks 101](/getting-started/trustacks-101) walkthrough sets all of
+  that up.
+</Callout>
+
+## 1. Bring in a finding
+
+TruStacks doesn't scan. Findings come from your tools: open Dependabot,
+code-scanning and secret-scanning alerts reach Signals through your runner's
+read-only GitHub source, and any scanner's output can be uploaded as SARIF.
+
+For this workshop, upload a sample:
+
+1. Download [`dockerfile-root.sarif`](/samples/dockerfile-root.sarif). It's a
+   hadolint `DL3002` result: *the container runs as root*.
+2. Open it in an editor and replace `YOUR-SERVICE-REPO` with your service
+   repo's name (for example `orders-api`). That's how TruStacks ties a finding
+   to a connected service.
+3. In **Signals**, on the **SARIF upload** row, click **Upload** and choose the
+   file. You'll see **Uploaded. 1 finding created.**
+
+{/* screenshot-placeholder: Signals after the SARIF upload: the "Uploaded. 1 finding created." confirmation, and the DL3002 finding in Incoming findings with its HIGH chip. Save as public/guide/workshop-signals-upload.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Signals after the SARIF upload: the "Uploaded. 1 finding created." confirmation, and the DL3002 finding in Incoming findings with its HIGH chip.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/guide/workshop-signals-upload.png</code></span>
+</figure>
+
+The finding appears under **Incoming findings** with a **HIGH** chip. Select
+it. The governed-loop stepper sits on **Finding detected**, and the
+**Proposed fix** card says *No fix yet. Triage this finding, then use Propose a fix…*
+
+If the card says the repo **isn't connected to an Application**, the name in
+the SARIF file doesn't match a connected service. Fix the name and upload
+again, or use **Connect this repo →**.
+
+## 2. Triage it
+
+Click **Triage**. This is your first human decision: *this finding is real and
+worth acting on.* The stepper moves on, the card says *Ready for a fix*, and
+**Propose a fix** appears. Not real? **Dismiss** it; it stays in the history.
+
+## 3. Let the crew propose a fix
+
+Click **Propose a fix**. The DevOps Engineer reads your service, your platform
+repo and your EnvironmentProfile, and drafts the change. That takes a minute or
+two. The card shows *The DevOps Engineer is drafting the fix…* and the stepper
+advances on its own.
+
+In our run, the crew didn't touch the service's Dockerfile, because TruStacks
+writes only to your platform repo. It fixed the finding where it owns the
+artifact: the Helm Deployment sets `securityContext.runAsNonRoot: true` and
+`runAsUser: 1001`. It also noticed the Dockerfile already declared
+`USER 1001`, and said so.
+
+## 4. Read the constitution's verdict
+
+Before any pull request opens, the signed constitution judges the change.
+The card shows the result:
+
+- **Constitution: allowed. Every rule passed.** A pull request opens.
+- **Constitution: denied.** No pull request opens. The card lists each rule
+  that refused the change, linked to the rule, with its message. Fix the
+  cause, or the rule, and propose again.
+
+{/* screenshot-placeholder: The Proposed fix card after the run: summary, "Constitution: allowed. Every rule passed.", The change · 6 files, How the crew got here, and Review & merge the PR. Save as public/guide/workshop-signals-verdict.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>The Proposed fix card after the run: summary, "Constitution: allowed. Every rule passed.", The change · 6 files, How the crew got here, and Review &amp; merge the PR.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/guide/workshop-signals-verdict.png</code></span>
+</figure>
+
+Then look at what was proposed:
+
+- **The change** lists every file. Ours had six: the CI workflow, a Helm chart
+  (`Chart.yaml`, `values.yaml`, Deployment and Service templates) and the
+  ArgoCD Application. Click one to read it in full.
+- **How the crew got here** is the run log, every step the agents took
+  (46 in our run).
+- **The DevOps Engineer's explanation** says why, including which
+  constitution rules the change satisfies.
+
+## 5. Approve it by merging
+
+Click **Review & merge the PR**. It opens the real pull request on your
+platform repo. Review it like any other change. Then:
+
+- **Merge it** to approve. Within about a minute TruStacks sees the merge and
+  moves the finding to **shipping**.
+- **Close it** if you don't want it. The finding stays where it is, and the PR
+  card leaves your [Overview](/guide/overview) queue.
+
+There is no approve button in TruStacks, on purpose. Approving is merging, in
+the tool where your team already reviews code. TruStacks never merges for you.
+
+## 6. Watch it ship
+
+ArgoCD syncs the merged change. If your runner's ArgoCD observer is on, the
+finding moves to **validated** once the app reports synced and healthy. The
+stepper's last step lights up and the transition history shows every move,
+with who made it.
+
+## What just happened
+
+- **The finding came from a tool you already run.** TruStacks isn't a scanner.
+- **The crew proposed a fix it was allowed to write.** It wrote only to your
+  platform repo, and it explained itself.
+- **Policy decided before anyone saw a pull request.** A denied change never
+  opens one.
+- **You approved by merging.** Every step is recorded, and the
+  [Overview](/guide/overview) reflects it: an untriaged finding is amber, a
+  ready PR is green, a denied fix is red.
+
+## Clean up
+
+- Close the pull request if you don't want to keep the change.
+- **Dismiss** the sample finding in Signals.
+
+## Known limits
+
+- The pull request doesn't yet say which finding it resolves
+  ([#685](https://github.com/TruStacks/trustacks-mvp/issues/685)).
+- **validated** needs the runner's ArgoCD observer (`observer.enabled=true`).
+  Without it, the finding stays at **shipping** after the merge.
