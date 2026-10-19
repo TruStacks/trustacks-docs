@@ -125,11 +125,10 @@ def main() -> None:
         "",
         "## Wiring",
         "",
-        "- **Getting-started** (`ts-shot--pending` figures): replace the pending figure with "
-        '`<figure className="ts-shot"><img src="/screenshots/getting-started/NN-name.png" '
-        'alt="…" /><figcaption>…</figcaption></figure>`.',
-        "- **Guide pages** (comment slots): replace the comment with "
-        '`<img src="/guide/name.png" alt="…" />` at the same spot.',
+        "- Every slot is a visible `ts-shot--pending` box on its page (with a `Save as` line) "
+        "under a comment the generator reads. To ship one, keep the comment, then replace the "
+        "box with `<figure className=\"ts-shot\"><img src=\"/…/name.png\" alt=\"…\" />"
+        "<figcaption>…</figcaption></figure>` (drop `ts-shot--pending` and the `Save as` line).",
         "- Or drop the files at the paths above and say so on the PR; wiring them in is one commit.",
     ]
     Path("SCREENSHOTS.md").write_text("\n".join(out) + "\n", encoding="utf-8")
