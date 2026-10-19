@@ -1,0 +1,259 @@
+---
+title: TruStacks 101
+description: A guided tour of TruStacks for platform leads and engineering managers. See what needs you, declare your stack, analyze a service, read your maturity score, and follow one change from agent proposal through the policy gate to a pull request you approve.
+---
+
+import { Callout } from 'nextra/components'
+
+# TruStacks 101
+
+Most teams' delivery setup grew one repo at a time. Pipelines differ between
+services, nobody can say for certain which ones scan images or pin their
+actions, and fixing a gap means someone hand-writing the same workflow again.
+TruStacks puts an agent crew on that work: the agents read your repos and
+propose platform changes as pull requests, a signed policy decides what is
+allowed, a human always approves, and your own ArgoCD ships it. We author the
+artifact; you run it on your stack.
+
+**Agents propose. Policy decides. Humans approve.**
+
+By the end of this tour you will have read your workspace at a glance, run an
+analysis and a gap analysis, seen your maturity score and what it would take
+to raise it, and followed one change from proposal to a pull request waiting
+for your review.
+
+<Callout type="info">
+  This page assumes a workspace that is already set up: a runner connected,
+  an LLM key saved, and one Application with a service repo and a platform
+  repo. If you are starting from nothing, do the
+  [Quickstart](/getting-started/hosted-quickstart) first and come back.
+</Callout>
+
+## Stop 1 · Overview
+
+**What you do.** Sign in at app.trustacks.com. You land on **Overview**.
+
+{/* asset: public/screenshots/101/01-overview.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 1 · Overview for BetaOrg1: the bronze maturity badge and bar top right, the "Needs your attention" queue, and the "Policy in force" card below it.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/01-overview.png</code></span>
+</figure>
+
+**Why it matters.** The home screen is about decisions, not vanity counts.
+**Needs your attention** lists what is stuck, failed or waiting on a human,
+most urgent first, and links to where you fix it. **Policy in force** shows
+which rules actually refused a proposal recently. If nothing is waiting, it
+says **Nothing is waiting on you.** rather than inventing a health score.
+
+More: [Overview](/guide/overview).
+
+## Stop 2 · Stack
+
+**What you do.** Open **Stack** in the sidebar.
+
+{/* asset: public/screenshots/101/02-stack.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 2 · Stack: the "Declared · Observed · Verified" header with the connected github source slot, and the Security Plane category cards with their Observed and Verified lines.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/02-stack.png</code></span>
+</figure>
+
+**Why it matters.** You declare the tools you run in one file,
+`environment-profile.yaml`, in your platform repo. Every agent reads it
+before proposing anything, and only declared tools get pipeline steps. Stack
+shows each category three ways, never blended: what you **declared**, what a
+read-only source in your cluster **observed**, and what your latest gap
+analysis **verified**. A declaration is a claim; an observation is evidence.
+The gap between them is what an auditor would find, so you see it first.
+
+More: [Stack](/guide/stack) · [Environment Profile](/reference/environment-profile).
+
+## Stop 3 · Applications and services
+
+**What you do.** Open **Applications**, then **Manage** on your Application.
+
+{/* asset: public/screenshots/101/03-application-detail.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 3 · Application detail for betaorg1-dogfood: the Renderer, GitOps root and Target clusters cards, betaorg1-dogfood-platform as the Platform / GitOps repo, and betaorg1-dogfood-service and trustacks-java-dogfood under Member services.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/03-application-detail.png</code></span>
+</figure>
+
+**Why it matters.** An **Application** is the unit TruStacks works in: one
+or more service repos, the one platform repo their delivery config lands in,
+and the target clusters it deploys to, each with a tier (`dev`, `uat` or
+`prod`). The agents read service repos and never write generated files into
+your application code. Every change lands as a pull request in the platform
+repo, where your reviewers already look.
+
+More: [Applications, services and proposals](/guide/applications) · [Applications, repositories and services](/concepts/applications-repositories-services).
+
+## Stop 4 · Run an analysis on a service
+
+**What you do.** Click a service (for example `betaorg1-dogfood-service`).
+Under **Run a new analysis**, leave the ref at `main` and click **Run
+analysis**.
+
+{/* asset: public/screenshots/101/04-analysis.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 4 · A finished analysis of betaorg1-dogfood-service: the Activity log with the Coordinator and Code Reviewer turns, and the Repository Analysis card (framework, language, runtime, tests, Dockerfile, CI).</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/04-analysis.png</code></span>
+</figure>
+
+**Why it matters.** Your runner clones the repo inside your cluster and the
+**Code Reviewer** describes it: framework, language, runtime, entrypoints,
+and whether tests, a Dockerfile and CI exist. A deterministic detector runs
+first, so a known framework is named as a fact, not a guess. An analysis
+changes nothing; it is the grounding for everything the crew proposes next.
+Each run's detail page shows the crew's turns as they happen.
+
+More: [Service detail](/guide/applications#service-detail).
+
+## Stop 5 · Gap analysis
+
+**What you do.** Open **Gap analyses** and click **Run new gap analysis**.
+Open the run when it finishes.
+
+{/* asset: public/screenshots/101/05-gap-analysis.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 5 · A finished gap analysis for betaorg1-dogfood: the Activity log with the Constitution, Coordinator, Baseline Security and SOC2 turns, and the report with the bronze tier badge and the Coverage cards.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/05-gap-analysis.png</code></span>
+</figure>
+
+**Why it matters.** A gap analysis answers *is this Application set up
+correctly?* The **Coordinator** checks your declared stack against the rules
+your runner enforces, then consults two specialists: **Baseline Security**
+on scanning, secrets and supply chain, and **SOC2** on the control families
+its findings map to. The score is computed by the runner before any model
+writes a word, so the number you brief upward is not an LLM's opinion.
+
+More: [Gap analyses](/guide/gap-analyses).
+
+## Stop 6 · Maturity
+
+**What you do.** Open **Maturity**.
+
+{/* asset: public/screenshots/101/06-maturity.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 6 · Maturity for betaorg1-dogfood: the bronze tier badge and score bar with its confirmed / counted / if verified legend, the "Open gaps" cards with Draft pipeline PR, and the "Path to gold" card.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/06-maturity.png</code></span>
+</figure>
+
+**Why it matters.** Your tier (bronze, silver or gold) comes from the gap
+analysis you just ran, and the bar separates what TruStacks **confirmed**
+from evidence from claims it could not check, which count half. **Open gaps**
+names what is pulling the score down; **Draft pipeline PR** asks the crew to
+add a missing tool's step. **Path to gold** says what is yours to do, what is
+ours, and whether gold is reachable today. If it is not, the page says so.
+
+More: [Maturity](/guide/maturity) · [Verified, claimed and disputed](/concepts/verified-claimed-disputed).
+
+## Stop 7 · From proposal to pull request
+
+**What you do.** Back on your service, on the **Analyses** tab, click
+**promote →** on the finished analysis, then **Promote to proposal**.
+
+{/* asset: public/screenshots/101/07-proposal.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 7 · Proposal detail for betaorg1-dogfood-service: the DevOps Engineer's drafted files, the Constitution's clean verdict (no violations), the advisory gap row, and the green "Pull request opened" banner.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/07-proposal.png</code></span>
+</figure>
+
+{/* asset: public/screenshots/101/07-github-pr.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 7 · The resulting pull request on GitHub in betaorg1-dogfood-platform: Summary, Blast radius, Rollback, Rule citations and the file list, open and awaiting review.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/07-github-pr.png</code></span>
+</figure>
+
+**Why it matters.** The **DevOps Engineer** reads the analysis, your Stack
+and your platform repo, and writes a reusable CI workflow, a Helm chart and
+an ArgoCD Application. Before anything reaches GitHub, the files are
+validated and judged by the signed **constitution**. A deny stops the run
+and cites each rule; no pull request opens. On allow, the pull request
+explains what changed, its blast radius and how to roll it back. The merge is
+yours; no agent can do it. Emitted ArgoCD Applications use manual sync, so
+deploying is a second human decision.
+
+More: [A proposal, from your side](/guide/applications#a-proposal-from-your-side) · [Proposal lifecycle](/reference/proposal-lifecycle).
+
+## Stop 8 · Rules
+
+**What you do.** Open **Rules** and click a rule, for example
+`practice.workflow_has_test_step`.
+
+{/* asset: public/screenshots/101/08-rules.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 8 · Rules: the gate strip, the rule list filtered to Constitution, and practice.workflow_has_test_step selected with its "Open · Apache-2.0" badge and the "Enforced outcome · Rego" source.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/08-rules.png</code></span>
+</figure>
+
+**Why it matters.** This is the exact policy your proposals are judged
+against, as your runner loaded it, with the Rego source. The constitution is
+public and Apache 2.0, so your security team can read every rule. Your own
+rules go in an overlay, and an overlay can only make the gate stricter: from
+runner 0.2.14 the runner rejects an overlay that reaches outside its own
+namespace.
+
+More: [Rules](/guide/rules) · [Constitution](/reference/constitution).
+
+## Stop 9 · Signals
+
+**What you do.** Open **Signals**. Click **Connect a source** to see the
+wizard; to see findings, choose **SARIF upload** and upload a scan.
+
+{/* asset: public/screenshots/101/09-signals.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 9 · Signals: the Sources panel with GitHub "Connected · read-only verified", the findings list, and one new finding selected showing Triage and Dismiss and the six-step governed loop. If the list is empty, upload a SARIF scan first.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/09-signals.png</code></span>
+</figure>
+
+**Why it matters.** Findings come from the tools you already run, or are
+observed in GitHub by your runner with a read-only token that never leaves
+your cluster. TruStacks is not another scanner. **Triage** a real finding,
+then **Propose a fix**: the fix is a normal proposal, with the same policy
+gate and the same human review.
+
+More: [Signals](/guide/signals).
+
+## Stop 10 · Compliance
+
+**What you do.** Open **Compliance**, then **Download an audit report
+(PDF) →**, choose **PDF (auditor-ready)** and **Generate report**.
+
+{/* asset: public/screenshots/101/10-compliance.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 10 · Compliance: the SOC2 evidence card for the last 90d, with control ids, titles and event counts.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/10-compliance.png</code></span>
+</figure>
+
+{/* asset: public/screenshots/101/10-audit-report.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Stop 10 · Audit Reports: control family SOC2, PDF (auditor-ready), the default 7-day window, and the "Report download started" confirmation.</figcaption>
+  <span className="ts-shot__file">Save as <code>public/screenshots/101/10-audit-report.png</code></span>
+</figure>
+
+**Why it matters.** Every governed action leaves a record: an analysis, a
+proposal and its verdict, a pull request, a gap analysis. TruStacks maps
+those to the SOC2 controls they evidence and counts them. It shows evidence,
+not pass or fail marks; your auditor judges. The PDF covers the window you
+pick and is generated on demand.
+
+More: [Compliance and audit reports](/guide/compliance).
+
+## What you have now
+
+- A view of what needs a human, and which rules actually bite.
+- Your stack as declared, observed and verified, side by side.
+- A maturity tier with the verified part separated from the claimed part,
+  and a named path to the next tier.
+- A delivery change written by the crew, checked by signed policy, and
+  waiting on your approval as a pull request.
+- SOC2 evidence that accrues from the work itself.
+
+## Where to go next
+
+- [Quickstart](/getting-started/hosted-quickstart) · set up a workspace end
+  to end, including the caller workflow and ArgoCD
+- [How TruStacks runs](/getting-started/how-trustacks-runs) · what runs
+  where, and what crosses the boundary
+- [Product guide](/guide) · every screen in detail
+- [Agents propose. Policy decides. Humans approve.](/concepts/agents-propose-policy-decides)
+  · the model behind the gate

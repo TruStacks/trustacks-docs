@@ -76,3 +76,13 @@ html.dark .ts-shot figcaption {
 .ts-shot--pending figcaption {
   margin-top: 0;
 }
+
+/* The file a pending screenshot should be saved as, shown in the box so
+   whoever captures it doesn't need the shot list open. */
+.ts-shot--pending .ts-shot__file {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+html.dark .ts-shot--pending .ts-shot__file {
+  color: #94a3b8;
+}
