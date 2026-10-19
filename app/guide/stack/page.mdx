@@ -131,12 +131,15 @@ TruStacks.
    Actions, Contents, Metadata, Pull requests, Issues, Dependabot alerts,
    Code scanning alerts, Secret scanning alerts. No write permission
    anywhere.
-2. Store it in your runner's namespace:
+2. Store it in your runner's namespace. `printf` is a shell builtin, so the
+   token never becomes a process argument; `--from-literal` would put it in
+   `kubectl`'s arguments, where anyone who can list processes (`ps`) could
+   read it:
 
    ```bash
    read -rs GH_TOKEN && \
-   kubectl -n <runner-namespace> create secret generic trustacks-mcp-github \
-     --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+   printf '%s' "$GH_TOKEN" | kubectl -n <runner-namespace> create secret generic trustacks-mcp-github \
+     --from-file=token=/dev/stdin && unset GH_TOKEN
    ```
 
 3. Turn the source on:
@@ -155,10 +158,13 @@ It needs runner `0.2.14-rc27` or later. Every value is in the
 [Runner Helm chart reference](/reference/runner-helm-chart#mcpsignals).
 
 <Callout type="info">
-  The app's recipe shows the Helm command against a chart repo named
-  `trustacks/runner` and a placeholder release name. If you installed from
-  the OCI chart as in the [install guide](/installation/cluster), use the
-  command above, with your release name and the version you run.
+  The app's recipe uses the same OCI chart with placeholders:
+  `<release>`, `<runner-namespace>` and `--version <your-runner-version>`.
+  Replace the version with the one your runner runs now (**Runners** shows
+  it). Without `--version`, Helm installs the newest stable chart and can
+  downgrade a pre-release runner. The full wizard, which fills these in for a
+  runner you pick and waits for its report, lives on
+  [Signals › Connect a source](/guide/signals#connect-a-source).
 </Callout>
 
 A fine-grained token has exactly one resource owner (a user or an
@@ -172,9 +178,12 @@ The `practices:` block of your profile, one line per key, marked
 
 ### Tool-actions packs
 
-A table of the tools TruStacks has curated a pinned GitHub Action for, with
-the action reference and commit SHA. This table is **representative**, and
-labeled so (see Beta limits).
+A short note on how the DevOps Engineer pins each tool's GitHub Action to an
+immutable commit SHA from the published packs, with a link, **See the packs
+and their pins**, to the
+[`tool-actions` directory of `trustacks-policy`](https://github.com/TruStacks/trustacks-policy/tree/main/tool-actions).
+The link shows even when your profile cannot be loaded. See
+[knowledge packs](/reference/knowledge-packs).
 
 ## What it means
 
@@ -239,10 +248,6 @@ The file format, every category and the five behavior keys are in the
   eight categories say **no source can observe this yet**. Showing tools
   nobody declared (an *undeclared* cell) and an org-wide matrix across
   Applications are planned.
-- **The tool-actions table is sample data.** The real curated packs (Trivy,
-  Semgrep, Gitleaks, Syft and Cosign today) ship inside the runner and in
-  the public `trustacks-policy` repo; the screen does not read them live yet.
-  See [knowledge packs](/reference/knowledge-packs).
 - The note under Behaviors says the scorer counts every `true` as covered. That
   is out of date: a `true` the evidence cannot confirm counts half, and one
   the evidence contradicts counts nothing.

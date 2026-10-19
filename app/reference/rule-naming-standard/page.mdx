@@ -28,7 +28,7 @@ This page is the summary.
 - **Each part starts with a letter.** `9foo.bar` is rejected; `foo9.bar` is fine.
 - **64 characters or fewer** in total.
 - **Reserved namespaces** belong to TruStacks: `argocd`, `constitution`,
-  `proposal`, `trustacks`.
+  `posture`, `practice`, `proposal`, `trustacks`.
 
 The pattern is `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`.
 
@@ -49,6 +49,7 @@ Acme.RequiresRunbookLink           # uppercase
 acme-corp.requires_runbook         # hyphen
 acme.security.requires_runbook     # two dots
 proposal.requires_runbook_link     # reserved namespace
+practice.requires_runbook_link     # reserved namespace (since version 2)
 ```
 
 ## Recommended conventions
@@ -77,15 +78,24 @@ the rule set you are judged against states the rule you are named by.
 
 <Callout type="info">
   The checks above all run through TruStacks tools. A bundle built and signed
-  some other way skips them. Overlay bundles have no delivery path to hosted
+  some other way skips them, but the runner still drops any overlay rule
+  whose id is invalid, reuses a constitution rule id or uses a reserved
+  namespace from the rule inventory it reports (and logs it), and from 0.2.14
+  rejects an overlay whose packages are not under `overlay.`. Overlay bundles have no delivery path to hosted
   runners yet; see [the constitution page](/reference/constitution#your-own-rules).
 </Callout>
 
 ## Versioning
 
-This is version 1 of the standard. A version 2 that ties a rule's namespace
-to the directory it lives in is in progress. Rule IDs already in use do not
-change.
+Version 2 of the standard is active. It adds one rule for the rules
+TruStacks ships: a constitution rule's namespace must equal the directory it
+lives in. Because every constitution directory is therefore a namespace,
+version 2 also reserves `practice` and `posture`, which the constitution
+already used but version 1 did not reserve. The grammar and the length cap
+are unchanged, and overlay rule IDs that were valid under version 1 stay
+valid unless they used `practice` or `posture`. The full text is the
+<a href="https://github.com/TruStacks/trustacks-policy/blob/main/standards/rule-naming.md" target="_blank" rel="noopener noreferrer">rule-naming standard</a>
+in `trustacks-policy`.
 
 ## Related
 

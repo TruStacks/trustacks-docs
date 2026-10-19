@@ -29,9 +29,8 @@ The runner pod's `load-policy-bundle` init container runs before the runner:
    plane after enrolling.
 
 <Callout type="warning">
-  **Runner versions.** Steps 1 to 3 run on hosted runners `0.2.14-rc24` and
-  later, which are pre-releases. No stable release includes them yet, and
-  the app's install command uses the newest stable release. Earlier runners,
+  **Runner versions.** Steps 1 to 3 run on hosted runners `0.2.14` and
+  later (and pre-releases from `0.2.14-rc24`). Earlier runners,
   including `0.2.13`, try to pull from a development registry that does not
   exist in your cluster, fall back, and enforce the baked copy without a
   signature check.
@@ -73,6 +72,17 @@ present is not reported as verified.
 `unknown` is never read as success or as failure. It means the runner cannot
 tell us.
 
+<Callout type="warning">
+  **A rejected overlay does not show here.** These fields describe whether the
+  overlay was pulled and verified at start. From runner 0.2.14 the runner also
+  checks, before it evaluates, that the overlay only adds to `data.overlay`
+  (see [your own rules](/reference/constitution#your-own-rules)). An overlay
+  that fails that check can still read `bundle`, `verified: true`, `ok`. The
+  signs are elsewhere: proposals and gap analyses fail with `overlay
+  rejected`, and the runner logs `policy.overlay_rejected` with each
+  violation.
+</Callout>
+
 ## Where to see it
 
 **In your cluster.** The init container prints its decision and a status
@@ -97,7 +107,7 @@ which includes `rules`, `constitution_source`, `constitution_verified`, and
 `constitution_reason`.
 
 **In the app.** The **Rules** page lists the rules your runner reports,
-including Rego source from `0.2.14-rc24` (pre-release). Runners `0.2.14-rc21`
+including Rego source from `0.2.14` (and pre-releases from `0.2.14-rc24`). Runners `0.2.14-rc21`
 to `rc23` report rule IDs and descriptions without source, and the page says
 so. Older runners report no rules.
 

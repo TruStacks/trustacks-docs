@@ -69,8 +69,10 @@ implementing it:
   reviewers is a repository setting TruStacks does not read. So it can only
   ever be **claimed**.
 
-The tier has no default, because declaring a target `prod` is what turns
-protection on. The kind defaults to Kubernetes, because it is configuration,
+The tier has no default on a target you add, because declaring a target
+`prod` is what turns protection on. A new Application starts with one
+target at tier `dev` (named `dev` on the hosted product, `local-k3d` in local
+development), which never turns protection on until you change it. The kind defaults to Kubernetes, because it is configuration,
 not a claim about you.
 
 ## Repositories and services

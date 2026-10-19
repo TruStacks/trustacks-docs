@@ -28,7 +28,7 @@ continue** (or **Finish** on the last step) and **Skip for now**.
 | 1 | **Tell us about your team** | Optional. A short form (company, role, what you want to use TruStacks for, how you heard about us). **Save & continue**. |
 | 2 | **Enroll your runner** | **Generate enrollment token**, copy the `helm install` command and run it against your cluster. The step waits, showing **Waiting for your runner to connect…**, and ticks itself when the runner checks in. Same component as [Runners](/guide/runners). |
 | 3 | **Connect a repo** | If you have no Application yet, create one inline (the name defaults to `my-services`). Then **Connect a repo** opens the connect wizard. See [Applications](/guide/applications#connecting-repos). |
-| 4 | **Declare what you run** | Explains `environment-profile.yaml`, lists the twelve tooling categories, and shows a starter file with **Copy YAML**. **Got it** acknowledges the step. **See what you've declared on Stack** opens [Stack](/guide/stack). |
+| 4 | **Declare what you run** | Explains `environment-profile.yaml`, lists the twelve tooling categories, and shows a starter file with **Copy YAML**. **Got it — continue** acknowledges the step. **See what you've declared on Stack** opens [Stack](/guide/stack). |
 | 5 | **Set your LLM provider** | **Open LLM settings** takes you to [Settings](/guide/settings). |
 | 6 | **Run your first analysis** | **Go to your services** takes you to the services list, where you open a service and press **Run analysis**. |
 
@@ -43,7 +43,7 @@ step.
   when one has run. **Mark done & continue** ticks a step optimistically, but
   the next status refresh shows the real state.
 - **Step 4 is the exception.** Nothing on the server can tell whether you
-  read the explanation, so **Got it** is stored in your browser. Committing
+  read the explanation, so **Got it — continue** is stored in your browser. Committing
   the file to your platform repo is what actually matters.
 - **Step 1 and step 4 are different "profiles".** Step 1 is *who you are*.
   Step 4 is *what you run*: a file in your platform repo that every agent

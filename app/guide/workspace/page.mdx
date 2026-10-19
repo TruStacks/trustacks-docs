@@ -9,7 +9,8 @@ import { Callout } from 'nextra/components'
 
 **Where:** **Workspace** in the sidebar (`#/workspace`). The Activity chat
 lives at `#/activity`; the sidebar keeps **Workspace** highlighted there.
-You reach the chat from **+ Draft a rule with the Coordinator** on
+You reach the chat from **Open the Coordinator chat** at the bottom of
+Workspace, from **+ Draft a rule with the Coordinator** on
 [Rules](/guide/rules), or by going to `#/activity` directly.
 
 These two screens show the agents as a team of named coworkers rather than
@@ -33,6 +34,8 @@ a function-call graph. Workspace *watches* a run. Activity is where you
   allow*, *opened a pull request on …*).
 - **Detail · tool call** (right): the most recent tool call on the run,
   which agent made it and its full parameters.
+- **Open the Coordinator chat** (bottom): a link to the Activity chat, where
+  you ask the crew a question or run `/gaps` or `/rule new`.
 
 If nothing has ever run, Workspace says **No crew activity yet** and offers
 **Go to your services**.
@@ -96,7 +99,14 @@ rule index, so the rule fits your stack. It does not run the rule.
 
 Choose a rule id in `<namespace>.<name>` form, lowercase with underscores,
 for example `acme.requires_runbook_link`. TruStacks-reserved namespaces
-(`proposal`, `argocd`, `constitution`, `trustacks`) are refused.
+(`argocd`, `constitution`, `posture`, `practice`, `proposal`, `trustacks`)
+are refused.
+
+When you paste a draft into your overlay, keep its `package overlay.<…>`
+line as the Coordinator wrote it. From runner 0.2.14, a rule whose package is
+not under `overlay.` is refused by `trustacks rule lint` and `rule sign`, and
+the runner rejects the whole overlay. See
+[your own rules](/reference/constitution#your-own-rules).
 
 ### What it means
 
@@ -127,7 +137,6 @@ from [Gap analyses](/guide/gap-analyses) and appears in its list.
   gets a placeholder reply. The Activity header's "talk in natural
   language" describes where this is going, not what it does today. The
   placeholder reply still mentions `/audit`, the older name for `/gaps`.
-- **The Workspace input bar does nothing yet.** Use Activity for commands.
 - **`/gaps` in the chat cannot pick an Application.** If you have more
   than one Application with a platform repo, start the analysis from
   [Gap analyses](/guide/gap-analyses), where you choose which one.

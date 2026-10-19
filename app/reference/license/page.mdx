@@ -24,7 +24,7 @@ following links.
 | What | License | Where |
 |---|---|---|
 | **Quickstart scripts, sample apps** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-quickstart" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-quickstart</a> |
-| **Constitution, framework packs, tool-action packs, renderer packs** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>, and the signed bundle at `ghcr.io/trustacks/policy/constitution` |
+| **Constitution, framework packs, tool-action packs, renderer packs, target-kind packs, CI runtime packs** | Apache License 2.0 | <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">github.com/TruStacks/trustacks-policy</a>, and the signed bundle at `ghcr.io/trustacks/policy/constitution` |
 | **Container images** (`ghcr.io/trustacks/control-plane`, `ghcr.io/trustacks/runner`, `ghcr.io/trustacks/ui`) | [TruStacks EULA (Beta)](https://trustacks.com/eula) | `ghcr.io/trustacks/*` |
 
 Everything in the first two rows you can fork, modify, and run
@@ -125,7 +125,7 @@ The SBOM attached to each image manifest is the authoritative
 enumeration. Pull it with:
 
 ```bash
-VERSION=0.2.13
+VERSION=0.2.14
 docker buildx imagetools inspect \
   "ghcr.io/trustacks/runner:${VERSION}" \
   --format '{{ json .SBOM }}'

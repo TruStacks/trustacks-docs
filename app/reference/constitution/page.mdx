@@ -174,8 +174,7 @@ reports why. See [Policy in force](/reference/policy-in-force).
 
 <Callout type="warning">
   **Runner versions.** Signed-policy pull for hosted runners ships in runner
-  `0.2.14-rc24` and later, which are pre-releases; no stable release includes
-  it yet. Earlier runners, including `0.2.13`, enforce the
+  `0.2.14` and later (and pre-releases from `0.2.14-rc24`). Earlier runners, including `0.2.13`, enforce the
   copy baked into the runner image and do not verify a signature at start.
 </Callout>
 
@@ -196,8 +195,52 @@ cosign verify \
 
 Overlay rules let you add your own reasons to refuse a proposal. Their denies
 are unioned into the constitution's (`data.proposal.deny`), so an overlay can
-only add refusals. It has no way to cancel a constitution deny. That holds by
-how the policy is assembled, not because a tool proves it.
+only add refusals. It has no way to cancel a constitution deny.
+
+From runner 0.2.14 this is **enforced**, not just a property of how the
+policy is assembled. Before it evaluates anything, the runner checks that the
+overlay only adds to `data.overlay`. Earlier runners did not check this.
+
+### What an overlay may contain
+
+- **Rego files** (`*.rego`, tests included, because they are loaded too) must
+  declare `package overlay.<name>`. The package is read by OPA's own parser,
+  not a pattern match; a file OPA does not attribute to a package is a
+  violation.
+- **Data files** (`*.json`, `*.yaml`, `*.yml`) only under `overlay/`, so
+  they land in `data.overlay`. At the root, only `opa build`'s `data.json`
+  and the `rule_inventory.json` that `trustacks rule sign` adds are allowed.
+- **No symlinks.** The tree must be exactly what was signed.
+- **Nothing else**, except a root `.manifest` and `*.md` / `*.txt` docs. This
+  is an allowlist: any other file type (a nested `*.tar.gz`, for example) is
+  refused.
+
+Rule ids must also follow the [rule naming standard](/reference/rule-naming-standard):
+the namespaces `argocd`, `constitution`, `posture`, `practice`, `proposal` and
+`trustacks` are reserved for TruStacks.
+
+### What a violation looks like
+
+The runner gives **no verdict** for a proposal or gap analysis while the
+overlay is unconfined. The run fails with
+`overlay rejected — overlay rules may only add to data.overlay: <each
+violation>`, and the runner logs `policy.overlay_rejected` with the
+violations. Fix the overlay, re-sign it, and run again.
+
+`trustacks rule lint` and `trustacks rule sign` run the same check, so you
+see the problem before the runner does, and `sign` refuses to publish an
+unconfined overlay. `trustacks rule new --package` must start with
+`overlay.`. See the [Rule CLI](/reference/runner-cli) and the
+[policy linter](/reference/policy-linter).
+
+### Overlay rules and your score
+
+Overlay rules are enforced on every proposal, but they do not count toward
+your maturity headline. The tier, coverage and verified figures are computed
+from constitution rules alone. Rows that only your overlay rules ask for are
+listed on Maturity under **Your rules**, outside the score. An overlay can
+still lower a constitution row, never raise one. See
+[Maturity scoring](/reference/maturity-scoring).
 
 What works today:
 

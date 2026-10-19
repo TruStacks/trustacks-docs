@@ -23,7 +23,7 @@ version pinned. You add one value, your enrollment token.
 
 ## Install
 
-Generate an enrollment token under **Settings → Runners** and copy the
+Generate an enrollment token under **Runners** and copy the
 command the page shows. It has this shape; the commands on this page use
 three shell variables, and the app's command has the version and token
 filled in:
@@ -56,7 +56,7 @@ kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
 The Runners page shows the runner as connected once it has enrolled.
 
 <figure className="ts-shot ts-shot--pending">
-  <figcaption>Settings → Runners, showing a connected runner with its running and published versions</figcaption>
+  <figcaption>Runners, showing a connected runner with its running and published versions</figcaption>
 </figure>
 
 ### The enrollment token
@@ -149,12 +149,14 @@ or organization that owns the repos, *Only select repositories*, and these
 repository permissions, all **Read-only**: Actions, Contents, Metadata, Pull
 requests, Issues, Dependabot alerts, Code scanning alerts, Secret scanning
 alerts. Nothing else, and no write permission. Create the Secret yourself,
-keeping the token out of your shell history:
+keeping the token out of your shell history and out of process arguments
+(`printf` is a shell builtin; `--from-literal` would put the token in
+`kubectl`'s arguments, visible to anyone who can run `ps`):
 
 ```bash
 read -rs GH_TOKEN && \
-kubectl -n "$NAMESPACE" create secret generic trustacks-mcp-github \
-  --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+printf '%s' "$GH_TOKEN" | kubectl -n "$NAMESPACE" create secret generic trustacks-mcp-github \
+  --from-file=token=/dev/stdin && unset GH_TOKEN
 ```
 
 Then turn the source on:
@@ -200,7 +202,7 @@ publishes at `https://api.github.com/meta`.
 Where the runner gets the constitution, and how it verifies it. See
 [Policy in force](/reference/policy-in-force) for what happens at start.
 
-| Value | Published default (0.2.14-rc24 and later, pre-release) | Meaning |
+| Value | Published default (0.2.14 and later) | Meaning |
 |---|---|---|
 | `policyBundle.bundleRef` | `ghcr.io/trustacks/policy/constitution:1` | The signed constitution to pull. |
 | `policyBundle.verify` | `true` | Verify the signature before loading. Turning this off loads the bundle unverified and the runner reports it as unverified. |
@@ -212,9 +214,8 @@ Where the runner gets the constitution, and how it verifies it. See
 <Callout type="warning">
   Runner charts before `0.2.14-rc24` have no `keyless` block and point
   `bundleRef` at a development registry that does not exist in your cluster.
-  Those runners fall back to the policy baked into the image. No stable
-  release has the `0.2.14-rc24` defaults yet, and the app's install command
-  uses the newest stable release.
+  Those runners fall back to the policy baked into the image. The first
+  stable release with these defaults is `0.2.14`.
 </Callout>
 
 ### Pod settings
@@ -307,13 +308,13 @@ kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner
 ```
 
 The second command removes the Secrets the runner wrote itself, which Helm
-does not track. Then delete the runner on **Settings → Runners**. Removing the
+does not track. Then delete the runner on **Runners**. Removing the
 TruStacks GitHub App from your org is separate, in your GitHub settings.
 
 <Callout type="warning">
   **Uninstalling does not revoke the enrollment token.** It is reusable and
   does not expire. Delete your copies of it, and if it may have leaked,
-  revoke it on **Settings → Runners** with **Revoke and generate a new
+  revoke it on **Runners** with **Revoke and generate a new
   token**; see [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
 </Callout>
 

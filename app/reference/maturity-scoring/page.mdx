@@ -36,8 +36,21 @@ rule, so the rows follow the rules in force.
 `linting_in_ci`, `manual_promotion_to_prod`, `non_root_containers`,
 `supply_chain_pinning`.
 
-Every row counts equally. Overlay rules that declare categories or practices
-add rows on runners that load them.
+Every row counts equally.
+
+**Only constitution rules make rows.** The headline (tier, coverage,
+verified, potential and ceiling) is computed from the constitution's rules
+alone. Overlay rules are still enforced on every proposal, and an overlay
+rule's gap can still lower a constitution row, but an overlay cannot add a
+row or raise one. Categories and practices that only your overlay rules ask
+for are reported separately and shown on Maturity under **Your rules**,
+outside the score. Earlier releases let overlay rules add rows to the
+headline; they no longer do.
+
+The rule inventory your runner reports marks every overlay row
+`source: overlay`, whatever the overlay file says. An overlay row that reuses
+a constitution rule id, or a reserved namespace, is dropped and logged, so it
+cannot change how a constitution rule is scored.
 
 ## States and weights
 
@@ -74,9 +87,8 @@ you declared today.
 Reports from before the ceiling existed show none, rather than a guess.
 Runners older than `0.2.14-rc21` do not report their rule inventory, and
 without it some rows cannot be verified: the ceiling there is 82%, below gold.
-From `0.2.14-rc21` on, every row today is verifiable and the ceiling is 100%.
-Those versions are pre-releases; no stable release reports the inventory
-yet.
+From `0.2.14-rc21` on (stable from `0.2.14`), every row today is verifiable
+and the ceiling is 100%.
 
 ## Tiers
 

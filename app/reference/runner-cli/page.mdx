@@ -56,7 +56,10 @@ trustacks rule new <rule_id> [--description TEXT] [--package NAME]
 
 Scaffolds `rules/<rule_id>/<rule_id>.rego` and `<rule_id>_test.rego`. The
 rule ID must meet the [naming standard](/reference/rule-naming-standard). The
-package defaults to `overlay.<namespace>_<name>`.
+package defaults to `overlay.<namespace>_<name>`. A `--package` you pass
+must start with `overlay.`; anything else is refused, because the runner
+rejects overlay rules outside `data.overlay`
+([details](/reference/constitution#your-own-rules)).
 
 The stub's deny condition is `false`, so it **never fires** until you replace
 it. The test file ships one passing baseline test and a commented template
@@ -84,8 +87,10 @@ trustacks rule lint [rule_id]
 ```
 
 Checks rule ID validity, that both files exist, that the rule declares a
-`package` and a `rule_metadata` map keyed by its ID, then runs `opa check`.
-See [Policy linter](/reference/policy-linter) for the full list and what it
+`package` and a `rule_metadata` map keyed by its ID, then runs `opa check`
+and the overlay confinement check (every package under `overlay.`, data only
+in `data.overlay`, no symlinks, allowlisted file types). Without `opa` on
+your `PATH`, it skips `opa check` and the package part of confinement. See [Policy linter](/reference/policy-linter) for the full list and what it
 does not check.
 
 ### `trustacks rule sign`
@@ -98,8 +103,9 @@ trustacks rule sign [--bundle-ref REF] [--registry HOST:PORT] [--tag TAG]
 
 Builds an OPA bundle from `rules/` (with a `rule_inventory.json`), pushes it
 with `oras`, and signs the pushed digest with `cosign`. Every rule ID is
-checked against the naming standard first. It does **not** run `lint` or
-`test`.
+checked against the naming standard first, and the overlay confinement
+check runs before the build: an overlay that reaches outside `data.overlay`
+is refused, not signed. It does **not** run the rest of `lint`, or `test`.
 
 | Flag | Default |
 |---|---|

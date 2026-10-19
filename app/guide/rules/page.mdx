@@ -46,7 +46,17 @@ repository. Every proposal must satisfy it. It is not waivable.
 
 **Your overlay** is rules your team adds. Overlay denies are added to the
 constitution's denies, so an overlay can only make the gate stricter, never
-looser.
+looser. From runner 0.2.14 the runner enforces this: every overlay rule must
+be `package overlay.<name>`, and an overlay that reaches outside
+`data.overlay` is rejected, with no verdict, until it is fixed. Earlier
+runners did not check. The full rules are in
+[the constitution reference](/reference/constitution#your-own-rules).
+
+Overlay rules are enforced on every proposal but do not count toward your
+[Maturity](/guide/maturity) headline, which is computed from constitution
+rules alone. What only your rules ask for shows on Maturity under **Your
+rules**. An overlay rule that reuses a constitution rule id, or a reserved
+namespace, is dropped from the inventory (and logged by the runner).
 
 The **kind** filter separates two families:
 
@@ -89,9 +99,8 @@ control plane serves that list; it never reaches into your cluster to ask.
 
 ## Beta limits
 
-- **Source needs a recent runner.** Rego source is reported by runners
-  0.2.14-rc24 and later, which are pre-releases; no stable release includes
-  it yet. Runners 0.2.14-rc21 to rc23 report which rules they enforce but not
+- **Source needs a recent runner.** Rego source is reported by runner
+  0.2.14 and later (and pre-releases from 0.2.14-rc24). Runners 0.2.14-rc21 to rc23 report which rules they enforce but not
   the Rego, and the detail says so and suggests upgrading on
   [Runners](/guide/runners). Runners older than that report no rules.
 - **Impact tiles and paired recipes are not built.** They are labeled

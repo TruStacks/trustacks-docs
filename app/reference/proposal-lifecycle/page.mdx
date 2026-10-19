@@ -108,7 +108,10 @@ exact error.
 
 The runner evaluates the [constitution](/reference/constitution) (and any
 overlay it loaded) against the files with OPA, inside your cluster. Any deny
-stops the proposal. The timeline lists each rule that fired and why. Nothing
+stops the proposal. Overlay denies only add to the constitution's; from
+runner 0.2.14 an overlay that reaches outside `data.overlay` is rejected and
+the proposal gets no verdict (see
+[your own rules](/reference/constitution#your-own-rules)). The timeline lists each rule that fired and why. Nothing
 is written to your platform repo.
 
 Denials count toward **Policy in force** on the Overview: how many proposals

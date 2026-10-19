@@ -12,7 +12,7 @@ about a service (its analyses, its proposals, the pull requests they open)
 is reached from here, so the sidebar keeps **Applications** highlighted
 while you are on any of those pages.
 
-{/* screenshot-placeholder: Applications list with one Application card showing two services across dev and prod tiers with deploy-status chips. Save as public/guide/applications.png */}
+{/* screenshot-placeholder: Applications list with one Application card, its services and target cluster, and a deploy-status chip. Save as public/guide/applications.png */}
 
 An **Application** is a set of services promoted together across tiers. It
 owns one platform repo (where pull requests land) and a list of target
@@ -100,8 +100,8 @@ run it end to end against a real AWS account. If you want to try it, tell us.
 
 <Callout type="warning">
   **Check the default cluster.** A new Application starts with one target
-  cluster named `local-k3d` at tier `dev`, a default that comes from local
-  development. Before your first proposal, replace it with your real cluster
+  cluster at tier `dev`, named `dev` on the hosted product (`local-k3d` in
+  local development). Before your first proposal, replace it with your real cluster
   names and tiers. The cluster name is woven into platform repo paths, so
   changing it later moves where new artifacts land.
 </Callout>

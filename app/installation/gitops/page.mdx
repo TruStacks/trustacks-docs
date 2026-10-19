@@ -114,8 +114,13 @@ request's commit SHA. Image tag promotion follows only your default branch,
 so those images are never proposed for deployment.
 
 The workflow runs your tests and linter, builds the image from the
-`Dockerfile` in the service repo, and pushes it to GitHub Container Registry
-tagged with the commit SHA. The tools it runs come from your Environment
+`Dockerfile` in the service repo, and pushes it to the registry you declare
+under `container_registry` in your Environment Profile (GitHub Container
+Registry, `ghcr`, needs no extra secret), at the image repository TruStacks
+computes from that entry and your service repo, tagged with the commit SHA.
+With no `container_registry` declared, a proposal stops before the agent
+runs (stage `image_reference`); see the
+[environment profile reference](/reference/environment-profile). The tools it runs come from your Environment
 Profile; a tool you have not declared gets no step.
 
 **Private platform repo:** allow other repos to use its workflows, once, or

@@ -83,6 +83,11 @@ does not gate anything. Skip it if you like; you can fill it in later.
 This is **not** the Environment Profile in step 6. This one is who you are;
 that one is what you run.
 
+{/* asset: public/screenshots/getting-started/02-team-profile.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 2 · Get set up, "Tell us about your team" with the optional company and team-size fields.</figcaption>
+</figure>
+
 ## Step 3. Enroll your runner
 
 The runner is the only TruStacks component you install. It runs in your
@@ -159,11 +164,16 @@ The connect wizard refuses to run until one exists.
    platform repo), and cannot be changed later.
 2. Open it from **Applications** and check two settings on the detail page:
    - **Target clusters.** Every Application needs at least one cluster with a
-     tier (`dev`, `uat`, or `prod`). A new Application starts with one `dev`
-     cluster called `local-k3d`. Rename it to the cluster name you will deploy
+     tier (`dev`, `uat`, or `prod`). A new Application starts with one `dev`-tier
+     cluster called `dev`. Rename it to the cluster name you will deploy
      to; the name shows up in paths in your platform repo.
    - **Renderer.** Helm (the default) or Kustomize. Kustomize support is
      Beta. See the [Applications guide](/guide/applications).
+
+{/* asset: public/screenshots/getting-started/04-create-application.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 4 · Applications, "Create an Application" with a name typed and the Create button enabled.</figcaption>
+</figure>
 
 ## Step 5. Connect your repos
 
@@ -171,7 +181,9 @@ TruStacks reads your **service** repo and opens pull requests in your
 **platform** repo. It never writes generated files into your application
 code. You connect each repo once.
 
-1. Go to **Services** and click **+ Connect repo**.
+1. Open **Applications**, click **View all services across applications →**
+   (the services list, `#/services`), and click **+ Connect repo**. (Step 3
+   of **Get set up**, **Connect a repo**, opens the same list.)
 2. Pick the role: **Service** (code to analyze) or **Platform** (where PRs
    land).
 3. Pick **GitHub**, then **Install on GitHub**. That installs the shared
@@ -242,20 +254,33 @@ Two things to know:
 The full schema is in the [Environment Profile reference](/reference/environment-profile).
 **Stack** in the sidebar shows what TruStacks read from your file.
 
+{/* asset: public/screenshots/getting-started/06-declare-profile.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 6 · Get set up, "Declare what you run" with the 12 categories and the starter environment-profile.yaml.</figcaption>
+</figure>
+
 ## Step 7. Set your LLM provider
 
 Open **Settings** and the LLM provider section, choose **Anthropic** or
 **OpenRouter**, paste your key, and save.
 
-- The key is validated with a live call before it is accepted.
-- The control plane does not store it. It holds the key in memory just long
-  enough to seal it to your runner's public key; your runner unseals it and
-  writes its own Secret in your namespace.
+- The control plane checks only the key's shape. It does not store the key.
+  It holds it in memory, sealed to your runner's public key, until your
+  runner collects it; your runner unseals it, writes its own Secret in your
+  namespace, and validates the key with a live call to the provider.
+- Nothing is rolled. The status reads **pending** until the runner has
+  checked the key, then **configured**, or **invalid** if the provider
+  rejected it.
 - Agents run on Claude Sonnet 4.5 or newer. With OpenRouter the model must be
   an `anthropic/` model. There is no model picker; you choose who bills you,
   not which model runs.
 
 See [LLM provider](/reference/llm-provider).
+
+{/* asset: public/screenshots/getting-started/07-llm-provider.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 7 · Settings, LLM provider with Anthropic selected and the key saved (key masked).</figcaption>
+</figure>
 
 ## Step 8. Run your first analysis
 
@@ -267,6 +292,11 @@ runtime, tests, and findings. You watch it stream live.
 Only the Code Reviewer runs here. That is expected: the DevOps Engineer runs
 in the next step, and the Baseline Security and SOC2 specialists run on gap
 analyses.
+
+{/* asset: public/screenshots/getting-started/08-first-analysis.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 8 · A service's analysis running: the Coordinator and Code Reviewer turns streaming in.</figcaption>
+</figure>
 
 ## Step 9. Promote to proposal
 
@@ -291,6 +321,11 @@ On allow, a **pull request opens in your platform repo**. Its body explains
 what was generated, which rules it was checked against, and anything the agent
 deliberately kept from your existing repo (preservation notes). See the
 [proposal lifecycle](/reference/proposal-lifecycle).
+
+{/* asset: public/screenshots/getting-started/09-promote-proposal.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 9 · Proposal detail: the Constitution's "clean, no violations" turn and the "Pull request opened" banner.</figcaption>
+</figure>
 
 ## Step 10. Merge, then add the caller workflow
 
@@ -372,6 +407,11 @@ one yourself.
   deploy in step 11 sits in `ImagePullBackOff`.
 </Callout>
 
+{/* asset: public/screenshots/getting-started/10-pr-and-ci.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 10 · The platform-repo pull request on GitHub with the Preservation notes section, and the green CI run.</figcaption>
+</figure>
+
 ## Step 11. Deploy with your ArgoCD
 
 TruStacks writes ArgoCD Applications into `argo-apps/` in your platform repo.
@@ -390,6 +430,11 @@ deploy anything by itself; someone clicks **Sync** in ArgoCD (or runs
 named, the constitution also enforces it: a proposal that sets automated
 sync on that cluster's Application is denied. If you want automated sync on `dev`,
 that is your change to make and review.
+
+{/* asset: public/screenshots/getting-started/11-argocd-synced.png */}
+<figure className="ts-shot ts-shot--pending">
+  <figcaption>Step 11 · Your ArgoCD showing the new Application Synced and Healthy.</figcaption>
+</figure>
 
 ## What happens next
 
@@ -421,9 +466,9 @@ Once the loop is running, these happen without another setup step:
 |---|---|
 | 1 · workspace | You land on **Get set up** in a new workspace |
 | 3 · runner | `kubectl -n "$NAMESPACE" get pods` shows the runner pod `1/1 Running`; the wizard shows **Runner connected** |
-| 5 · repos | Both repos appear under **Services** (the platform repo with the Platform role) and on the Application's detail page |
+| 5 · repos | Both repos appear on the services list (the platform repo with the Platform role) and on the Application's detail page |
 | 6 · profile | **Stack** lists the categories you declared |
-| 7 · LLM | The provider shows as configured after the live check |
+| 7 · LLM | The provider shows as configured after your runner's live check |
 | 8 · analysis | Live events stream; the analysis reaches **done** with the right framework and runtime |
 | 9 · proposal | Artifact validation passes, the policy gate shows **allow**, and a PR appears in your **platform** repo |
 | 10 · CI | The caller workflow run in your service repo goes green and pushes an image |
@@ -436,6 +481,7 @@ Once the loop is running, these happen without another setup step:
 | Runner pod stuck in `Init` | Check the init containers: `kubectl -n "$NAMESPACE" describe pod -l app.kubernetes.io/name=runner`. Usually an image pull blocked by egress; see [network requirements](/installation/cluster#network-requirements). |
 | Runner running but never shows connected | `kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner`. Look for enrollment errors. Confirm the cluster can reach `api.trustacks.com` over HTTPS and that the token was pasted whole. Tokens do not expire, so a token from earlier is still valid unless someone revoked it on **Runners**; a revoked token can't enroll a runner, so use its replacement. |
 | Connect wizard says "Create an Application first" | Create one (step 4). |
+| You are back on sign-in with "Your session expired. Sign in again to continue." | Your session could not be renewed. Sign in again. Earlier releases showed an empty workspace instead; nothing was lost. |
 | GitHub install returns to the app but shows no repos | The App was installed without access to those repos. Change the repo selection in GitHub under your account or organization's installed GitHub Apps, then retry. |
 | Analysis fails with an LLM error | Re-enter the key in Settings. Check the provider shows as configured, not pending. A pending key means your runner has not collected it yet; confirm the runner is connected. |
 | **Promote to proposal** returns an error about clusters or the platform repo | The Application needs at least one target cluster and a bound platform repo. Check the Application detail page. |

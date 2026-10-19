@@ -174,11 +174,9 @@ kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner -c load-policy-bundl
 
 <Callout type="warning">
   **Version note.** Pulling and verifying the published constitution ships
-  in runner 0.2.14-rc24 and later, which are pre-releases. No stable release
-  includes it yet, and the app's install command uses the newest stable
-  release, so a runner installed from it uses the image-baked copy,
-  unverified at start-up, until a stable release ships the verified pull.
-  See [Policy in force](/reference/policy-in-force).
+  in runner 0.2.14 and later (and pre-releases from 0.2.14-rc24). A runner
+  older than that uses the image-baked copy, unverified at start-up, until
+  you upgrade it. See [Policy in force](/reference/policy-in-force).
 </Callout>
 
 ## Verify what you install
