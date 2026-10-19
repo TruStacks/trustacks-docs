@@ -72,6 +72,17 @@ present is not reported as verified.
 `unknown` is never read as success or as failure. It means the runner cannot
 tell us.
 
+<Callout type="warning">
+  **A rejected overlay does not show here.** These fields describe whether the
+  overlay was pulled and verified at start. From runner 0.2.14 the runner also
+  checks, before it evaluates, that the overlay only adds to `data.overlay`
+  (see [your own rules](/reference/constitution#your-own-rules)). An overlay
+  that fails that check can still read `bundle`, `verified: true`, `ok`. The
+  signs are elsewhere: proposals and gap analyses fail with `overlay
+  rejected`, and the runner logs `policy.overlay_rejected` with each
+  violation.
+</Callout>
+
 ## Where to see it
 
 **In your cluster.** The init container prints its decision and a status
