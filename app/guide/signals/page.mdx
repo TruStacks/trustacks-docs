@@ -9,7 +9,7 @@ import { Callout } from 'nextra/components'
 
 **Where:** **Signals** in the sidebar (`#/signals`).
 
-{/* screenshot-placeholder: Signals in live mode with the "Live · N from your sources" strip, a findings list, Triage / Dismiss buttons, the six-step governed loop and Transition history. Save as public/guide/signals.png */}
+{/* screenshot-placeholder: Signals with the Sources panel, the "Live · N from your sources" strip, a findings list, Triage / Dismiss buttons, the six-step governed loop and Transition history. Save as public/guide/signals.png */}
 
 Signals is where security findings meet the governed delivery loop.
 TruStacks is not a scanner and does not own the fix. Findings come from the
@@ -18,28 +18,95 @@ SARIF file), or are observed in GitHub by your runner's read-only
 [MCP Signals](/reference/mcp-server#mcp-signals) source. TruStacks governs, validates and ships the fix through your
 pipeline. You approve, always. TruStacks re-proposes; it never auto-merges.
 
-<Callout type="warning">
-  **Signals is a preview.** The screen carries a *Direction* badge. When
-  your workspace has no findings, it shows **Representative** sample data,
-  clearly labeled, so you can see the intended experience. The sample
-  findings, crew conversation and diffs in that mode are illustrations, not
-  your data.
-</Callout>
+## Sources
 
-## Two modes
+A **Sources** panel sits at the top of the screen. It lists every place
+findings and observations come from, each with the status your runner last
+reported. With no report, it says **Not connected** or **No reports yet**,
+never "connected".
 
-### Representative mode (no findings yet)
+| Source | What it reads | Status shown |
+|---|---|---|
+| **GitHub, read-only** | Dependabot, code-scanning and secret-scanning alerts, and CI runs, read by your runner with a read-only token | **Not connected**; **Connected · read-only verified · last sweep …**; **Refused** (the server offered a tool we do not allow); **On, but its Secret is missing in the runner's namespace**; **Last sweep failed** |
+| **ArgoCD deploy status** | Whether a merged change synced and became healthy, read by your runner | **No reports yet** or **Reporting · last report …** |
+| **SARIF upload** | Any scanner's SARIF output (CodeQL, Semgrep, Trivy, and so on) | **Upload a file any time** |
 
-An amber strip reads **Representative**, explaining that connecting real
-finding sources is coming soon. Four sample findings (two CVEs, a hardcoded
-secret, a container running as root) show the full intended loop: which
-fixer authored the change, the crew's conversation about it, the diff, and
-where it sits in the six steps.
+A source that is not reporting yet has a **Connect** button; SARIF has
+**Upload**. **Connect a source** at the top of the panel opens the same
+wizard with a source chooser first.
 
-### Live mode (your findings)
+### Connect a source
 
-When at least one real finding exists, a green strip reads **Live · N from
-your sources** and the sample data disappears.
+The wizard never asks for a credential. TruStacks writes the commands; you
+run them on your own cluster.
+
+1. **Choose a source**: GitHub, read-only; ArgoCD deploy status; or SARIF
+   upload.
+2. **Pick the runner.** Choose one of your connected runners, then enter its
+   **Runner namespace** and **Helm release** (default `trustacks-runner`).
+   For ArgoCD, also enter the namespace your ArgoCD Applications live in
+   (default `argocd`). These values only fill in the commands; they are not
+   sent anywhere. If no runner is connected, the wizard sends you to
+   [enroll one](/guide/runners) first. The GitHub source needs runner
+   0.2.14-rc27 or later; an older runner is stopped here with a prompt to
+   upgrade it from **Runners**.
+3. **Run the commands.**
+   - For GitHub: create a fine-grained personal access token scoped to the
+     repos you have connected, with read-only repository permissions only
+     (Actions, Contents, Metadata, Pull requests, Issues, Dependabot alerts,
+     Code scanning alerts, Secret scanning alerts). Store it with the
+     generated `kubectl` command, which reads the token with `read -rs` so
+     it never appears on the command line or in your shell history:
+
+     ```bash
+     read -rs GH_TOKEN && \
+     kubectl -n <runner-namespace> create secret generic trustacks-mcp-github \
+       --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+     ```
+
+     Then turn the source on. The `--version` is pinned to the version that
+     runner runs now, so the upgrade neither up- nor downgrades it:
+
+     ```bash
+     helm upgrade <release> oci://ghcr.io/trustacks/charts/runner --version <runner-version> -n <runner-namespace> \
+       --reset-then-reuse-values \
+       --set mcpSignals.enabled=true \
+       --set mcpSignals.sources.github.enabled=true
+     ```
+
+     The runner needs HTTPS egress to `api.github.com`.
+   - For ArgoCD: the same `helm upgrade` with
+     `--set observer.enabled=true --set observer.argocdNamespace=<namespace>`.
+     The chart grants the runner read-only `get, list, watch` on ArgoCD
+     Applications and nothing else.
+4. **Wait for the report.** After **I've run them**, the wizard waits for
+   *that runner's own* report and shows exactly what came back:
+   **Connected · read-only verified**, **Refused**, the Secret missing, or
+   **Last sweep failed**. If nothing arrives within 10 minutes, it tells you
+   to check that the runner pod restarted and to look in its logs.
+
+### Upload a SARIF file
+
+Choose **SARIF upload** (or **Upload** on its row) and pick a `.sarif` or
+`.json` file. The file is posted to the findings intake; each result becomes
+a finding, and the list refreshes. The wizard reports how many findings were
+created, or that the file had no results. The file is read as data, never
+executed.
+
+## Findings
+
+### No findings yet
+
+When nothing has reported a finding to your workspace, the screen shows
+**No findings yet** and lists how findings arrive: GitHub, read-only through
+your runner, and any scanner by SARIF upload. If the findings list fails to
+load, the screen says so ("Couldn't load findings"), rather than showing an
+empty list.
+
+### Your findings
+
+When at least one finding exists, a green strip reads **Live · N from
+your sources**.
 
 - **Incoming findings (left)**: each with a severity chip (CRIT, HIGH,
   MED, LOW), title, source and age. A finding an MCP source observed shows
@@ -95,18 +162,16 @@ validation, constitution check and human review as any other proposal.
 
 ## Beta limits
 
-- **One intake connector, no upload button yet.** Besides the API (a SARIF
-  upload endpoint and a generic findings endpoint), findings arrive from the
-  read-only GitHub source when MCP Signals is on: open Dependabot,
-  code-scanning and secret-scanning alerts on repos connected to an
-  Application. Each alert enters Signals once, however many sweeps see it.
-  Repos added only through `extraRepos` never produce findings. Snyk and
-  Trivy integrations are direction, not shipped.
-- **The approve-and-ship steps are not built on this screen.** In live
-  mode, the approve button reads **Approve & ship, coming soon** and is
+- **Two intake paths.** Findings arrive from the read-only GitHub source
+  (open Dependabot, code-scanning and secret-scanning alerts on repos
+  connected to an Application) and from SARIF uploads, plus the API (a
+  SARIF endpoint and a generic findings endpoint). Each GitHub alert enters
+  Signals once, however many sweeps see it. Repos added only through
+  `extraRepos` never produce findings. Snyk and Trivy integrations are
+  direction, not shipped; their output arrives today as SARIF.
+- **The approve-and-ship steps are not built on this screen.** The
+  approve button on **Proposed fix** reads **Approve & ship, coming soon** and is
   disabled. Approval happens where it always does: on the pull request.
 - The live **Proposed fix** card still says governed-loop transitions
   "land in a follow-on slice", even after **Propose a fix** has started a
   real proposal. Trust the loop stepper and the transition history.
-- The red **3** badge next to Signals in the sidebar is a fixed design
-  preview, not a count of your findings.
