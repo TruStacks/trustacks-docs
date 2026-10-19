@@ -61,6 +61,12 @@ Stated plainly, because it is the thing your security team will ask.
 - Analysis results, findings, proposals (including the generated files),
   policy verdicts, and audit events. This is what the app shows you.
 - Your rule inventory and runner status, as reported by the runner.
+- If you turn them on: what a read-only MCP Signals source observed (for
+  example GitHub alert and CI-run facts, and the source's own status), and
+  ArgoCD deploy status (whether a merged change synced and became healthy).
+  See [Signals](/guide/signals#sources).
+- Any SARIF file you upload on Signals, posted from your browser to the
+  findings intake.
 - Your LLM key, once, in transit: the control plane holds it in memory just
   long enough to seal it to your runner, and does not store it.
 

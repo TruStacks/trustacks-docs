@@ -110,6 +110,15 @@ A value outside the list fails validation.
 
 ### What declaring a tool does
 
+- **`container_registry` is required for a proposal.** TruStacks computes
+  where your service's image lives from the primary `container_registry`
+  entry and your service repo's owner and name, and hands that to the
+  DevOps Engineer to copy, never to invent. With no `container_registry`
+  declared, a proposal stops before the agent runs, with an error at stage
+  `image_reference` that says what to add. `ghcr`, `docker_hub` and `quay`
+  have known hosts; `ecr`, `acr`, `gcr`, `harbor` and `artifactory` also
+  need `config.repository_prefix` (for example
+  `<registry-host>/<namespace>`), because their address cannot be derived.
 - **The DevOps Engineer emits pipeline steps only for tools you declared.**
   It never adds a scanner you did not list. Missing tools show up in your gap
   report instead.

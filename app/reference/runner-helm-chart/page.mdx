@@ -23,7 +23,7 @@ version pinned. You add one value, your enrollment token.
 
 ## Install
 
-Generate an enrollment token under **Settings → Runners** and copy the
+Generate an enrollment token under **Runners** and copy the
 command the page shows. It has this shape; the commands on this page use
 three shell variables, and the app's command has the version and token
 filled in:
@@ -56,7 +56,7 @@ kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
 The Runners page shows the runner as connected once it has enrolled.
 
 <figure className="ts-shot ts-shot--pending">
-  <figcaption>Settings → Runners, showing a connected runner with its running and published versions</figcaption>
+  <figcaption>Runners, showing a connected runner with its running and published versions</figcaption>
 </figure>
 
 ### The enrollment token
@@ -306,13 +306,13 @@ kubectl -n "$NAMESPACE" delete secret trustacks-runner-identity trustacks-runner
 ```
 
 The second command removes the Secrets the runner wrote itself, which Helm
-does not track. Then delete the runner on **Settings → Runners**. Removing the
+does not track. Then delete the runner on **Runners**. Removing the
 TruStacks GitHub App from your org is separate, in your GitHub settings.
 
 <Callout type="warning">
   **Uninstalling does not revoke the enrollment token.** It is reusable and
   does not expire. Delete your copies of it, and if it may have leaked,
-  revoke it on **Settings → Runners** with **Revoke and generate a new
+  revoke it on **Runners** with **Revoke and generate a new
   token**; see [Revoke enrollment tokens](/guide/runners#revoke-enrollment-tokens).
 </Callout>
 
