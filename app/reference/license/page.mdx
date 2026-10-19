@@ -125,7 +125,7 @@ The SBOM attached to each image manifest is the authoritative
 enumeration. Pull it with:
 
 ```bash
-VERSION=0.2.13
+VERSION=0.2.14
 docker buildx imagetools inspect \
   "ghcr.io/trustacks/runner:${VERSION}" \
   --format '{{ json .SBOM }}'

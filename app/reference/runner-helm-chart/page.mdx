@@ -200,7 +200,7 @@ publishes at `https://api.github.com/meta`.
 Where the runner gets the constitution, and how it verifies it. See
 [Policy in force](/reference/policy-in-force) for what happens at start.
 
-| Value | Published default (0.2.14-rc24 and later, pre-release) | Meaning |
+| Value | Published default (0.2.14 and later) | Meaning |
 |---|---|---|
 | `policyBundle.bundleRef` | `ghcr.io/trustacks/policy/constitution:1` | The signed constitution to pull. |
 | `policyBundle.verify` | `true` | Verify the signature before loading. Turning this off loads the bundle unverified and the runner reports it as unverified. |
@@ -212,9 +212,8 @@ Where the runner gets the constitution, and how it verifies it. See
 <Callout type="warning">
   Runner charts before `0.2.14-rc24` have no `keyless` block and point
   `bundleRef` at a development registry that does not exist in your cluster.
-  Those runners fall back to the policy baked into the image. No stable
-  release has the `0.2.14-rc24` defaults yet, and the app's install command
-  uses the newest stable release.
+  Those runners fall back to the policy baked into the image. The first
+  stable release with these defaults is `0.2.14`.
 </Callout>
 
 ### Pod settings
