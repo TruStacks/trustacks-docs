@@ -29,9 +29,9 @@ the model spend is on your own account with the provider you choose.
     the runner's default.
   - With OpenRouter: **Model (required)**, and it must start with
     `anthropic/` (for example `anthropic/claude-sonnet-4-5`).
-- **Save + rotate**. While it works the button reads **Validating + rolling
-  runner…**; when done, **Saved at …** with a note that the new key takes
-  effect on the next run.
+- **Save + rotate**. While it works the button reads **Saving…**; when done,
+  **Saved at …** with a note that your runner picks the key up, checks it
+  with a live call and uses it from the next run.
 
 ## What it means
 
@@ -41,13 +41,22 @@ expectations are tuned for that model family, so picking a different model
 family is not offered. The model field exists to pin a specific Claude
 release during a model rollover, not to swap vendors.
 
-**What happens on save:**
+**What happens on save (hosted):**
 
-1. The control plane makes a live test call to the provider with your key.
-   A bad key fails here, before anything changes.
-2. The key is sealed to your runner and written as the
-   `trustacks-runner-llm` Secret in your runner's namespace.
-3. The runner is rolled so it picks the key up.
+1. The control plane checks only the key's shape (and, for OpenRouter, that
+   a model is set). It makes no call with your key.
+2. It holds the key in memory, sealed to your runner, until your runner
+   collects it. Your runner writes the `trustacks-runner-llm` Secret in its
+   own namespace and makes the live test call to the provider.
+3. Nothing is rolled. The runner uses the key from its next run.
+
+The key's status reads **pending** until your runner has collected and
+checked it, then **configured**, or **invalid** if the provider rejected it.
+If the runner never collects it, the held key lapses (**expired**) and you
+paste it again.
+
+On a local or self-hosted control plane in the same cluster, the control
+plane makes the live call itself, writes the Secret and rolls the runner.
 
 TruStacks keeps only a short prefix of the key for display.
 

@@ -171,7 +171,9 @@ TruStacks reads your **service** repo and opens pull requests in your
 **platform** repo. It never writes generated files into your application
 code. You connect each repo once.
 
-1. Go to **Services** and click **+ Connect repo**.
+1. Open **Applications**, click **View all services across applications →**
+   (the services list, `#/services`), and click **+ Connect repo**. (Step 3
+   of **Get set up**, **Connect a repo**, opens the same list.)
 2. Pick the role: **Service** (code to analyze) or **Platform** (where PRs
    land).
 3. Pick **GitHub**, then **Install on GitHub**. That installs the shared
@@ -247,10 +249,13 @@ The full schema is in the [Environment Profile reference](/reference/environment
 Open **Settings** and the LLM provider section, choose **Anthropic** or
 **OpenRouter**, paste your key, and save.
 
-- The key is validated with a live call before it is accepted.
-- The control plane does not store it. It holds the key in memory just long
-  enough to seal it to your runner's public key; your runner unseals it and
-  writes its own Secret in your namespace.
+- The control plane checks only the key's shape. It does not store the key.
+  It holds it in memory, sealed to your runner's public key, until your
+  runner collects it; your runner unseals it, writes its own Secret in your
+  namespace, and validates the key with a live call to the provider.
+- Nothing is rolled. The status reads **pending** until the runner has
+  checked the key, then **configured**, or **invalid** if the provider
+  rejected it.
 - Agents run on Claude Sonnet 4.5 or newer. With OpenRouter the model must be
   an `anthropic/` model. There is no model picker; you choose who bills you,
   not which model runs.
@@ -421,9 +426,9 @@ Once the loop is running, these happen without another setup step:
 |---|---|
 | 1 · workspace | You land on **Get set up** in a new workspace |
 | 3 · runner | `kubectl -n "$NAMESPACE" get pods` shows the runner pod `1/1 Running`; the wizard shows **Runner connected** |
-| 5 · repos | Both repos appear under **Services** (the platform repo with the Platform role) and on the Application's detail page |
+| 5 · repos | Both repos appear on the services list (the platform repo with the Platform role) and on the Application's detail page |
 | 6 · profile | **Stack** lists the categories you declared |
-| 7 · LLM | The provider shows as configured after the live check |
+| 7 · LLM | The provider shows as configured after your runner's live check |
 | 8 · analysis | Live events stream; the analysis reaches **done** with the right framework and runtime |
 | 9 · proposal | Artifact validation passes, the policy gate shows **allow**, and a PR appears in your **platform** repo |
 | 10 · CI | The caller workflow run in your service repo goes green and pushes an image |
