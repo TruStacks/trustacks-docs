@@ -9,7 +9,7 @@ import { Callout } from 'nextra/components'
 
 **Where:** **Signals** in the sidebar (`#/signals`).
 
-{/* screenshot-placeholder: Signals with the Sources panel, the "Live · N from your sources" strip, a findings list, Triage / Dismiss buttons, the six-step governed loop and Transition history. Save as public/guide/signals.png */}
+{/* screenshot-placeholder: Signals with the Sources panel (GitHub "Connected · read-only verified", ArgoCD "Reporting", SARIF upload) above the findings list, one finding selected showing the six-step governed loop. Save as public/guide/signals.png */}
 
 Signals is where security findings meet the governed delivery loop.
 TruStacks is not a scanner and does not own the fix. Findings come from the
@@ -36,6 +36,14 @@ A source that is not reporting yet has a **Connect** button; SARIF has
 wizard with a source chooser first.
 
 ### Connect a source
+
+{/* screenshot-placeholder: Connect a source dialog, first step: the three source cards (GitHub, read-only · ArgoCD deploy status · SARIF upload). Save as public/guide/signals-connect-choose.png */}
+
+{/* screenshot-placeholder: Connect a source, GitHub: the runner picker (runner id · version), Runner namespace and Helm release filled in. Save as public/guide/signals-connect-runner.png */}
+
+{/* screenshot-placeholder: Connect a source, GitHub: the commands step with the token scope (repo names, read-only permissions), the kubectl secret command and the version-pinned helm upgrade. Save as public/guide/signals-connect-commands.png */}
+
+{/* screenshot-placeholder: Connect a source, GitHub: the result "Connected · read-only verified · last sweep 0m ago · N observations". Save as public/guide/signals-connect-connected.png */}
 
 The wizard never asks for a credential. TruStacks writes the commands; you
 run them on your own cluster.
@@ -90,6 +98,8 @@ run them on your own cluster.
    to check that the runner pod restarted and to look in its logs.
 
 ### Upload a SARIF file
+
+{/* screenshot-placeholder: Connect a source, SARIF upload: the file picker and the "Uploaded. N findings created." result. Save as public/guide/signals-sarif-upload.png */}
 
 Choose **SARIF upload** (or **Upload** on its row) and pick a `.sarif` or
 `.json` file. The file is posted to the findings intake; each result becomes
