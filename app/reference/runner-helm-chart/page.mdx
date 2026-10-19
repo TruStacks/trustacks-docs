@@ -149,12 +149,14 @@ or organization that owns the repos, *Only select repositories*, and these
 repository permissions, all **Read-only**: Actions, Contents, Metadata, Pull
 requests, Issues, Dependabot alerts, Code scanning alerts, Secret scanning
 alerts. Nothing else, and no write permission. Create the Secret yourself,
-keeping the token out of your shell history:
+keeping the token out of your shell history and out of process arguments
+(`printf` is a shell builtin; `--from-literal` would put the token in
+`kubectl`'s arguments, visible to anyone who can run `ps`):
 
 ```bash
 read -rs GH_TOKEN && \
-kubectl -n "$NAMESPACE" create secret generic trustacks-mcp-github \
-  --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+printf '%s' "$GH_TOKEN" | kubectl -n "$NAMESPACE" create secret generic trustacks-mcp-github \
+  --from-file=token=/dev/stdin && unset GH_TOKEN
 ```
 
 Then turn the source on:

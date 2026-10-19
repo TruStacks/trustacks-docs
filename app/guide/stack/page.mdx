@@ -131,12 +131,15 @@ TruStacks.
    Actions, Contents, Metadata, Pull requests, Issues, Dependabot alerts,
    Code scanning alerts, Secret scanning alerts. No write permission
    anywhere.
-2. Store it in your runner's namespace:
+2. Store it in your runner's namespace. `printf` is a shell builtin, so the
+   token never becomes a process argument; `--from-literal` would put it in
+   `kubectl`'s arguments, where anyone who can list processes (`ps`) could
+   read it:
 
    ```bash
    read -rs GH_TOKEN && \
-   kubectl -n <runner-namespace> create secret generic trustacks-mcp-github \
-     --from-literal=token="$GH_TOKEN" && unset GH_TOKEN
+   printf '%s' "$GH_TOKEN" | kubectl -n <runner-namespace> create secret generic trustacks-mcp-github \
+     --from-file=token=/dev/stdin && unset GH_TOKEN
    ```
 
 3. Turn the source on:

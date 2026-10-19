@@ -31,7 +31,13 @@ the model spend is on your own account with the provider you choose.
     `anthropic/` (for example `anthropic/claude-sonnet-4-5`).
 - **Save + rotate**. While it works the button reads **Saving…**; when done,
   **Saved at …** with a note that your runner picks the key up, checks it
-  with a live call and uses it from the next run.
+  with a live call and uses it from the next run. What happened before that
+  note depends on where your control plane runs; see *What happens on save*
+  below. On the hosted product the runner's check comes after the save, so
+  the key reads **pending** until it reports. On a local or self-hosted
+  control plane in the same cluster, the live check and the runner roll
+  already happened before **Saved at …** appears, and a bad key fails the
+  save instead.
 
 ## What it means
 
