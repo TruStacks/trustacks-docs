@@ -1,6 +1,6 @@
 ---
 title: Policy linter
-description: What trustacks rule lint actually checks on your overlay rules. Rule ID, file layout, package and rule_metadata, and an opa check compile pass. What it does not check, and why overlays can only be stricter anyway.
+description: What trustacks rule lint actually checks on your overlay rules. Rule ID, file layout, package and rule_metadata, an opa check compile pass and overlay confinement. What it does not check, and why overlays can only be stricter.
 ---
 
 import { Callout } from 'nextra/components'
@@ -28,7 +28,7 @@ For each directory under `rules/`:
 | Check | Fails when |
 |---|---|
 | Directory name is a valid rule ID | It does not match `<namespace>.<name>` (lowercase letters, digits, underscores, one dot). Later checks for that rule are skipped. |
-| Namespace is not reserved | The namespace is `argocd`, `constitution`, `proposal`, or `trustacks`. |
+| Namespace is not reserved | The namespace is `argocd`, `constitution`, `posture`, `practice`, `proposal`, or `trustacks`. |
 | Length | The rule ID is longer than 64 characters. |
 | Rule file exists | `rules/<id>/<id>.rego` is missing. |
 | Test file exists | `rules/<id>/<id>_test.rego` is missing. |
@@ -39,11 +39,26 @@ For each directory under `rules/`:
 Then it runs `opa check` over the scoped rule, or over all of `rules/` when
 unscoped, and reports any parse or compile error.
 
+Last, it runs the **overlay confinement** check over `rules/`, the same check
+the runner makes before it evaluates an overlay (scoped runs report only the
+named rule's findings):
+
+| Check | Fails when |
+|---|---|
+| Package is under `overlay.` | A `.rego` file (tests included) declares a package that is not `overlay.<name>`, or OPA's parser reports no package for it. |
+| Data stays in `data.overlay` | A `.json`, `.yaml` or `.yml` file would load outside `data.overlay`. |
+| No symlinks | Any symlink under `rules/`. |
+| Allowed file types | Any file other than Rego, JSON/YAML data, a root `.manifest`, or `.md` / `.txt` docs. |
+
+The full rules, and what the runner does with an overlay that breaks them,
+are in [the constitution reference](/reference/constitution#your-own-rules).
+
 The naming checks are the [rule-naming standard](/reference/rule-naming-standard).
 
 <Callout type="info">
   If `opa` is not on your `PATH`, lint prints a warning and skips the
-  `opa check` pass. The file checks still run. Install OPA so a clean lint
+  `opa check` pass and the package part of the confinement check. The file
+  checks still run. Install OPA so a clean lint
   means what it says.
 </Callout>
 
@@ -60,9 +75,11 @@ The naming checks are the [rule-naming standard](/reference/rule-naming-standard
   with constitution rules. It does not need to; see below.
 
 <Callout type="warning">
-  **`trustacks rule sign` does not run lint.** It builds, pushes, and signs
-  whatever is under `rules/`, after checking every rule ID against the naming
-  standard. Run `lint` and `test` yourself first, or in CI.
+  **`trustacks rule sign` does not run the full lint.** It checks every rule
+  ID against the naming standard and runs the confinement check, and refuses
+  to sign an overlay that reaches outside `data.overlay`. It does not run the
+  other lint checks or your tests. Run `lint` and `test` yourself first, or
+  in CI.
 </Callout>
 
 ## Why an overlay cannot weaken the constitution
@@ -72,10 +89,16 @@ question, `data.proposal.deny`, and gets the union of both. An overlay rule
 can add a reason to refuse a proposal. It has no way to remove one, because
 there is nothing to override: no allow rule, no waiver, no exception list.
 
-That property holds by how the policy is assembled, not because the linter
-proves it. Earlier versions of this page said the linter verifies
-refinement, signatures, citations, and waivers at compile time. It does none
-of those.
+That only holds if overlay rules stay in their own namespace. A file that
+declared `package proposal` could redefine a constitution helper and switch a
+rule off. So from runner 0.2.14 the runner **enforces** it: an overlay that
+reaches outside `data.overlay` gets no verdict, and the run fails with
+`overlay rejected — overlay rules may only add to data.overlay`. Earlier
+runners did not check. Lint and `rule sign` run the same confinement check so
+you find out first.
+
+The linter still does not verify refinement, signatures, citations, or
+waivers. It does none of those.
 
 ## In CI
 

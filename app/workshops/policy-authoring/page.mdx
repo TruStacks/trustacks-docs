@@ -34,8 +34,8 @@ token scope. The rule id is `acme.requires_explicit_workflow_permissions`.
 Substitute your own namespace for `acme`.
 
 Rule ids are `<namespace>.<name>`: lowercase letters, digits and
-underscores, at most 64 characters. The namespaces `proposal`, `argocd`,
-`constitution` and `trustacks` are reserved for TruStacks.
+underscores, at most 64 characters. The namespaces `argocd`, `constitution`,
+`posture`, `practice`, `proposal` and `trustacks` are reserved for TruStacks.
 
 ## Time required
 
@@ -48,7 +48,10 @@ The overlay is a set of Rego rules that lives in your overlay repo, next to
 and loaded by the runner alongside the constitution. Your rules' denies are
 added to the constitution's, so a proposal must satisfy both. That is why an
 overlay can only make the gate stricter: it can add denies, never remove
-one.
+one. From runner 0.2.14 the runner enforces this: every overlay `.rego` file
+must be `package overlay.<name>`, and an overlay that reaches outside
+`data.overlay` gets no verdict at all. The full rules are in
+[the constitution reference](/reference/constitution#your-own-rules).
 
 Each rule is two files:
 
@@ -148,6 +151,13 @@ deny contains msg if {
    the whole `.rego` file with the Coordinator's draft (keep the package
    name `overlay.acme_requires_explicit_workflow_permissions`).
 
+   <Callout type="warning">
+     Keep every package under `overlay.`. A file whose package is anything
+     else (`package proposal`, say) is refused by `rule lint` and
+     `rule sign`, and the runner rejects the whole overlay. `rule new
+     --package` refuses a package that does not start with `overlay.`.
+   </Callout>
+
 3. **Write the tests.** The scaffold includes one passing baseline test.
    Add a negative and a positive case to the `_test.rego` file:
 
@@ -180,10 +190,11 @@ deny contains msg if {
 
    `rule test` runs `opa test` on the rule. `rule lint` checks the rule's
    structure: the directory name is a valid rule id, both files exist, the
-   `package` and `rule_metadata` are present and name the rule id, and
-   `opa check` passes. Lint does not prove anything about how the rule
-   relates to the constitution; the "stricter, never looser" property comes
-   from how denies are combined, not from a linter.
+   `package` and `rule_metadata` are present and name the rule id,
+   `opa check` passes, and the overlay is confined to `data.overlay` (the
+   same check the runner makes before it evaluates an overlay). Without OPA
+   on your `PATH`, lint skips `opa check` and the package part of the
+   confinement check.
 
 5. **Sign and publish the overlay bundle:**
 
@@ -193,15 +204,31 @@ deny contains msg if {
 
    This builds the overlay bundle, pushes it to the local registry
    (`zot.localtest.me:8080` by default) and signs it with the local
-   development cosign key under `.policy-keys/`. It does not run lint, so
-   run lint first.
+   development cosign key under `.policy-keys/`. Before building, it runs
+   the confinement check and refuses to sign an overlay that reaches outside
+   `data.overlay`. It does not run the rest of lint or your tests, so run
+   those first. Note the bundle ref it prints, for example
+   `zot.localtest.me:8080/trustacks/policy/overlay/trustacks-mvp-local:dev`
+   (the name comes from your `environment-profile.yaml`).
 
 6. **Commit and open a PR on the overlay repo**, so the rule has a reviewed
    history like any other code. Explain why the rule exists, what it denies,
    and the edge cases it handles.
 
-7. **Restart the runner** so its init container pulls and verifies the new
-   bundle. In local development:
+7. **Point the runner at the overlay** so its init container pulls and
+   verifies it. The local runner is installed with no overlay
+   (`policyBundle.overlayRef` is empty), so the first time, set it. Inside the
+   cluster the registry is `zot.trustacks-system.svc.cluster.local:5000`, so
+   use that host with the repository and tag `rule sign` printed:
+
+   ```bash
+   helm upgrade runner charts/runner -n trustacks-system \
+     --reset-then-reuse-values \
+     --set policyBundle.overlayRef=zot.trustacks-system.svc.cluster.local:5000/trustacks/policy/overlay/trustacks-mvp-local:dev
+   ```
+
+   The upgrade restarts the runner. After later re-signs to the same tag, a
+   restart is enough:
 
    ```bash
    kubectl -n trustacks-system rollout restart deployment runner-runner

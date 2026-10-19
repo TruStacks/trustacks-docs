@@ -94,7 +94,9 @@ How it talks to the control plane:
   reference](/reference/constitution).
 - **Overlay rules** are yours. Their denies are added to the constitution's
   denies, so an overlay can only make the gate stricter: it adds reasons to
-  refuse and has no way to remove one. Overlay authoring runs through the
+  refuse and has no way to remove one. From runner 0.2.14 the runner
+  enforces this, rejecting an overlay that reaches outside `data.overlay`
+  (earlier runners did not check). Overlay authoring runs through the
   [`trustacks rule` CLI](/reference/runner-cli). There is no delivery path for
   overlay bundles to hosted runners yet; see
   [the constitution page](/reference/constitution#your-own-rules).

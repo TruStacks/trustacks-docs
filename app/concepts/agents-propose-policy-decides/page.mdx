@@ -52,7 +52,10 @@ Before a proposal can become a pull request, two checks run, in order:
 
 A deny stops the run and cites each violated rule. No pull request opens.
 An allow opens one. Overlay rules can only add denies, so your overlay can
-make the gate stricter but never looser.
+make the gate stricter but never looser. From runner 0.2.14 the runner
+enforces this: an overlay rule that reaches outside its own namespace is
+rejected, and the run gets no verdict. See
+[your own rules](/reference/constitution#your-own-rules).
 
 The language model never decides. It drafts; OPA judges what it drafted.
 

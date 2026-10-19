@@ -197,8 +197,10 @@ If the platform repo already matches the proposal exactly, the run ends with
 The easiest way to watch the gate refuse something is to add a rule that the
 emitted workflow will not satisfy. The
 [policy authoring workshop](/workshops/policy-authoring) does exactly that:
-a rule requiring top-level `permissions:` on every workflow. After landing it,
-re-run Step 4. `policy_check` reports **denied**, cites your rule id, and no
+a rule requiring top-level `permissions:` on every workflow. Land it all the
+way through Part C, including step 7, which points the runner at your overlay
+with `--set policyBundle.overlayRef=<ref>`; without that the runner loads no
+overlay and nothing is denied. Then re-run Step 4. `policy_check` reports **denied**, cites your rule id, and no
 PR opens. The [Overview](/guide/overview)'s **Policy in force** card starts
 counting it.
 
