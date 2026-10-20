@@ -31,11 +31,49 @@ when this page was written; the outcomes described are what happened.
 
 ## 1. Bring in a finding
 
-TruStacks doesn't scan. Findings come from your tools: open Dependabot,
-code-scanning and secret-scanning alerts reach Signals through your runner's
-read-only GitHub source, and any scanner's output can be uploaded as SARIF.
+TruStacks doesn't scan, and you shouldn't have to hand it anything. Findings
+come from the tools you already run, and in day-to-day use they arrive on their
+own. There are two ways in. Use the first for real work, and the second when
+you want a finding right now, as in this workshop.
 
-For this workshop, upload a sample:
+### The automatic path (how it works day to day)
+
+Your runner's read-only **GitHub** source reads open **Dependabot**,
+**code-scanning** and **secret-scanning** alerts on every repo connected to an
+Application. Anything that reaches GitHub code scanning reaches Signals.
+
+1. In **Signals → Sources**, check that **GitHub, read-only** says
+   *Connected · read-only verified*. If not, use **Connect a source**.
+2. On your service repo in GitHub (**Settings → Code security**), turn on
+   **Dependabot alerts** and **code scanning**. Code scanning is free on public
+   repos; private repos need GitHub Advanced Security.
+3. Declare a scanner in your EnvironmentProfile, for example:
+
+   ```yaml
+   image_scanning:
+     - provider: trivy
+   ```
+
+   The DevOps Engineer's next proposal adds the scan to your CI workflow
+   **and uploads its results to GitHub code scanning**: a pinned
+   `github/codeql-action/upload-sarif` step right after the scan, which runs
+   even when the scan fails the build. This needs release 0.2.15-rc6 or later.
+   Semgrep works the same way.
+4. Merge that PR. Your CI runs the scanner, GitHub stores the results, and your
+   runner's next sweep turns them into findings. The GitHub source sweeps every
+   6 hours; **last sweep Nm ago** on its row tells you when it last ran.
+
+Nothing is uploaded by hand, and TruStacks never runs the scanner. You run it,
+GitHub stores the results, and TruStacks reads them.
+
+### The quick path (for this workshop): upload a sample
+
+A scanner whose results never reach GitHub can still report: upload its SARIF
+file in **Signals**. SARIF (Static Analysis Results Interchange Format) is the
+standard JSON report most scanners can write (CodeQL, Semgrep, Trivy,
+hadolint, Checkov). Each result names the rule, where it fired, how severe it
+is and a message. For this workshop it's simply the fastest way to get a
+finding:
 
 1. Download [`dockerfile-root.sarif`](/samples/dockerfile-root.sarif). It's a
    hadolint `DL3002` result: *the container runs as root*.

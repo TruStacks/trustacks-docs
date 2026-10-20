@@ -117,6 +117,15 @@ run them on your own cluster.
    **Last sweep failed**. If nothing arrives within 10 minutes, it tells you
    to check that the runner pod restarted and to look in its logs.
 
+### How findings arrive without you
+
+Most findings should never need an upload. The read-only GitHub source reads
+code-scanning alerts, and from release 0.2.15-rc6, when your EnvironmentProfile
+declares a scanner that writes SARIF (Trivy, Semgrep), the DevOps Engineer's CI
+workflow uploads that scanner's results to GitHub code scanning. Your CI runs
+the scanner, GitHub stores the results, and the next sweep brings them here.
+See the [Signals workshop](/workshops/signals-governed-fix).
+
 ### Upload a SARIF file
 
 {/* screenshot-placeholder: Connect a source, SARIF upload: the file picker and the "Uploaded. N findings created." result. Save as public/guide/signals-sarif-upload.png */}
@@ -125,7 +134,9 @@ run them on your own cluster.
   <span className="ts-shot__file">Save as <code>public/guide/signals-sarif-upload.png</code></span>
 </figure>
 
-Choose **SARIF upload** (or **Upload** on its row) and pick a `.sarif` or
+For a scanner whose results never reach GitHub. SARIF (Static Analysis
+Results Interchange Format) is the standard JSON report most scanners can
+write. Choose **SARIF upload** (or **Upload** on its row) and pick a `.sarif` or
 `.json` file. The file is posted to the findings intake; each result becomes
 a finding, and the list refreshes. The wizard reports how many findings were
 created, or that the file had no results. The file is read as data, never
