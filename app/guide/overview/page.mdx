@@ -47,7 +47,7 @@ names a thing that is stuck, waiting or broken, and links to where you fix it.
 
 | Card | Colour | What puts it there | Where it links |
 |---|---|---|---|
-| No runner is enrolled / no runner is checking in | **Red, blocked** | You have connected a service, but no runner is enrolled, or none has checked in recently. It sits on top because nothing else in the queue can move until it's fixed. | Runners |
+| No runner is enrolled / no runner is checking in | **Red, blocked** | You have connected a service, but no runner is enrolled, or none has checked in recently. It sits on top because nothing that needs a run (analyses, proposals, fixes, gap analyses) can make progress until it's fixed. You can still triage findings and review open PRs. | Runners |
 | The latest proposal for a service failed | **Red, failed** | The newest proposal for that service ended in an error. **A proposal the constitution denied lands here too**: the card says which rule refused it. | The failed run |
 | The latest analysis for a service failed | **Red, failed** | The newest analysis for that service ended in an error (for example, no LLM key, or the repo couldn't be cloned). | The failed run |
 | *app* is degraded (or similar) in the cluster | **Red, failed** | ArgoCD reports the app as unhealthy or out of sync. Only if the optional ArgoCD observer is on. | Applications |
@@ -71,7 +71,7 @@ with in the world:
 | A failed proposal or analysis | A newer proposal (or analysis) runs for the same service. Fixing the cause and re-running is what clears it. |
 | A degraded app | ArgoCD reports it healthy and synced. |
 | Findings | They move on in Signals: triaged, approved, shipped or dismissed. |
-| A pull request is ready | The PR is **merged or closed** on GitHub. |
+| A pull request is ready | The PR is **merged or closed** on GitHub, for a PR on a GitHub platform repo connected through the TruStacks GitHub App (see below). |
 | An analysis is ready to promote | You promote it, or a newer analysis runs for that service. |
 
 <Callout type="info">
@@ -114,11 +114,12 @@ health percentages for systems it has not observed.
 ## What to do here
 
 1. Work the attention queue from the top. A red **No runner is checking
-   in** card means nothing else in the queue can move until you fix the
-   runner.
+   in** card means no new analysis, proposal or fix can run until you fix the
+   runner; you can still triage findings and review open PRs meanwhile.
 2. When a PR is ready, open it, review it in your Git provider and merge it,
-   or close it if you don't want it. Either clears the card. TruStacks never
-   merges for you.
+   or close it if you don't want it. On a GitHub App-connected platform repo,
+   either clears the card within about a minute. TruStacks never merges for
+   you.
 3. Read **Policy in force** weekly. A rule that denies often may point at a
    real gap in what the agents emit, or in what your stack declares.
 
