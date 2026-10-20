@@ -42,21 +42,50 @@ Dismissing hides it for the browser session only.
 
 ### Needs your attention
 
-A queue of cards, most urgent first. Each card names a thing that is stuck,
-waiting or broken, and links to where you fix it:
+A queue of cards, most urgent first: red, then amber, then green. Each card
+names a thing that is stuck, waiting or broken, and links to where you fix it.
 
-| Card | Severity | Where it links |
-|---|---|---|
-| No runner is enrolled / no runner is checking in | Blocked (red). Nothing else can progress. | Runners |
-| The latest analysis or proposal for a service failed | Failed (red) | The failed run |
-| *app* is degraded (or similar) in the cluster | Failed (red). Only if the optional ArgoCD observer is on. | Applications |
-| Fixes waiting on your approval / findings not yet triaged | Waiting (amber) | Signals |
-| A pull request is ready for your review | Ready (green) | The proposal |
-| The latest analysis for this service is ready to promote | Ready (green) | The analysis |
+| Card | Colour | What puts it there | Where it links |
+|---|---|---|---|
+| No runner is enrolled / no runner is checking in | **Red, blocked** | You have connected a service, but no runner is enrolled, or none has checked in recently. It sits on top because nothing that needs a run (analyses, proposals, fixes, gap analyses) can make progress until it's fixed. You can still triage findings and review open PRs. | Runners |
+| The latest proposal for a service failed | **Red, failed** | The newest proposal for that service ended in an error. **A proposal the constitution denied lands here too**: the card says which rule refused it. | The failed run |
+| The latest analysis for a service failed | **Red, failed** | The newest analysis for that service ended in an error (for example, no LLM key, or the repo couldn't be cloned). | The failed run |
+| *app* is degraded (or similar) in the cluster | **Red, failed** | ArgoCD reports the app as unhealthy or out of sync. Only if the optional ArgoCD observer is on. | Applications |
+| Fixes waiting on your approval | **Amber, waiting** | A Signals finding has a fix proposed and is waiting on you. | Signals |
+| Findings not yet triaged | **Amber, waiting** | A Signals finding is still `detected`. | Signals |
+| A pull request is ready for your review | **Green, ready** | An agent opened a PR that is not merged or closed yet. | The proposal |
+| The latest analysis for this service is ready to promote | **Green, ready** | The newest analysis for a service finished and hasn't been turned into a proposal. | The analysis |
 
-The queue clears itself from what happens in the world, not from a dismiss
-button. A failed run drops off when a newer run for the same service
-exists. A PR drops off once it is merged or closed.
+Red means something is broken or refused; fix it first. Amber means a decision
+is waiting on you. Green means work is done and ready for you to review. At
+most three cards of each kind are shown.
+
+### How a card clears
+
+There is no dismiss button. A card clears when the thing it describes is dealt
+with in the world:
+
+| Card | It clears when… |
+|---|---|
+| Runner not checking in | A runner checks in again. |
+| A failed proposal or analysis | A newer proposal (or analysis) runs for the same service. Fixing the cause and re-running is what clears it. |
+| A degraded app | ArgoCD reports it healthy and synced. |
+| Findings not yet triaged | You triage or dismiss them in Signals. |
+| Fixes waiting on your approval | You merge the fix's pull request (the finding moves to shipping), or dismiss the finding in Signals. |
+| A pull request is ready | The PR is **merged or closed** on GitHub, for a PR on a GitHub platform repo connected through the TruStacks GitHub App (see below). |
+| An analysis is ready to promote | You promote it, or a newer analysis runs for that service. |
+
+<Callout type="info">
+**An old PR you don't want?** Close it on GitHub; you don't have to merge
+it. TruStacks checks open PRs about once a minute, and a PR closed without
+merging counts as dealt with, the same as a merged one. Its card is gone within
+about a minute.
+
+This check reaches PRs on a GitHub platform repo connected through the
+TruStacks GitHub App, whose service still belongs to an Application. A PR
+anywhere else is never re-checked, so its card stays until the service has a
+newer proposal.
+</Callout>
 
 An empty queue reads **Nothing is waiting on you.** That is a statement
 about the queue, not a clean bill of health for your systems.
@@ -86,10 +115,13 @@ health percentages for systems it has not observed.
 ## What to do here
 
 1. Work the attention queue from the top. A red **No runner is checking
-   in** card means nothing else in the queue can move until you fix the
-   runner.
-2. When a PR is ready, open it, review it in your Git provider and merge it
-   (or close it). TruStacks never merges for you.
+   in** card means no new analysis, proposal or fix can run until you fix the
+   runner; you can still triage findings and review open PRs meanwhile.
+2. When a PR is ready, open it, review it in your Git provider and merge it,
+   or close it if you don't want it. On a GitHub App-connected platform repo,
+   for a service that still belongs to an Application, either clears the card
+   within about a minute. TruStacks never merges for
+   you.
 3. Read **Policy in force** weekly. A rule that denies often may point at a
    real gap in what the agents emit, or in what your stack declares.
 
