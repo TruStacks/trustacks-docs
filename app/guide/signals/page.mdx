@@ -119,7 +119,7 @@ run them on your own cluster.
 
 ### How findings arrive without you
 
-Most findings should never need an upload. The read-only GitHub source reads
+Most findings never need a manual upload to Signals. The read-only GitHub source reads
 code-scanning alerts, and from release 0.2.15-rc6, when your EnvironmentProfile
 declares a scanner that writes SARIF (Trivy, Semgrep), the DevOps Engineer's CI
 workflow uploads that scanner's results to GitHub code scanning. Your CI runs
@@ -229,8 +229,10 @@ validation, constitution check and human review as any other proposal.
 
 1. Triage new findings.
 2. For a real issue in a connected service, **Propose a fix**. Watch the
-   card: check the verdict and the change, then **Review & merge the PR** (or
-   close it if you don't want it). **Open the proposal** shows the full run.
+   card. If the constitution **allowed** it, check the change, then **Review &
+   merge the PR** (or close it if you don't want it). If it **denied** it, no
+   pull request was opened: fix the cause the card names, or the rule, and
+   propose again. **Open the proposal** shows the full run.
 3. Dismiss noise, so the [Overview](/guide/overview) queue only shows what
    needs you.
 
@@ -252,7 +254,7 @@ validation, constitution check and human review as any other proposal.
   direction, not shipped; their output arrives today as SARIF.
 - **The pull request doesn't name the finding yet.** A fix opened from Signals
   addresses the finding, but the PR title and body don't say which finding it
-  resolves ([#685](https://github.com/TruStacks/trustacks-mvp/issues/685)).
+  resolves.
 - **The card finds the proposal among your 100 most recent proposals.** In a
   very busy workspace an older fix may not show; it is still on the service's
   **Proposals** tab.

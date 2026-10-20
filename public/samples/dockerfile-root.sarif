@@ -25,7 +25,7 @@
           "ruleId": "DL3002",
           "level": "error",
           "message": {
-            "text": "Container runs as root: the Dockerfile has no non-root USER directive."
+            "text": "SYNTHETIC SAMPLE for the TruStacks Signals workshop, not a scan of your Dockerfile: the container runs as root."
           },
           "locations": [
             {

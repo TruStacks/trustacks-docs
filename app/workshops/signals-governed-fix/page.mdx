@@ -1,5 +1,5 @@
 ---
-title: Signals workshop — from a finding to a merged fix
+title: "Signals workshop: from a finding to a merged fix"
 description: On the hosted product, bring a scanner finding into Signals, triage it, let the crew propose a governed fix, read the constitution's verdict, and approve it by merging the pull request.
 ---
 
@@ -17,9 +17,10 @@ hosted product:
 5. **You approve by merging the pull request.**
 6. ArgoCD ships it.
 
-This is the loop TruStacks sells: *agents propose, policy decides, humans
-approve.* About 15 minutes. Each step below was run on app.trustacks.com
-when this page was written; the outcomes described are what happened.
+This is the loop TruStacks sells. *Agents propose. Policy decides. Humans
+approve.* About 15 minutes. Steps 1 to 5 were run on app.trustacks.com when this page
+was written, and the outcomes described are what happened. Step 6 depends on
+your ArgoCD setup and wasn't part of that run.
 
 <Callout type="info">
   **You need:** a workspace with a runner connected (0.2.15 or later), an
@@ -46,7 +47,8 @@ Application. Anything that reaches GitHub code scanning reaches Signals.
    *Connected · read-only verified*. If not, use **Connect a source**.
 2. On your service repo in GitHub (**Settings → Code security**), turn on
    **Dependabot alerts** and **code scanning**. Code scanning is free on public
-   repos; private repos need GitHub Advanced Security.
+   repos; on private, organization-owned repos it needs GitHub Code Security
+   (part of GitHub Advanced Security).
 3. Declare a scanner in your EnvironmentProfile, for example:
 
    ```yaml
@@ -76,7 +78,9 @@ is and a message. For this workshop it's simply the fastest way to get a
 finding:
 
 1. Download [`dockerfile-root.sarif`](/samples/dockerfile-root.sarif). It's a
-   hadolint `DL3002` result: *the container runs as root*.
+   **synthetic** report shaped like a hadolint `DL3002` result (*the container
+   runs as root*). It wasn't produced by scanning your Dockerfile, so it may
+   not be true of your service.
 2. Open it in an editor and replace `YOUR-SERVICE-REPO` with your service
    repo's name (for example `orders-api`). That's how TruStacks ties a finding
    to a connected service.
@@ -98,6 +102,10 @@ the SARIF file doesn't match a connected service. Fix the name and upload
 again, or use **Connect this repo →**.
 
 ## 2. Triage it
+
+In real use, check that a finding is true before you triage it. The workshop
+sample is synthetic, so triage it to continue the exercise, and expect the
+crew to notice if your service already runs as non-root. Ours did.
 
 Click **Triage**. This is your first human decision: *this finding is real and
 worth acting on.* The stepper moves on, the card says *Ready for a fix*, and
@@ -157,8 +165,13 @@ the tool where your team already reviews code. TruStacks never merges for you.
 
 ## 6. Watch it ship
 
-ArgoCD syncs the merged change. If your runner's ArgoCD observer is on, the
-finding moves to **validated** once the app reports synced and healthy. The
+ArgoCD deploys the merged change. If the Application syncs **manually**, which
+the constitution requires for a prod-tier target, open ArgoCD and **Sync** it
+yourself; merging doesn't start a manual sync. An auto-synced Application picks
+the change up on its own.
+
+If your runner's ArgoCD observer is on, the finding moves to **validated** once
+the app reports synced and healthy. The
 stepper's last step lights up and the transition history shows every move,
 with who made it.
 
@@ -175,12 +188,13 @@ with who made it.
 
 ## Clean up
 
-- Close the pull request if you don't want to keep the change.
+- **If you merged the pull request** and don't want to keep the change, revert
+  it on your platform repo the way you'd revert any change.
+- **If you didn't merge it**, close it.
 - **Dismiss** the sample finding in Signals.
 
 ## Known limits
 
-- The pull request doesn't yet say which finding it resolves
-  ([#685](https://github.com/TruStacks/trustacks-mvp/issues/685)).
+- The pull request doesn't yet say which finding it resolves.
 - **validated** needs the runner's ArgoCD observer (`observer.enabled=true`).
   Without it, the finding stays at **shipping** after the merge.
