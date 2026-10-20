@@ -70,7 +70,8 @@ with in the world:
 | Runner not checking in | A runner checks in again. |
 | A failed proposal or analysis | A newer proposal (or analysis) runs for the same service. Fixing the cause and re-running is what clears it. |
 | A degraded app | ArgoCD reports it healthy and synced. |
-| Findings | They move on in Signals: triaged, approved, shipped or dismissed. |
+| Findings not yet triaged | You triage or dismiss them in Signals. |
+| Fixes waiting on your approval | You merge the fix's pull request (the finding moves to shipping), or dismiss the finding in Signals. |
 | A pull request is ready | The PR is **merged or closed** on GitHub, for a PR on a GitHub platform repo connected through the TruStacks GitHub App (see below). |
 | An analysis is ready to promote | You promote it, or a newer analysis runs for that service. |
 
@@ -118,7 +119,8 @@ health percentages for systems it has not observed.
    runner; you can still triage findings and review open PRs meanwhile.
 2. When a PR is ready, open it, review it in your Git provider and merge it,
    or close it if you don't want it. On a GitHub App-connected platform repo,
-   either clears the card within about a minute. TruStacks never merges for
+   for a service that still belongs to an Application, either clears the card
+   within about a minute. TruStacks never merges for
    you.
 3. Read **Policy in force** weekly. A rule that denies often may point at a
    real gap in what the agents emit, or in what your stack declares.
