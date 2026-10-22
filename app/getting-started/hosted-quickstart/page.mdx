@@ -47,8 +47,8 @@ in your service repo, ArgoCD, and what happens after the first deploy.
 
 If you have Docker Desktop or Podman Desktop, you can run a small cluster on
 your own machine with [k3d](https://k3d.io/stable/), which runs k3s inside
-containers. It needs no root access, and `k3d cluster delete trustacks` removes
-it again.
+containers. Running the cluster needs no root access, and
+`k3d cluster delete trustacks` removes it again.
 
 1. Start Docker Desktop (or Docker Engine on Linux). Using Podman? See
    [k3d with Podman](https://k3d.io/stable/usage/advanced/podman/).
@@ -57,7 +57,8 @@ it again.
    - Linux: k3d's own installer,
      `curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash`,
      then [kubectl](https://kubernetes.io/docs/tasks/tools/) and
-     [helm](https://helm.sh/docs/intro/install/).
+     [helm](https://helm.sh/docs/intro/install/). The installer puts k3d in
+     `/usr/local/bin`, so it may ask for your password (sudo).
    - Windows: follow the Windows instructions for [k3d](https://k3d.io/stable/),
      [kubectl](https://kubernetes.io/docs/tasks/tools/) and
      [helm](https://helm.sh/docs/intro/install/), then use a PowerShell or WSL
@@ -71,7 +72,14 @@ it again.
 
 Already on Docker Desktop? You can turn on its
 [built-in Kubernetes](https://docs.docker.com/desktop/features/kubernetes/)
-(Settings, then Kubernetes) instead of using k3d.
+instead of using k3d: in Settings, open Kubernetes, select Enable Kubernetes,
+and apply. Then point kubectl at it, so the runner installs there and not in
+another cluster you use:
+
+```bash
+kubectl config use-context docker-desktop
+kubectl get nodes
+```
 
 <Callout type="info">
   A cluster on your laptop is for trying TruStacks. The runner stops whenever
