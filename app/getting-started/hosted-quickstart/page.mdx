@@ -45,13 +45,16 @@ in your service repo, ArgoCD, and what happens after the first deploy.
 
 ### No Kubernetes cluster yet?
 
-If you have Docker Desktop or Podman Desktop, you can run a small cluster on
-your own machine with [k3d](https://k3d.io/stable/), which runs k3s inside
+If you have Docker Desktop (or Docker Engine on Linux), you can run a small
+cluster on your own machine with [k3d](https://k3d.io/stable/), which runs k3s inside
 containers. Running the cluster needs no root access, and
 `k3d cluster delete trustacks` removes it again.
 
-1. Start Docker Desktop (or Docker Engine on Linux). Using Podman? See
-   [k3d with Podman](https://k3d.io/stable/usage/advanced/podman/).
+1. Start Docker Desktop (or Docker Engine on Linux). Using Podman instead? k3d
+   needs extra setup for it first (the Podman socket and `DOCKER_HOST`, plus
+   more for rootless Podman). Follow
+   [k3d with Podman](https://k3d.io/stable/usage/advanced/podman/), then
+   continue at step 3.
 2. Install k3d, kubectl and helm.
    - macOS: `brew install k3d kubectl helm`
    - Linux: k3d's own installer,
@@ -72,8 +75,9 @@ containers. Running the cluster needs no root access, and
 
 Already on Docker Desktop? You can turn on its
 [built-in Kubernetes](https://docs.docker.com/desktop/features/kubernetes/)
-instead of using k3d: in Settings, open Kubernetes, select Enable Kubernetes,
-and apply. Then point kubectl at it, so the runner installs there and not in
+instead of using k3d: in the Docker Desktop Dashboard, open the Kubernetes
+view, select Create cluster, keep the single-node Kubeadm option, and select
+Create. Then point kubectl at it, so the runner installs there and not in
 another cluster you use:
 
 ```bash
