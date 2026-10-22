@@ -54,7 +54,7 @@ containers. Running the cluster needs no root access, and
    needs extra setup for it first (the Podman socket and `DOCKER_HOST`, plus
    more for rootless Podman). Follow
    [k3d with Podman](https://k3d.io/stable/usage/advanced/podman/), then
-   continue at step 3.
+   continue at step 2.
 2. Install k3d, kubectl and helm.
    - macOS: `brew install k3d kubectl helm`
    - Linux: k3d's own installer,
@@ -66,7 +66,8 @@ containers. Running the cluster needs no root access, and
      [kubectl](https://kubernetes.io/docs/tasks/tools/) and
      [helm](https://helm.sh/docs/intro/install/), then use a PowerShell or WSL
      terminal.
-3. Create the cluster and check that its one node is `Ready`:
+3. Create the cluster and check that its one node is `Ready` and its
+   `VERSION` is v1.28 or newer:
 
    ```bash
    k3d cluster create trustacks
@@ -78,7 +79,9 @@ Already on Docker Desktop? You can turn on its
 instead of using k3d: in the Docker Desktop Dashboard, open the Kubernetes
 view, select Create cluster, keep the single-node Kubeadm option, and select
 Create. Then point kubectl at it, so the runner installs there and not in
-another cluster you use:
+another cluster you use, and check that the node's `VERSION` is v1.28 or newer
+(Docker Desktop picks the version; if it's older, update Docker Desktop or use
+k3d):
 
 ```bash
 kubectl config use-context docker-desktop
