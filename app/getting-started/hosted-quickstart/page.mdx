@@ -43,6 +43,57 @@ in your service repo, ArgoCD, and what happens after the first deploy.
 - **ArgoCD** in a cluster, if you want step 11 (deploy). Steps 1 to 10 do not
   need it.
 
+### No Kubernetes cluster yet?
+
+If you have Docker Desktop (or Docker Engine on Linux), you can run a small
+cluster on your own machine with [k3d](https://k3d.io/stable/), which runs k3s inside
+containers. Running the cluster needs no root access, and
+`k3d cluster delete trustacks` removes it again.
+
+1. Start Docker Desktop (or Docker Engine on Linux). Using Podman instead? k3d
+   needs extra setup for it first (the Podman socket and `DOCKER_HOST`, plus
+   more for rootless Podman). Follow
+   [k3d with Podman](https://k3d.io/stable/usage/advanced/podman/), then
+   continue at step 2.
+2. Install k3d, kubectl and helm.
+   - macOS: `brew install k3d kubectl helm`
+   - Linux: k3d's own installer,
+     `curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash`,
+     then [kubectl](https://kubernetes.io/docs/tasks/tools/) and
+     [helm](https://helm.sh/docs/intro/install/). The installer puts k3d in
+     `/usr/local/bin`, so it may ask for your password (sudo).
+   - Windows: follow the Windows instructions for [k3d](https://k3d.io/stable/),
+     [kubectl](https://kubernetes.io/docs/tasks/tools/) and
+     [helm](https://helm.sh/docs/intro/install/), then use a PowerShell or WSL
+     terminal.
+3. Create the cluster and check that its one node is `Ready` and its
+   `VERSION` is v1.28 or newer:
+
+   ```bash
+   k3d cluster create trustacks
+   kubectl get nodes
+   ```
+
+Already on Docker Desktop? You can turn on its
+[built-in Kubernetes](https://docs.docker.com/desktop/features/kubernetes/)
+instead of using k3d: in the Docker Desktop Dashboard, open the Kubernetes
+view, select Create cluster, keep the single-node Kubeadm option, and select
+Create. Then point kubectl at it, so the runner installs there and not in
+another cluster you use, and check that the node's `VERSION` is v1.28 or newer
+(Docker Desktop picks the version; if it's older, update Docker Desktop or use
+k3d):
+
+```bash
+kubectl config use-context docker-desktop
+kubectl get nodes
+```
+
+<Callout type="info">
+  A cluster on your laptop is for trying TruStacks. The runner stops whenever
+  the machine sleeps, so for day-to-day use, install it in a cluster that stays
+  on. The same guide is in the app, on the runner step.
+</Callout>
+
 ## Step 1. Create your workspace
 
 Go to <a href="https://app.trustacks.com" target="_blank" rel="noopener noreferrer">app.trustacks.com</a>
