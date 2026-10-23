@@ -86,3 +86,111 @@ html.dark .ts-shot figcaption {
 html.dark .ts-shot--pending .ts-shot__file {
   color: #94a3b8;
 }
+
+/*
+ * Platform model diagram (concepts/agents-propose-policy-decides). Plain HTML
+ * so it is searchable, accessible and themeable; rows stack on narrow screens.
+ */
+.ts-model {
+  margin: 1.5rem 0 2rem;
+  padding: 1.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  text-align: center;
+}
+.ts-model__label {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.ts-model__row {
+  display: grid;
+  gap: 0.75rem;
+}
+.ts-model__row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ts-model__row--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.ts-model__node,
+.ts-model__base {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.ts-model__node strong,
+.ts-model__base strong {
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+.ts-model__node span,
+.ts-model__base span {
+  color: #475569;
+}
+.ts-model__node--agent {
+  border-color: #10b981;
+}
+.ts-model__node--yours {
+  border-style: dashed;
+}
+.ts-model__gate {
+  padding: 0.75rem;
+  border: 2px solid #10b981;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.06);
+}
+.ts-model__label--gate {
+  color: #047857;
+}
+.ts-model__arrow {
+  margin: 0.4rem 0;
+  font-size: 1.1rem;
+  color: #94a3b8;
+}
+.ts-model figcaption {
+  margin-top: 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #475569;
+}
+html.dark .ts-model,
+html.dark .ts-model__node,
+html.dark .ts-model__base {
+  border-color: #334155;
+}
+html.dark .ts-model__node--agent {
+  border-color: #10b981;
+}
+html.dark .ts-model__gate {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+html.dark .ts-model__node strong,
+html.dark .ts-model__base strong {
+  color: #e2e8f0;
+}
+html.dark .ts-model__node span,
+html.dark .ts-model__base span,
+html.dark .ts-model__label,
+html.dark .ts-model figcaption {
+  color: #94a3b8;
+}
+html.dark .ts-model__label--gate {
+  color: #34d399;
+}
+@media (max-width: 720px) {
+  .ts-model__row--3,
+  .ts-model__row--4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

@@ -18,6 +18,64 @@ part of the system with a separate job, and none of them can do another's.
 - **Humans approve.** A person on your team reviews and merges the pull
   request. Nothing merges itself, and no agent can approve its own work.
 
+## Where TruStacks sits in your platform
+
+<figure className="ts-model" aria-label="Where TruStacks sits in your platform">
+  <div className="ts-model__label">Who changes how your software is delivered</div>
+  <div className="ts-model__row ts-model__row--3">
+    <div className="ts-model__node">
+      <strong>Your developers</strong>
+      <span>Write code, review and merge pull requests</span>
+    </div>
+    <div className="ts-model__node">
+      <strong>Their AI coding assistants</strong>
+      <span>Changes a person commits, whoever drafted them</span>
+    </div>
+    <div className="ts-model__node ts-model__node--agent">
+      <strong>TruStacks agents</strong>
+      <span>Code Reviewer, DevOps Engineer, Coordinator. Propose delivery artifacts as pull requests</span>
+    </div>
+  </div>
+  <div className="ts-model__arrow" aria-hidden="true">↓</div>
+  <div className="ts-model__gate">
+    <div className="ts-model__label ts-model__label--gate">TruStacks: the governed layer</div>
+    <div className="ts-model__row ts-model__row--4">
+      <div className="ts-model__node">
+        <strong>One signed policy</strong>
+        <span>The constitution plus your overlay rules, OPA/Rego, signed with cosign</span>
+      </div>
+      <div className="ts-model__node">
+        <strong>Policy decides</strong>
+        <span>Every agent proposal is judged before a pull request opens. Your own commits are audited against the same rules</span>
+      </div>
+      <div className="ts-model__node">
+        <strong>Humans approve</strong>
+        <span>Pull requests to your platform repo. Nothing merges itself, and no agent approves its own work</span>
+      </div>
+      <div className="ts-model__node">
+        <strong>Evidence</strong>
+        <span>Every verdict, approval and finding recorded. Maturity scored from declared, observed and verified evidence</span>
+      </div>
+    </div>
+  </div>
+  <div className="ts-model__arrow" aria-hidden="true">↓</div>
+  <div className="ts-model__label">Your stack. You run it; TruStacks authors what it runs</div>
+  <div className="ts-model__row ts-model__row--4">
+    <div className="ts-model__node ts-model__node--yours"><strong>Git and CI</strong><span>GitHub, Gitea, your pipelines</span></div>
+    <div className="ts-model__node ts-model__node--yours"><strong>GitOps</strong><span>ArgoCD syncs what you merged</span></div>
+    <div className="ts-model__node ts-model__node--yours"><strong>Scanners</strong><span>Trivy, Semgrep, code scanning. Results flow back as Signals</span></div>
+    <div className="ts-model__node ts-model__node--yours"><strong>Registries and secrets</strong><span>Your images, your secret store</span></div>
+  </div>
+  <div className="ts-model__arrow" aria-hidden="true">↓</div>
+  <div className="ts-model__base">
+    <strong>Your infrastructure</strong>
+    <span>Kubernetes, OpenShift or ECS, owned and operated by your platform team. The TruStacks runner runs here and only connects out.</span>
+  </div>
+  <figcaption>
+    TruStacks governs the change, not your tools. Agents and people go through the same signed policy, a person approves, and your own tooling deploys.
+  </figcaption>
+</figure>
+
 ## The crew
 
 | Agent | What it does | Where you see it |
