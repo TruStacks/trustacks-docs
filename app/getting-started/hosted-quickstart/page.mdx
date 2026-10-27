@@ -558,7 +558,7 @@ Once the loop is running, these happen without another setup step:
 | Connect wizard says "Create an Application first" | Create one (step 4). |
 | You are back on sign-in with "Your session expired. Sign in again to continue." | Your session could not be renewed. Sign in again. Earlier releases showed an empty workspace instead; nothing was lost. |
 | GitHub install returns to the app but shows no repos | The App was installed without access to those repos. Change the repo selection in GitHub under your account or organization's installed GitHub Apps, then retry. |
-| Analysis fails with an LLM error | Confirm the runner is connected on **Runners**, then save the key again in **Settings** (**Save + rotate**). A saved key waits up to two hours for a runner to collect it. |
+| Analysis fails with an LLM error | If the provider rejected the key, check the key itself, your provider account's credit, and (on OpenRouter) that the model starts with `anthropic/`, then save the key again in **Settings** (**Save + rotate**). If the runner never collected it, confirm the runner is connected on **Runners** and save it again: a saved key waits up to two hours for a runner to collect it. |
 | **Promote to proposal** stops at `image_reference` | Your Environment Profile declares no `container_registry`. Add one (step 6) and promote again. |
 | **Promote to proposal** returns an error about clusters or the platform repo | The Application needs at least one target cluster and a bound platform repo. Check the Application detail page. |
 | Proposal stops at policy, no PR | The policy gate denied it. The proposal page lists each rule and why. See the [constitution](/reference/constitution). |

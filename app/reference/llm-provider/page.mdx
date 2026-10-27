@@ -35,7 +35,8 @@ which model runs.
    single-use secret in TruStacks' secret store that expires after two
    hours. It is never written to the TruStacks database.
 3. **Sealed delivery.** When your runner collects the key, it is sealed to
-   that runner's public key, and the stored copy is deleted.
+   that runner's public key. The stored copy is deleted once the runner
+   reports back, after it has written its Secret and tested the key.
 4. **Runner writes it.** Your runner unseals it and writes the Kubernetes
    Secret `trustacks-runner-llm` in its own namespace.
 5. **Live test call.** The runner makes a one-token request to the provider
@@ -58,7 +59,7 @@ rotate, save a new key the same way.
 | Place | Holds the key? |
 |---|---|
 | TruStacks database | No. Only the provider, the model override, the first six characters, and status. |
-| TruStacks secret store | Up to two hours, until your runner collects it; then deleted |
+| TruStacks secret store | Up to two hours: deleted once your runner reports back, or when it expires |
 | Your cluster | Yes, in the Secret `trustacks-runner-llm` in the runner's namespace |
 | Your LLM provider | Receives it on every call, as usual |
 
