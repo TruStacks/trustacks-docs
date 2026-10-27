@@ -1,6 +1,6 @@
 ---
 title: TruStacks 101
-description: A guided tour of TruStacks for platform leads and engineering managers. See what needs you, declare your stack, analyze a service, read your maturity score, and follow one change from agent proposal through the policy gate to a pull request you approve.
+description: A guided tour of TruStacks for platform leads and engineering managers. See what needs you, declare your stack, analyze a service, follow one change from agent proposal through the policy gate to a pull request you approve, and read your maturity score.
 ---
 
 import { Callout } from 'nextra/components'
@@ -18,9 +18,9 @@ artifact; you run it on your stack.
 **Agents propose. Policy decides. Humans approve.**
 
 By the end of this tour you will have read your workspace at a glance, run an
-analysis and a gap analysis, seen your maturity score and what it would take
-to raise it, and followed one change from proposal to a pull request waiting
-for your review.
+analysis, followed one change from proposal to a pull request waiting for
+your review, then run a gap analysis and seen your maturity score and what it
+would take to raise it.
 
 <Callout type="info">
   This page assumes a workspace that is already set up: a runner connected,
@@ -113,57 +113,19 @@ Each run's detail page shows the crew's turns as they happen.
 
 More: [Service detail](/guide/applications#service-detail).
 
-## Stop 5 · Gap analysis
+## Stop 5 · From proposal to pull request
 
-**What you do.** Open **Gap analyses** and click **Run new gap analysis**.
-Open the run when it finishes.
-
-<figure className="ts-shot">
-  <img src="/guide/gap-analysis-detail.png" alt="" />
-  <figcaption>Stop 5 · A finished gap analysis for betaorg1-dogfood: the Activity log with the Constitution, Coordinator, Baseline Security and SOC2 turns, and the Maturity card with the bronze tier badge.</figcaption>
-</figure>
-
-**Why it matters.** A gap analysis answers *is this Application set up
-correctly?* The **Coordinator** checks your declared stack against the rules
-your runner enforces, then consults two specialists: **Baseline Security**
-on scanning, secrets and supply chain, and **SOC2** on the control families
-its findings map to. The score is computed by the runner before any model
-writes a word, so the number you brief upward is not an LLM's opinion.
-
-More: [Gap analyses](/guide/gap-analyses).
-
-## Stop 6 · Maturity
-
-**What you do.** Open **Maturity**.
-
-<figure className="ts-shot">
-  <img src="/guide/maturity.png" alt="" />
-  <figcaption>Stop 6 · Maturity for betaorg1-dogfood: the bronze tier badge and score bar with its confirmed / counted / if verified legend, the "Open gaps" cards with Draft pipeline PR, and the "Path to gold" card.</figcaption>
-</figure>
-
-**Why it matters.** Your tier (bronze, silver or gold) comes from the gap
-analysis you just ran, and the bar separates what TruStacks **confirmed**
-from evidence from claims it could not check, which count half. **Open gaps**
-names what is pulling the score down; **Draft pipeline PR** asks the crew to
-add a missing tool's step. **Path to gold** says what is yours to do, what is
-ours, and whether gold is reachable today. If it is not, the page says so.
-
-More: [Maturity](/guide/maturity) · [Verified, claimed and disputed](/concepts/verified-claimed-disputed).
-
-## Stop 7 · From proposal to pull request
-
-**What you do.** Back on your service, on the **Analyses** tab, click
+**What you do.** On the same service, open the **Analyses** tab, click
 **promote →** on the finished analysis, then **Promote to proposal**.
 
 <figure className="ts-shot">
   <img src="/guide/proposal-detail.png" alt="" />
-  <figcaption>Stop 7 · Proposal detail for betaorg1-dogfood-service: the Constitution's clean verdict (no violations), the advisory gap row, and the green "Pull request opened" banner.</figcaption>
+  <figcaption>Stop 5 · Proposal detail for betaorg1-dogfood-service: the Constitution's clean verdict (no violations), the advisory gap row, and the green "Pull request opened" banner.</figcaption>
 </figure>
 
-{/* asset: public/screenshots/101/07-github-pr.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Stop 7 · The resulting pull request on GitHub in betaorg1-dogfood-platform: Summary, Blast radius, Rollback, Rule citations and the file list, open and awaiting review.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/101/07-github-pr.png</code></span>
+<figure className="ts-shot">
+  <img src="/screenshots/101/05-github-pr.png" alt="" />
+  <figcaption>Stop 5 · The resulting pull request on GitHub in the platform repo, opened by the TruStacks bot and awaiting review: the summary and the table of what it adds. Further down, the body covers Blast radius, Rollback, Rule citations and the file list.</figcaption>
 </figure>
 
 **Why it matters.** The **DevOps Engineer** reads the analysis, your Stack
@@ -176,6 +138,43 @@ yours; no agent can do it. Emitted ArgoCD Applications use manual sync, so
 deploying is a second human decision.
 
 More: [A proposal, from your side](/guide/applications#a-proposal-from-your-side) · [Proposal lifecycle](/reference/proposal-lifecycle).
+
+## Stop 6 · Gap analysis
+
+**What you do.** Open **Gap analyses** and click **Run new gap analysis**.
+Open the run when it finishes.
+
+<figure className="ts-shot">
+  <img src="/guide/gap-analysis-detail.png" alt="" />
+  <figcaption>Stop 6 · A finished gap analysis for betaorg1-dogfood: the Activity log with the Constitution, Coordinator, Baseline Security and SOC2 turns, and the Maturity card with the bronze tier badge.</figcaption>
+</figure>
+
+**Why it matters.** A gap analysis answers *is this Application set up
+correctly?* The **Coordinator** checks your declared stack against the rules
+your runner enforces, then consults two specialists: **Baseline Security**
+on scanning, secrets and supply chain, and **SOC2** on the control families
+its findings map to. The score is computed by the runner before any model
+writes a word, so the number you brief upward is not an LLM's opinion.
+
+More: [Gap analyses](/guide/gap-analyses).
+
+## Stop 7 · Maturity
+
+**What you do.** Open **Maturity**.
+
+<figure className="ts-shot">
+  <img src="/guide/maturity.png" alt="" />
+  <figcaption>Stop 7 · Maturity for betaorg1-dogfood: the bronze tier badge and score bar with its confirmed / counted / if verified legend, the "Open gaps" cards with Draft pipeline PR, and the "Path to gold" card.</figcaption>
+</figure>
+
+**Why it matters.** Your tier (bronze, silver or gold) comes from the gap
+analysis you just ran, and the bar separates what TruStacks **confirmed**
+from evidence from claims it could not check, which count half. **Open gaps**
+names what is pulling the score down; **Draft pipeline PR** asks the crew to
+add a missing tool's step. **Path to gold** says what is yours to do, what is
+ours, and whether gold is reachable today. If it is not, the page says so.
+
+More: [Maturity](/guide/maturity) · [Verified, claimed and disputed](/concepts/verified-claimed-disputed).
 
 ## Stop 8 · Rules
 
@@ -241,10 +240,10 @@ More: [Compliance and audit reports](/guide/compliance).
 
 - A view of what needs a human, and which rules actually bite.
 - Your stack as declared, observed and verified, side by side.
-- A maturity tier with the verified part separated from the claimed part,
-  and a named path to the next tier.
 - A delivery change written by the crew, checked by signed policy, and
   waiting on your approval as a pull request.
+- A maturity tier with the verified part separated from the claimed part,
+  and a named path to the next tier.
 - SOC2 evidence that accrues from the work itself.
 
 ## Where to go next
