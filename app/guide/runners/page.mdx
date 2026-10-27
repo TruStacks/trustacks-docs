@@ -10,10 +10,9 @@ import { Callout } from 'nextra/components'
 **Where:** **Runners** in the sidebar (`#/settings/runners`). Step 2 of
 [Get set up](/guide/onboarding) embeds the same enrollment card.
 
-{/* screenshot-placeholder: Runners screen with the enrollment card (token + helm command), the upgrade card, and one connected runner row. Save as public/guide/runners.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/runners.png" alt="" />
   <figcaption>Runners screen with the enrollment card (token + helm command), the upgrade card, and one connected runner row.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/runners.png</code></span>
 </figure>
 
 The runner is the part of TruStacks that runs in *your* cluster. It clones
@@ -24,8 +23,8 @@ screen is where you enroll runners and keep them current.
 
 ### Enroll a runner
 
-1. **Generate enrollment token** creates a token and shows it once
-   (**Shown once, copy it now**).
+1. **Generate enrollment token** creates a token and shows it once. Copy it
+   straight away: the app won't show it again.
 2. Under it, **Install the runner in your cluster** shows a ready-to-run
    command with the current published chart version as a badge:
 
@@ -96,7 +95,7 @@ credentials. You need to be a workspace owner.
    again, or **Cancel**.
 2. Every enrollment token for the workspace is revoked at once, and one
    replacement is minted. The app says how many old tokens it revoked and
-   shows the new token once (**Shown once, copy it now**).
+   shows the new token once. Copy it straight away.
 3. **Give it to each runner you already run** shows an upgrade command
    that carries the new token:
 

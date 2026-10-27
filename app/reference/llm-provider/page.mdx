@@ -9,7 +9,7 @@ import { Callout } from 'nextra/components'
 
 The agents run on Claude. You bring the API key, so model usage is billed to
 your own account with Anthropic or OpenRouter. Set it under
-**Settings → LLM** (`#/settings/llm`).
+**Settings** in the sidebar (`#/settings/llm`).
 
 ## Providers
 
@@ -31,22 +31,27 @@ which model runs.
 
 1. **Shape check.** The key and model are checked before anything else; a
    non-Anthropic OpenRouter model is rejected here.
-2. **Sealed delivery.** The control plane holds the key in memory for up to
-   five minutes. When your runner collects it, the key is sealed to that
-   runner's public key. It is never written to the TruStacks database.
-3. **Runner writes it.** Your runner unseals it and writes the Kubernetes
+2. **Held for your runner.** The control plane writes the key to a
+   single-use secret in TruStacks' secret store that expires after two
+   hours. It is never written to the TruStacks database.
+3. **Sealed delivery.** When your runner collects the key, it is sealed to
+   that runner's public key. The stored copy is deleted once the runner
+   reports back, after it has written its Secret and tested the key.
+4. **Runner writes it.** Your runner unseals it and writes the Kubernetes
    Secret `trustacks-runner-llm` in its own namespace.
-4. **Live test call.** The runner makes a one-token request to the provider
+5. **Live test call.** The runner makes a one-token request to the provider
    to prove the key works.
-5. **Status.** The page shows **pending** until the runner reports back, then
-   **configured** or **invalid**. If no runner collects the key within five
-   minutes, it shows **expired**; see [Troubleshooting](#troubleshooting).
+
+The control plane records the outcome of that check, but the Settings banner
+doesn't show it yet: it reads *configured* as soon as you save. Your first
+agent run is the confirmation; see [Troubleshooting](#troubleshooting).
 
 The page shows only the first six characters of the key afterward. To
 rotate, save a new key the same way.
 
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Settings → LLM with OpenRouter selected and status configured</figcaption>
+<figure className="ts-shot">
+  <img src="/guide/settings.png" alt="" />
+  <figcaption>Settings with the Anthropic provider configured and the key masked.</figcaption>
 </figure>
 
 ## Where your key goes
@@ -54,7 +59,7 @@ rotate, save a new key the same way.
 | Place | Holds the key? |
 |---|---|
 | TruStacks database | No. Only the provider, the model override, the first six characters, and status. |
-| TruStacks control plane memory | Up to five minutes, until your runner collects it |
+| TruStacks secret store | Up to two hours: deleted once your runner reports back, or when it expires |
 | Your cluster | Yes, in the Secret `trustacks-runner-llm` in the runner's namespace |
 | Your LLM provider | Receives it on every call, as usual |
 
@@ -67,13 +72,12 @@ with that in mind.
 
 ## Troubleshooting
 
-- **Invalid** · the provider rejected the test call. Check the key, that the
-  account has credit, and (OpenRouter) that the model name starts with
-  `anthropic/`.
-- **Expired** · no runner collected the key. Check **Runners** and
-  your runner's logs, then save again.
+- **Agents fail with an LLM error** · the provider rejected the key. Check
+  the key, that the account has credit, and (OpenRouter) that the model name
+  starts with `anthropic/`. Then save it again.
 - **Agents fail with a configuration error** · no key is configured, or the
-  runner has not picked it up yet.
+  runner has not collected it yet. Check **Runners** and your runner's logs.
+  A saved key waits two hours for a runner; after that, save it again.
 
 ## Where to go next
 

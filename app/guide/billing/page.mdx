@@ -7,15 +7,16 @@ import { Callout } from 'nextra/components'
 
 # Billing
 
-**Where:** **Billing** in the sidebar (`#/settings/billing`). While your
-workspace is on a trial, a strip at the top of every screen shows **Trial**
-(or **Workshop**), how many days are left and your workspace name. It turns
-urgent in the last five days.
+**Where:** **Billing** in the sidebar (`#/settings/billing`). A strip at the
+top of every screen shows the program you're in (**Beta**) and your workspace
+name. If you signed up with a Beta code and haven't added a card, it also
+shows **Free until** a date, the days left, and **Add a card to keep going**.
+A workspace on a time-boxed trial (or a workshop) sees **Trial** and the days
+left instead; it turns urgent in the last five days.
 
-{/* screenshot-placeholder: Billing screen showing Plan (trial), Tier (developer), Trial ends and the Upgrade button. Save as public/guide/billing.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/billing.png" alt="" />
   <figcaption>Billing screen showing Plan (trial), Tier (developer), Trial ends and the Upgrade button.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/billing.png</code></span>
 </figure>
 
 ## What you see
@@ -25,13 +26,16 @@ A status card:
 - **Plan**: for example trial or paid.
 - **Tier**: your subscription tier (for example Developer).
 - **Subscription**: the Stripe subscription status, when there is one.
-- **Trial ends**: the date, while you are not on a paid plan.
+- **Trial ends**: the date, for a time-boxed trial or workshop workspace.
+  Workspaces created through checkout are on a paid plan and don't show it.
 
 Under it, one of:
 
-- **Upgrade**: opens Stripe Checkout to subscribe.
 - **Manage billing**: opens the Stripe customer portal (invoices, payment
-  method, cancellation) once you have a subscription.
+  method, cancellation). Every workspace created through **Create a
+  workspace** has a subscription, so this is what you see.
+- **Upgrade**: opens Stripe Checkout to subscribe, for a workspace with no
+  subscription yet (a trial or workshop).
 - An amber note: **Billing isn't configured on this deployment**, and every
   feature is available with no subscription.
 
@@ -42,7 +46,12 @@ made*).
 ## What it means
 
 Payments are handled entirely by Stripe; TruStacks never sees your card.
-A new workspace starts on a 30-day trial. The Developer tier is the plan on
+A new workspace starts on the Developer plan through Stripe Checkout. With a
+Beta code your first 45 days are free and no card is needed at checkout. Add
+a card under **Manage billing** before the 45 days end and Stripe bills the
+plan from then. Without a card, the subscription ends with the 45 days: you
+can still sign in and see your workspace, but new work stops until you
+subscribe. The Developer tier is the plan on
 sale during Beta; see [pricing on trustacks.com](https://trustacks.com/pricing)
 for what it includes. Higher tiers are not sold during Beta.
 
@@ -51,7 +60,9 @@ Your LLM usage is billed separately by your LLM provider under your own key
 
 ## What to do here
 
-- Before your trial ends, **Upgrade** if the screen offers it.
+- On a Beta code: add a card under **Manage billing** before your 45 free
+  days end (the date is in the strip at the top).
+- On a trial: **Upgrade** before the trial ends.
 - Use **Manage billing** to change your payment method or cancel.
 
 ## How it connects
@@ -65,8 +76,9 @@ Your LLM usage is billed separately by your LLM provider under your own key
 
 ## Beta limits
 
-- **Billing may not be live yet.** If you see the *Billing isn't configured*
-  note, nothing is charged and nothing is gated: every feature, including
-  SOC2, is available.
+- **Self-managed installs run unmetered.** The *Billing isn't configured*
+  note appears only where billing is switched off (a self-managed install);
+  there nothing is charged and nothing is gated. Billing is live on the
+  hosted service.
 - **Plan limits are not enforced in the app during Beta** (for example seat
   and service counts).

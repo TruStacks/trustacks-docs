@@ -15,10 +15,9 @@ plain language, or run a slash command. Every answer shows the records it came
 from, and the Coordinator can't change anything: buttons in an answer only open
 a page or start something you would start yourself.
 
-{/* screenshot-placeholder: Workspace with a question ("Why am I bronze, and what would get me to silver?"), the cited answer with its Sources chips, and the Open the gap report / Run a gap analysis buttons. Save as public/guide/workspace.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/workspace.png" alt="" />
   <figcaption>Workspace with a question ("Why am I bronze, and what would get me to silver?"), the cited answer with its Sources chips, and the Open the gap report / Run a gap analysis buttons.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/workspace.png</code></span>
 </figure>
 
 ## Ask about your setup
@@ -58,9 +57,19 @@ Follow-up questions continue the conversation (*"and what about gold?"*).
 
 <Callout type="info">
   **Answers run on your runner, with your LLM key**, like every other agent
-  run. Asking needs runner **0.2.15** or later. With an older runner, the
-  chat says *No connected runner can answer questions yet. Upgrade your
-  runner…* and links to [Runners](/guide/runners).
+  run. Asking needs a **0.2.15** runner. The install command the app shows
+  still pins **0.2.14**, which can't answer, so the chat says *No connected
+  runner can answer questions yet. Upgrade your runner…*. Upgrade to a 0.2.15
+  pre-release (0.2.15-rc20 is the newest at the time of writing):
+
+  ```bash
+  helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
+    --version 0.2.15-rc20 \
+    -n "<your-namespace>" --reset-then-reuse-values
+  ```
+
+  `--reset-then-reuse-values` needs Helm 3.14 or later. Give it a minute to
+  reconnect, then ask again. See [Runners](/guide/runners).
 </Callout>
 
 ## The commands
@@ -78,10 +87,9 @@ The draft arrives as a file block, `rules/<rule_id>/<rule_id>.rego`, with
 **Copy** and **Download**, the Coordinator's reasoning, and a reminder of the
 CLI steps to land it.
 
-{/* screenshot-placeholder: A finished rule draft in the Workspace: the Rego file block with Copy and Download, and the "Would it have blocked my recent proposals?" result listing each proposal as "passes this rule" or "would be blocked". Save as public/guide/workspace-rule-draft.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>A finished rule draft in the Workspace: the Rego file block with Copy and Download, and the "Would it have blocked my recent proposals?" result listing each proposal as "passes this rule" or "would be blocked".</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/workspace-rule-draft.png</code></span>
+<figure className="ts-shot">
+  <img src="/guide/workspace-rule-draft.png" alt="" />
+  <figcaption>A finished rule draft in the Workspace: the end of the Rego, the commands to land it, and the "Would it have blocked my recent proposals?" result listing each proposal as "passes this rule" or "would be blocked".</figcaption>
 </figure>
 
 ### Check what a draft would have blocked

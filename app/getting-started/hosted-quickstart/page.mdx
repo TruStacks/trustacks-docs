@@ -96,35 +96,40 @@ kubectl get nodes
 
 ## Step 1. Create your workspace
 
-Go to <a href="https://app.trustacks.com" target="_blank" rel="noopener noreferrer">app.trustacks.com</a>
-and click **Sign in**. That takes you to the TruStacks sign-in page at
-`auth.trustacks.com`. Choose **Register** and create your organization and
-user (email and password).
+1. Go to <a href="https://app.trustacks.com" target="_blank" rel="noopener noreferrer">app.trustacks.com</a>
+   and click **Create a workspace**.
+2. Enter a **Workspace name**, your **Work email** and, if you're in the
+   Beta program, your **Beta code**. The code makes your first 45 days free,
+   so there's nothing to pay today.
+3. Click **Continue to checkout** (it reads **Continue to payment** when you
+   leave the code blank). Stripe handles checkout; we never see your card.
+4. On the Stripe page, tick **I agree to TruStacks's Terms of Service and
+   Privacy Policy** and complete checkout.
+5. We email you a link to set your password. **Don't register again**: your
+   account already exists. Set the password from the email, return to
+   app.trustacks.com, click **Sign in**, and you land on **Get set up**.
 
-Start from app.trustacks.com, not from auth.trustacks.com directly, so the
-sign-in redirects you back into the app when you finish.
+Your new workspace is isolated from every other, and you are its owner.
 
-Registering creates a new, isolated **workspace** with a **30-day trial**, and
-makes you its owner. You land on **Get set up**.
+<Callout type="info">
+  **No Beta code?** Checkout asks for a card and the subscription starts
+  straight away. In the Beta program but don't have your code? Ask in the
+  [support Discord](https://discord.gg/NSpqYrMa2p) before you check out.
+  No email after checkout? Check your spam folder; the page you return to
+  can send it again.
+</Callout>
 
 <Callout type="info">
   **Adding teammates.** Invite colleagues from **Team** in the sidebar. They
-  get an email and join *your* workspace. A teammate who registers on their
-  own creates a separate workspace instead. During Beta every member is an
-  owner. See the [Team guide](/guide/team).
+  get an email and join *your* workspace. A teammate who signs up through
+  **Create a workspace** starts a separate, separately billed workspace
+  instead. During Beta every member is an owner. See the
+  [Team guide](/guide/team).
 </Callout>
 
-<Callout type="info">
-  **Card-based signup.** The app also has a **Create a workspace** path that
-  starts a trial through card checkout. It is shown only when self-serve
-  billing is enabled. Until then it says self-serve signup isn't open yet;
-  use **Register** as described above.
-</Callout>
-
-{/* asset: public/screenshots/getting-started/01-register.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Step 1 · The auth.trustacks.com sign-in page with the Register option.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/01-register.png</code></span>
+<figure className="ts-shot">
+  <img src="/screenshots/getting-started/01-signup.png" alt="" />
+  <figcaption>Step 1 · The Create a workspace form: workspace name, work email and an optional Beta code.</figcaption>
 </figure>
 
 ## Step 2. Tell us about your team (optional)
@@ -135,10 +140,9 @@ does not gate anything. Skip it if you like; you can fill it in later.
 This is **not** the Environment Profile in step 6. This one is who you are;
 that one is what you run.
 
-{/* asset: public/screenshots/getting-started/02-team-profile.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/screenshots/getting-started/02-team-profile.png" alt="" />
   <figcaption>Step 2 · Get set up, "Tell us about your team" with the optional company and team-size fields.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/02-team-profile.png</code></span>
 </figure>
 
 ## Step 3. Enroll your runner
@@ -182,8 +186,9 @@ work that touches your code. Nothing connects inbound to your cluster.
 
    With the release name `trustacks-runner`, the deployment is named
    **`trustacks-runner-runner`** (the chart appends `-runner`).
-4. The wizard shows **Runner connected** a few seconds after the runner
-   enrolls, and moves on.
+4. A few seconds after the runner enrolls, the wizard shows **Runner
+   connected.** and ticks the step. Click **Mark done & continue** (or pick
+   the next step) to go on.
 
 The enrollment token is reusable and does not expire. It is stored only as a
 hash on our side, and the runner keeps presenting it when it re-enrolls, so
@@ -199,10 +204,9 @@ the [runner install reference](/installation/cluster).
   [Runner install](/installation/cluster#verify-what-you-install).
 </Callout>
 
-{/* asset: public/screenshots/getting-started/03-enroll-runner.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/screenshots/getting-started/03-enroll-runner.png" alt="" />
   <figcaption>Step 3 · Generate enrollment token, with the copyable helm install command.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/03-enroll-runner.png</code></span>
 </figure>
 
 ## Step 4. Create an Application
@@ -219,15 +223,15 @@ The connect wizard refuses to run until one exists.
 2. Open it from **Applications** and check two settings on the detail page:
    - **Target clusters.** Every Application needs at least one cluster with a
      tier (`dev`, `uat`, or `prod`). A new Application starts with one `dev`-tier
-     cluster called `dev`. Rename it to the cluster name you will deploy
-     to; the name shows up in paths in your platform repo.
+     cluster called `dev`. The name shows up in paths in your platform repo,
+     and a cluster can't be renamed: to use your own name, fill in **cluster
+     name** and **tier**, click **Add cluster**, remove `dev`, then **Save**.
    - **Renderer.** Helm (the default) or Kustomize. Kustomize support is
      Beta. See the [Applications guide](/guide/applications).
 
-{/* asset: public/screenshots/getting-started/04-create-application.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/screenshots/getting-started/04-create-application.png" alt="" />
   <figcaption>Step 4 · Applications, "Create an Application" with a name typed and the Create button enabled.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/04-create-application.png</code></span>
 </figure>
 
 ## Step 5. Connect your repos
@@ -263,10 +267,9 @@ code. You connect each repo once.
 A service is a whole repo. If you have a monorepo, connect it as one service
 for now; per-path services inside one repo are not supported yet.
 
-{/* asset: public/screenshots/getting-started/05-connect-repo.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Step 5 · + Connect repo: role picker, GitHub App install, then the repo and Application binding.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/05-connect-repo.png</code></span>
+<figure className="ts-shot">
+  <img src="/guide/connect-repo.png" alt="" />
+  <figcaption>Step 5 · + Connect repo opens the role picker: Service repo or Platform repo. GitHub then installs the TruStacks GitHub App and binds the repo to an Application.</figcaption>
 </figure>
 
 ## Step 6. Declare what you run
@@ -286,6 +289,10 @@ ci_cd_platform:
   - provider: github_actions
     primary: true
 
+container_registry:
+  - provider: ghcr
+    primary: true
+
 gitops_controller:
   - provider: argocd
     primary: true
@@ -299,8 +306,13 @@ gitops_controller:
 #   tests_in_ci: true
 ```
 
-Two things to know:
+Three things to know:
 
+- **`container_registry` is required.** It tells the DevOps Engineer where
+  your image is published. Without it, **Promote to proposal** in step 9
+  stops at `image_reference` and no pull request opens. The wizard's starter
+  has it commented out, so uncomment it. For GitHub Container Registry,
+  `provider: ghcr` is all it needs.
 - **A category you leave out counts as a gap.** It is not neutral, so your
   score understates what you run until you declare it.
 - **`practices` are claims about you.** The starter ships every one of them
@@ -310,34 +322,37 @@ Two things to know:
 The full schema is in the [Environment Profile reference](/reference/environment-profile).
 **Stack** in the sidebar shows what TruStacks read from your file.
 
-{/* asset: public/screenshots/getting-started/06-declare-profile.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/onboarding.png" alt="" />
   <figcaption>Step 6 · Get set up, "Declare what you run" with the 12 categories and the starter environment-profile.yaml.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/06-declare-profile.png</code></span>
 </figure>
 
 ## Step 7. Set your LLM provider
 
-Open **Settings** and the LLM provider section, choose **Anthropic** or
-**OpenRouter**, paste your key, and save.
+Open **Settings**, choose **Anthropic** or **OpenRouter**, paste your key
+into **API key** and again into **Confirm API key**, and click **Save +
+rotate**. With OpenRouter, **Model (required)** must start with `anthropic/`.
 
-- The control plane checks only the key's shape. It does not store the key.
-  It holds it in memory, sealed to your runner's public key, until your
-  runner collects it; your runner unseals it, writes its own Secret in your
-  namespace, and validates the key with a live call to the provider.
-- Nothing is rolled. The status reads **pending** until the runner has
-  checked the key, then **configured**, or **invalid** if the provider
-  rejected it.
-- Agents run on Claude Sonnet 4.5 or newer. With OpenRouter the model must be
-  an `anthropic/` model. There is no model picker; you choose who bills you,
-  not which model runs.
+- The control plane checks the key's shape and writes it to a single-use
+  secret in TruStacks' secret store that expires after two hours. Its
+  database keeps only metadata (provider, the key's first characters,
+  status). Your runner collects the key sealed to its own key, writes the
+  `trustacks-runner-llm` Secret in its namespace, and validates it with a
+  live call to the provider. The stored copy is then deleted. If no runner
+  collects it within two hours, save it again.
+- Nothing is rolled.
+- The banner says **configured** as soon as you save. It does not yet show
+  whether your runner has collected and accepted the key. The first analysis
+  in step 8 is the real check: if it fails with an LLM or config error,
+  confirm the runner is connected on **Runners** and save the key again.
+- Agents run on Claude Sonnet 4.5 or newer. There is no model picker; you
+  choose who bills you, not which model runs.
 
 See [LLM provider](/reference/llm-provider).
 
-{/* asset: public/screenshots/getting-started/07-llm-provider.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/settings.png" alt="" />
   <figcaption>Step 7 · Settings, LLM provider with Anthropic selected and the key saved (key masked).</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/07-llm-provider.png</code></span>
 </figure>
 
 ## Step 8. Run your first analysis
@@ -351,10 +366,9 @@ Only the Code Reviewer runs here. That is expected: the DevOps Engineer runs
 in the next step, and the Baseline Security and SOC2 specialists run on gap
 analyses.
 
-{/* asset: public/screenshots/getting-started/08-first-analysis.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/screenshots/getting-started/08-first-analysis.png" alt="" />
   <figcaption>Step 8 · A service's analysis running: the Coordinator and Code Reviewer turns streaming in.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/08-first-analysis.png</code></span>
 </figure>
 
 ## Step 9. Promote to proposal
@@ -381,10 +395,9 @@ what was generated, which rules it was checked against, and anything the agent
 deliberately kept from your existing repo (preservation notes). See the
 [proposal lifecycle](/reference/proposal-lifecycle).
 
-{/* asset: public/screenshots/getting-started/09-promote-proposal.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/proposal-detail.png" alt="" />
   <figcaption>Step 9 · Proposal detail: the Constitution's "clean, no violations" turn and the "Pull request opened" banner.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/screenshots/getting-started/09-promote-proposal.png</code></span>
 </figure>
 
 ## Step 10. Merge, then add the caller workflow
@@ -530,7 +543,7 @@ Once the loop is running, these happen without another setup step:
 | 3 · runner | `kubectl -n "$NAMESPACE" get pods` shows the runner pod `1/1 Running`; the wizard shows **Runner connected** |
 | 5 · repos | Both repos appear on the services list (the platform repo with the Platform role) and on the Application's detail page |
 | 6 · profile | **Stack** lists the categories you declared |
-| 7 · LLM | The provider shows as configured after your runner's live check |
+| 7 · LLM | The banner shows your provider as configured; the first analysis in step 8 confirms the runner accepted the key |
 | 8 · analysis | Live events stream; the analysis reaches **done** with the right framework and runtime |
 | 9 · proposal | Artifact validation passes, the policy gate shows **allow**, and a PR appears in your **platform** repo |
 | 10 · CI | The caller workflow run in your service repo goes green and pushes an image |
@@ -545,7 +558,8 @@ Once the loop is running, these happen without another setup step:
 | Connect wizard says "Create an Application first" | Create one (step 4). |
 | You are back on sign-in with "Your session expired. Sign in again to continue." | Your session could not be renewed. Sign in again. Earlier releases showed an empty workspace instead; nothing was lost. |
 | GitHub install returns to the app but shows no repos | The App was installed without access to those repos. Change the repo selection in GitHub under your account or organization's installed GitHub Apps, then retry. |
-| Analysis fails with an LLM error | Re-enter the key in Settings. Check the provider shows as configured, not pending. A pending key means your runner has not collected it yet; confirm the runner is connected. |
+| Analysis fails with an LLM error | If the provider rejected the key, check the key itself, your provider account's credit, and (on OpenRouter) that the model starts with `anthropic/`, then save the key again in **Settings** (**Save + rotate**). If the runner never collected it, confirm the runner is connected on **Runners** and save it again: a saved key waits up to two hours for a runner to collect it. |
+| **Promote to proposal** stops at `image_reference` | Your Environment Profile declares no `container_registry`. Add one (step 6) and promote again. |
 | **Promote to proposal** returns an error about clusters or the platform repo | The Application needs at least one target cluster and a bound platform repo. Check the Application detail page. |
 | Proposal stops at policy, no PR | The policy gate denied it. The proposal page lists each rule and why. See the [constitution](/reference/constitution). |
 | Proposal stops at artifact validation | A generated file did not render or parse. The proposal page shows the failing check and its output. |
@@ -565,9 +579,11 @@ Once the loop is running, these happen without another setup step:
 - **Customer overlay rules** can be drafted in the Workspace chat and built
   with the CLI, but there is no way yet to deliver your own signed rules to a
   hosted runner.
-- **Billing.** Self-serve billing may not be enabled for your workspace yet.
-  [Billing](/guide/billing) in the app says plainly whether it is configured.
-  Pricing is at [trustacks.com/pricing](https://trustacks.com/pricing).
+- **Billing.** A Beta code makes the first 45 days free. The strip at the top
+  of the app shows **Free until** a date with the days left; add a card
+  under **Billing** → **Manage billing** before then to keep going. See
+  [Billing](/guide/billing). Pricing is at
+  [trustacks.com/pricing](https://trustacks.com/pricing).
 
 ## Remove everything
 

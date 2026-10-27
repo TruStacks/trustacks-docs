@@ -55,8 +55,9 @@ kubectl -n "$NAMESPACE" logs deploy/trustacks-runner-runner | grep -i enroll
 
 The Runners page shows the runner as connected once it has enrolled.
 
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Runners, showing a connected runner with its running and published versions</figcaption>
+<figure className="ts-shot">
+  <img src="/guide/runners.png" alt="" />
+  <figcaption>Runners, showing a connected runner with its running and published versions.</figcaption>
 </figure>
 
 ### The enrollment token
@@ -225,8 +226,8 @@ Where the runner gets the constitution, and how it verifies it. See
 | `image.repository`, `image.tag` | `ghcr.io/trustacks/runner`, the chart's version |
 | `deployKeyLoader.image` | `alpine/k8s:1.31.4` (from Docker Hub) |
 | `imagePullSecrets` | Empty. Set if you mirror the images to a private registry. |
-| `resources.requests` | `cpu: 50m`, `memory: 128Mi` |
-| `resources.limits` | `cpu: 500m`, `memory: 512Mi` |
+| `resources.requests` | `cpu: 50m`, `memory: 128Mi` in chart 0.2.14; `cpu: 100m`, `memory: 384Mi` from 0.2.15 |
+| `resources.limits` | `cpu: 500m`, `memory: 512Mi` in chart 0.2.14; `cpu: 1`, `memory: 1Gi` from 0.2.15 |
 | `podSecurityContext` | `runAsNonRoot: true`, `runAsUser: 10001`, `fsGroup: 10001` |
 | `securityContext` | No privilege escalation, read-only root filesystem, all capabilities dropped |
 | `nodeSelector`, `tolerations`, `affinity` | Empty |

@@ -67,8 +67,12 @@ Stated plainly, because it is the thing your security team will ask.
   See [Signals](/guide/signals#sources).
 - Any SARIF file you upload on Signals, posted from your browser to the
   findings intake.
-- Your LLM key, once, in transit: the control plane holds it in memory just
-  long enough to seal it to your runner, and does not store it.
+- Your LLM key, for up to two hours: the control plane keeps it in a
+  single-use secret in the TruStacks secret store, seals it to your runner
+  when the runner collects it, and deletes it once the runner has written
+  its own Secret and tested the key. If no runner collects it, it expires
+  after two hours. The key is never written to the control plane's database;
+  the copy that stays is the Secret in your cluster.
 
 **What the control plane reads from GitHub directly:**
 
