@@ -67,8 +67,10 @@ Stated plainly, because it is the thing your security team will ask.
   See [Signals](/guide/signals#sources).
 - Any SARIF file you upload on Signals, posted from your browser to the
   findings intake.
-- Your LLM key, once, in transit: the control plane holds it in memory just
-  long enough to seal it to your runner, and does not store it.
+- Your LLM key, once, in transit: the control plane keeps it in a
+  single-use secret that expires in two hours, seals it to your runner when
+  the runner collects it, then deletes it. It never writes the key to its
+  database.
 
 **What the control plane reads from GitHub directly:**
 

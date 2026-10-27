@@ -34,11 +34,9 @@ the model spend is on your own account with the provider you choose.
   - With OpenRouter: **Model (required)**, and it must start with
     `anthropic/` (for example `anthropic/claude-sonnet-4-5`).
 - **Save + rotate**. While it works the button reads **Saving…**; when done,
-  **Saved at …** with a note that your runner picks the key up, checks it
-  with a live call and uses it from the next run. What happened before that
-  note depends on where your control plane runs; see *What happens on save*
-  below. On the hosted product the runner's check comes after the save, so
-  the key reads **pending** until it reports. On a local or self-hosted
+  **Saved at …** with a note that the key is checked with a live call before
+  it is used. What happened before that note depends on where your control
+  plane runs; see *What happens on save* below. On a local or self-hosted
   control plane in the same cluster, the live check and the runner roll
   already happened before **Saved at …** appears, and a bad key fails the
   save instead.
@@ -55,15 +53,24 @@ release during a model rollover, not to swap vendors.
 
 1. The control plane checks only the key's shape (and, for OpenRouter, that
    a model is set). It makes no call with your key.
-2. It holds the key in memory, sealed to your runner, until your runner
-   collects it. Your runner writes the `trustacks-runner-llm` Secret in its
-   own namespace and makes the live test call to the provider.
-3. Nothing is rolled. The runner uses the key from its next run.
+2. It writes the key to a single-use secret in TruStacks' secret store that
+   expires after two hours. Its database keeps only metadata (provider, the
+   key's first characters, status), never the key.
+3. Your runner collects the key, sealed to its own key, writes the
+   `trustacks-runner-llm` Secret in its own namespace, and makes the live
+   test call to the provider. The stored copy is then deleted.
+4. Nothing is rolled. The runner uses the key from its next run.
 
-The key's status reads **pending** until your runner has collected and
-checked it, then **configured**, or **invalid** if the provider rejected it.
-If the runner never collects it, the held key lapses (**expired**) and you
-paste it again.
+If no runner collects the key within two hours, it expires and you save it
+again.
+
+<Callout type="warning">
+  **The banner doesn't show the runner's check yet.** On the hosted product
+  the banner reads *configured* as soon as you save, even before your runner
+  has collected and tested the key. To confirm the key works, run an analysis:
+  if it fails with an LLM or config error, check that your runner is connected
+  on [Runners](/guide/runners) and save the key again.
+</Callout>
 
 On a local or self-hosted control plane in the same cluster, the control
 plane makes the live call itself, writes the Secret and rolls the runner.
