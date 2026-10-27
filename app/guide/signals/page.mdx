@@ -9,10 +9,9 @@ import { Callout } from 'nextra/components'
 
 **Where:** **Signals** in the sidebar (`#/signals`).
 
-{/* screenshot-placeholder: Signals with the Sources panel (GitHub "Connected · read-only verified", ArgoCD "Reporting", SARIF upload) above the findings list, one finding selected showing the six-step governed loop. Save as public/guide/signals.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/signals.png" alt="Signals with the Sources panel (GitHub &quot;Connected · read-only verified&quot;, ArgoCD &quot;Reporting&quot;, SARIF upload) above the findings list, one finding selected showing the six-step governed loop." />
   <figcaption>Signals with the Sources panel (GitHub "Connected · read-only verified", ArgoCD "Reporting", SARIF upload) above the findings list, one finding selected showing the six-step governed loop.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals.png</code></span>
 </figure>
 
 Signals is where security findings meet the governed delivery loop.
@@ -41,28 +40,24 @@ wizard with a source chooser first.
 
 ### Connect a source
 
-{/* screenshot-placeholder: Connect a source dialog, first step: the three source cards (GitHub, read-only · ArgoCD deploy status · SARIF upload). Save as public/guide/signals-connect-choose.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/signals-connect-choose.png" alt="Connect a source dialog, first step: the three source cards (GitHub, read-only · ArgoCD deploy status · SARIF upload)." />
   <figcaption>Connect a source dialog, first step: the three source cards (GitHub, read-only · ArgoCD deploy status · SARIF upload).</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals-connect-choose.png</code></span>
 </figure>
 
-{/* screenshot-placeholder: Connect a source, GitHub: the runner picker (runner id · version), Runner namespace and Helm release filled in. Save as public/guide/signals-connect-runner.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/signals-connect-runner.png" alt="Connect a source, GitHub: the runner picker (runner id · version), Runner namespace and Helm release filled in." />
   <figcaption>Connect a source, GitHub: the runner picker (runner id · version), Runner namespace and Helm release filled in.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals-connect-runner.png</code></span>
 </figure>
 
-{/* screenshot-placeholder: Connect a source, GitHub: the commands step with the token scope (repo names, read-only permissions), the kubectl secret command and the version-pinned helm upgrade. Save as public/guide/signals-connect-commands.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/signals-connect-commands.png" alt="Connect a source, GitHub: the commands step with the token scope (repo names, read-only permissions), the kubectl secret command and the version-pinned helm upgrade." />
   <figcaption>Connect a source, GitHub: the commands step with the token scope (repo names, read-only permissions), the kubectl secret command and the version-pinned helm upgrade.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals-connect-commands.png</code></span>
 </figure>
 
-{/* screenshot-placeholder: Connect a source, GitHub: the result "Connected · read-only verified · last sweep 0m ago · N observations". Save as public/guide/signals-connect-connected.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Connect a source, GitHub: the result "Connected · read-only verified · last sweep 0m ago · N observations".</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals-connect-connected.png</code></span>
+<figure className="ts-shot">
+  <img src="/guide/signals-connect-connected.png" alt="The Sources panel once connected: GitHub &quot;Connected · read-only verified · last sweep · N observations&quot;." />
+  <figcaption>The Sources panel once connected: GitHub "Connected · read-only verified · last sweep · N observations".</figcaption>
 </figure>
 
 The wizard never asks for a credential. TruStacks writes the commands; you
@@ -128,10 +123,9 @@ See the [Signals workshop](/workshops/signals-governed-fix).
 
 ### Upload a SARIF file
 
-{/* screenshot-placeholder: Connect a source, SARIF upload: the file picker and the "Uploaded. N findings created." result. Save as public/guide/signals-sarif-upload.png */}
-<figure className="ts-shot ts-shot--pending">
-  <figcaption>Connect a source, SARIF upload: the file picker and the "Uploaded. N findings created." result.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals-sarif-upload.png</code></span>
+<figure className="ts-shot">
+  <img src="/guide/signals-sarif-upload.png" alt="Connect a source, SARIF upload: the file picker." />
+  <figcaption>Connect a source, SARIF upload: the file picker.</figcaption>
 </figure>
 
 For a scanner whose results never reach GitHub. SARIF (Static Analysis
@@ -180,10 +174,9 @@ your sources**.
 
 ### The Proposed fix card
 
-{/* screenshot-placeholder: A finding's Proposed fix card after Propose a fix: the DevOps Engineer's one-line summary, "Constitution: allowed. Every rule passed.", "The change · 6 files" with the file list, "How the crew got here", and the green Review & merge the PR button. Save as public/guide/signals-fix-card.png */}
-<figure className="ts-shot ts-shot--pending">
+<figure className="ts-shot">
+  <img src="/guide/signals-fix-card.png" alt="A finding's Proposed fix card after Propose a fix: the DevOps Engineer's one-line summary, &quot;Constitution: allowed. Every rule passed.&quot;, &quot;The change · 6 files&quot; with the file list, &quot;How the crew got here&quot;, and the green Review &amp; merge the PR button." />
   <figcaption>A finding's Proposed fix card after Propose a fix: the DevOps Engineer's one-line summary, "Constitution: allowed. Every rule passed.", "The change · 6 files" with the file list, "How the crew got here", and the green Review &amp; merge the PR button.</figcaption>
-  <span className="ts-shot__file">Save as <code>public/guide/signals-fix-card.png</code></span>
 </figure>
 
 After **Propose a fix**, the card follows the real proposal:
