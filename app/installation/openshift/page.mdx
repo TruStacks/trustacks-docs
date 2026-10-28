@@ -1,0 +1,199 @@
+---
+title: Running on OpenShift
+description: Install the TruStacks runner on Red Hat OpenShift under the default restricted-v2 SCC, declare a cluster as OpenShift, and what TruStacks writes for it — ArgoCD Applications in openshift-gitops, workloads that run under an arbitrary UID, and an Ingress the router turns into a Route.
+---
+
+import { Callout } from 'nextra/components'
+
+# Running on OpenShift
+
+TruStacks supports any conformant Kubernetes, and OpenShift is a
+first-class distribution. The runner installs under OpenShift's default
+security policy with no extra grants, and what the agents write for an
+OpenShift cluster runs there unmodified.
+
+<Callout type="info">
+  OpenShift support arrives with runner **0.2.15-rc24**. Older runners set a
+  fixed user ID that OpenShift rejects, so the pod never starts.
+</Callout>
+
+## What is different on OpenShift
+
+Almost nothing you write by hand. One set of workload files serves both
+OpenShift and other Kubernetes; only a few cluster details change.
+
+| | Other Kubernetes | OpenShift |
+|---|---|---|
+| Runner pod user | Fixed UID `10001` | Assigned by the SCC from the namespace's range |
+| Where ArgoCD Applications live | `argocd` | `openshift-gitops` |
+| Namespace ArgoCD creates for the service | Plain | Labelled `argocd.argoproj.io/managed-by` |
+| Exposure | `Ingress` | The same `Ingress`; the router turns it into a `Route` |
+
+## Install the runner
+
+Use the same command as any cluster
+([Runner install](/installation/cluster#install)). The chart detects
+OpenShift from the `security.openshift.io/v1` API and adjusts itself:
+
+- It does **not** set `runAsUser`, `runAsGroup` or `fsGroup`. The
+  `restricted-v2` SCC assigns them, and rejects a pod that asks for its own.
+- It keeps `runAsNonRoot`, drops every capability, disallows privilege
+  escalation, uses `seccompProfile: RuntimeDefault` and a read-only root
+  filesystem.
+- **No custom SCC and no `anyuid` grant are needed.** Don't add one.
+
+Install into a namespace of your own, not an `openshift-*` namespace: Pod
+Security label sync is off there.
+
+If you render the chart without a cluster to ask (`helm template`, or a
+GitOps tool that renders offline), say so explicitly:
+
+```bash
+--set openshift=true
+```
+
+`openshift: auto` is the default. Set `false` to force the vanilla
+behaviour on a cluster that exposes the OpenShift API.
+
+### Deploy keys work too
+
+Under an arbitrary UID the process has no entry in `/etc/passwd`, and
+OpenSSH refuses to run for a user it cannot look up. The runner image
+handles this at start-up, so repositories you connect with an SSH deploy
+key clone normally. Repositories connected through the GitHub App use
+HTTPS and were never affected.
+
+### Deploy status
+
+With `observer.enabled=true`, the runner watches ArgoCD Applications in
+`openshift-gitops` on OpenShift and `argocd` elsewhere. If your Applications
+live somewhere else, for example an upstream ArgoCD you installed yourself,
+set it:
+
+```bash
+--set observer.enabled=true --set observer.argocdNamespace=argocd
+```
+
+The RoleBinding is created in that namespace, so it has to exist.
+
+## Declare the cluster as OpenShift
+
+In **Applications**, open the Application, and under **Target clusters**
+choose **OpenShift** as the distribution when you add the cluster. The chip
+then reads *Kubernetes · OpenShift*.
+
+The distribution is a setting, not something TruStacks detects: it tells
+the agents which cluster details to write. A cluster without it is treated
+as other Kubernetes.
+
+Two optional per-cluster values, set through the API today:
+
+| Setting | Default | Use it when |
+|---|---|---|
+| `gitops_namespace` | `openshift-gitops` on OpenShift, else `argocd` | Your Applications live in a namespace-scoped ArgoCD instance |
+| `argocd_project` | `default` | You scope teams with their own AppProject (you create it; TruStacks only names it) |
+
+## What TruStacks writes for an OpenShift cluster
+
+### The ArgoCD Application
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payments-api
+  namespace: openshift-gitops
+spec:
+  project: default
+  # source and destination as on any cluster
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        argocd.argoproj.io/managed-by: openshift-gitops
+```
+
+Sync stays manual, and on a `prod` cluster manual sync is enforced by
+policy, as everywhere ([Sync is manual](/installation/gitops#sync-is-manual)).
+
+`CreateNamespace=true` creates a plain Namespace, which skips your cluster's
+project template (quotas, NetworkPolicies). If you want the template, create
+the project first; ArgoCD then uses it.
+
+### Workloads
+
+Every Deployment the agents write carries the same baseline on every
+Kubernetes, and a policy rule (`practice.k8s_workload_restricted`) checks it
+before any pull request opens:
+
+- `runAsNonRoot`, `seccompProfile: RuntimeDefault`, no privilege
+  escalation, all capabilities dropped;
+- **no fixed `runAsUser`, `runAsGroup` or `fsGroup`**;
+- CPU and memory requests and limits on every container (OpenShift projects
+  often enforce a quota);
+- container ports above 1024.
+
+The reference Dockerfiles run as a numeric non-root user in group 0
+(`USER 1001:0`; `.NET` uses the image's own `1654:0`) and give group 0 the
+owner's permissions on the app directory. OpenShift starts the container as
+an arbitrary UID in group 0, so the image can still write where it needs to.
+The same image runs unchanged elsewhere.
+
+### Exposure
+
+The Helm chart includes an `Ingress`, **off by default**: the hostname is
+yours, and TruStacks never guesses one. Turn it on in the chart's values:
+
+```yaml
+ingress:
+  enabled: true
+  host: payments.apps.example.com
+  annotations:
+    route.openshift.io/termination: edge
+```
+
+The router turns the Ingress into a managed `Route`. The `termination`
+annotation makes it terminate TLS at the router, and a TLS-enabled Ingress
+also gets HTTP redirected to HTTPS. Two things to know:
+
+- An unknown `termination` value is ignored and falls back to `edge`.
+- `nginx.ingress.kubernetes.io/*` annotations do nothing on the OpenShift
+  router.
+
+TruStacks does not write native `Route` objects. If you need a Route-only
+setting, add your own Route; the agents keep files you added
+([how they read your repo first](/guide/applications#a-proposal-from-your-side)).
+
+## What TruStacks does not do on OpenShift
+
+- **ImageStreams and BuildConfigs.** Image triggers rewrite Deployments and
+  fight ArgoCD. Images are pulled by reference from your registry.
+- **`DeploymentConfig`**, which OpenShift deprecated. Workloads are plain
+  Deployments.
+- **`ProjectRequest`**. See the namespace note above.
+- **OpenShift Pipelines (Tekton).** CI is a GitHub Actions workflow today.
+- **The internal registry** as a declared registry. Use Quay or another
+  registry your cluster can pull from.
+
+## Test it as an ordinary user
+
+When you check an install, use a service account or user without
+cluster-admin. Cluster administrators are granted the `anyuid` SCC, which
+hides exactly the failures this page is about.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| The runner pod never starts; events mention `unable to validate against any security context constraint` | Runner older than 0.2.15-rc24, or `openshift=false` set on OpenShift |
+| An Application exists but never appears in the ArgoCD UI | It is not in the namespace your ArgoCD instance watches; set `gitops_namespace` on the cluster |
+| Sync fails with a permission error on the namespace | The namespace lacks the `managed-by` label, or the instance's AppProject doesn't allow it |
+| Deploy status stays unknown | `observer.argocdNamespace` doesn't match where your Applications live |
+
+## Where to go next
+
+- [Runner install](/installation/cluster): the full install reference
+- [GitOps integration](/installation/gitops): the root Application and how
+  a change reaches the cluster
+- [Runner Helm chart](/reference/runner-helm-chart): every value
