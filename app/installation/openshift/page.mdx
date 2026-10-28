@@ -13,7 +13,7 @@ security policy with no extra grants, and what the agents write for an
 OpenShift cluster runs there unmodified.
 
 <Callout type="info">
-  OpenShift support arrives with runner **0.2.15-rc24**. Older runners set a
+  OpenShift support arrives with runner **0.2.15**. Older runners set a
   fixed user ID that OpenShift rejects, so the pod never starts.
 </Callout>
 
@@ -186,7 +186,7 @@ hides exactly the failures this page is about.
 
 | Symptom | Likely cause |
 |---|---|
-| The runner pod never starts; events mention `unable to validate against any security context constraint` | Runner older than 0.2.15-rc24, or `openshift=false` set on OpenShift |
+| The runner pod never starts; events mention `unable to validate against any security context constraint` | Runner older than 0.2.15, or `openshift=false` set on OpenShift |
 | An Application exists but never appears in the ArgoCD UI | It is not in the namespace your ArgoCD instance watches; set `gitops_namespace` on the cluster |
 | Sync fails with a permission error on the namespace | The namespace lacks the `managed-by` label, or the instance's AppProject doesn't allow it |
 | Deploy status stays unknown | `observer.argocdNamespace` doesn't match where your Applications live |
