@@ -167,6 +167,11 @@ spec:
 kubectl apply -f trustacks-platform-root.yaml
 ```
 
+On OpenShift GitOps, use `openshift-gitops` for both `namespace` fields: that
+is where its default instance reconciles Applications, and where TruStacks
+writes them for an OpenShift cluster
+([Running on OpenShift](/installation/openshift)).
+
 Automated sync on the **root** only creates and removes the child Application
 objects as pull requests merge. It does not deploy workloads; see below.
 Whether the root syncs automatically is your choice.

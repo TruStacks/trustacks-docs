@@ -120,7 +120,7 @@ up healthy.
 | Value | Default | Meaning |
 |---|---|---|
 | `observer.enabled` | `false` | Turn on the read-only ArgoCD watch. |
-| `observer.argocdNamespace` | `argocd` | Namespace where your ArgoCD `Application` resources live. |
+| `observer.argocdNamespace` | empty: `openshift-gitops` on OpenShift, `argocd` elsewhere | Namespace where your ArgoCD `Application` resources live. The observer's RoleBinding is created there, so it must exist. |
 
 ```bash
 --set observer.enabled=true --set observer.argocdNamespace=argocd
@@ -228,7 +228,8 @@ Where the runner gets the constitution, and how it verifies it. See
 | `imagePullSecrets` | Empty. Set if you mirror the images to a private registry. |
 | `resources.requests` | `cpu: 50m`, `memory: 128Mi` in chart 0.2.14; `cpu: 100m`, `memory: 384Mi` from 0.2.15 |
 | `resources.limits` | `cpu: 500m`, `memory: 512Mi` in chart 0.2.14; `cpu: 1`, `memory: 1Gi` from 0.2.15 |
-| `podSecurityContext` | `runAsNonRoot: true`, `runAsUser: 10001`, `fsGroup: 10001` |
+| `openshift` | `auto`: detected from the `security.openshift.io/v1` API. `true` / `false` override it; set one when rendering with `helm template`. See [Running on OpenShift](/installation/openshift). |
+| `podSecurityContext` | `runAsNonRoot: true`, `runAsUser: 10001`, `fsGroup: 10001`, `seccompProfile: RuntimeDefault`. On OpenShift the three IDs are left out, and the `restricted-v2` SCC assigns them. |
 | `securityContext` | No privilege escalation, read-only root filesystem, all capabilities dropped |
 | `nodeSelector`, `tolerations`, `affinity` | Empty |
 

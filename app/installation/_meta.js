@@ -1,5 +1,6 @@
 export default {
   cluster: 'Runner install',
   secrets: 'Credentials and trust boundary',
-  gitops: 'GitOps integration'
+  gitops: 'GitOps integration',
+  openshift: 'Running on OpenShift'
 }

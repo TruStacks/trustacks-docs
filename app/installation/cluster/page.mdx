@@ -18,6 +18,8 @@ guided version.
 
 - Kubernetes **1.28 or newer** (the chart's `kubeVersion` is `>=1.28.0-0`).
   Any conformant distribution, including managed ones and laptop clusters.
+  On **OpenShift** the chart installs under the default `restricted-v2` SCC
+  with no extra grants; see [Running on OpenShift](/installation/openshift).
 - Nodes on `linux/amd64` or `linux/arm64`.
 - `helm` **3.14 or newer** (the upgrade command needs
   `--reset-then-reuse-values`).
@@ -103,7 +105,8 @@ The chart reads `saas.enrollmentTokenSecret.name` (default
 | `saas.enrollmentToken` | empty | Token to put in a chart-created Secret |
 | `saas.enrollmentTokenSecret.name` / `.key` | `trustacks-runner-enrollment` / `enrollment-token` | Where the runner reads the token |
 | `observer.enabled` | `false` | Read-only ArgoCD deploy-status reporting (see below) |
-| `observer.argocdNamespace` | `argocd` | Namespace your ArgoCD Application resources live in |
+| `observer.argocdNamespace` | `argocd`, or `openshift-gitops` on OpenShift | Namespace your ArgoCD Application resources live in |
+| `openshift` | `auto` | Detects OpenShift and leaves user IDs to its SCC; set `true` with `helm template` ([Running on OpenShift](/installation/openshift)) |
 | `mcpSignals.enabled`, `mcpSignals.sources.github.enabled` | `false` | Read-only GitHub observations for the Stack screen, and open alerts as findings in Signals, with a token you put in a Secret (see [`mcpSignals.*`](/reference/runner-helm-chart#mcpsignals)) |
 | `resources` | requests 50m CPU / 128Mi, limits 500m / 512Mi | Pod resources |
 | `imagePullSecrets` | none | For pulling through a private mirror |
