@@ -1,6 +1,6 @@
 ---
 title: Settings (LLM provider)
-description: The Settings screen. Bring your own Anthropic or OpenRouter key. Both route to Claude Sonnet 4.5 or newer.
+description: The Settings screen. Use your own Anthropic or OpenRouter key (during the Beta, TruStacks provides one). Both route to Claude Sonnet 4.5 or newer.
 ---
 
 import { Callout } from 'nextra/components'
@@ -20,8 +20,7 @@ the model spend is on your own account with the provider you choose.
 
 **In the Beta program** you don't need your own key to start: TruStacks gives
 you an Anthropic key at no charge, and you paste it here. It stops working when
-the Beta ends; replace it with your own before then. See
-[LLM provider](/reference/llm-provider).
+the Beta ends. Replace it with your own at least a day before the Beta ends: a new key reaches your runner when the runner next collects it, which can take up to two hours, and agent runs fail if the Beta key has stopped working by then. See [LLM provider](/reference/llm-provider).
 
 ## What you see
 
@@ -110,4 +109,4 @@ Details on the Secret, rotation and egress are in the
 
 - One provider configuration per workspace. There are no per-Application or
   per-agent keys, by design.
-- TruStacks-managed model billing is not offered today; bring your own key.
+- Outside the Beta, TruStacks-managed model billing is not offered; bring your own key. During the Beta, TruStacks provides an Anthropic key at no charge.
