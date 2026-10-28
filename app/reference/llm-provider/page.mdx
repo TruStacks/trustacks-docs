@@ -8,8 +8,17 @@ import { Callout } from 'nextra/components'
 # LLM provider (BYO key)
 
 The agents run on Claude. You bring the API key, so model usage is billed to
-your own account with Anthropic or OpenRouter. Set it under
+your own account with Anthropic or OpenRouter (during the Beta, TruStacks
+provides the key; see below). Set it under
 **Settings** in the sidebar (`#/settings/llm`).
+
+<Callout type="info">
+  **Beta: the model is on us.** In the Beta program, TruStacks gives you an
+  Anthropic API key at no charge, so you don't need your own to start. We send
+  it to you when your workspace is set up; paste it under **Settings** like
+  any other key. It stops working when the Beta ends. Replace it
+   with your own at least a day before the Beta ends: a new key reaches your runner when the runner next collects it, which can take up to two hours, and agent runs fail if the Beta key has stopped working by then.
+</Callout>
 
 ## Providers
 
