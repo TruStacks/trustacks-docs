@@ -33,12 +33,21 @@ export const metadata: Metadata = {
 
 const logo = (
   <span className="flex items-center gap-2">
+    {/* The navy mark for the light theme; the reversed mark for dark, where
+        the navy layers would disappear. Shown and hidden by globals.css. */}
     <Image
+      className="ts-logo-light"
       src="/brand/logo-icon.png"
       alt=""
-      width={28}
+      width={29}
       height={28}
-      priority
+    />
+    <Image
+      className="ts-logo-dark"
+      src="/brand/logo-icon-dark.png"
+      alt=""
+      width={29}
+      height={28}
     />
     <span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
       TruStacks <span style={{ opacity: 0.6, fontWeight: 500 }}>Docs</span>
