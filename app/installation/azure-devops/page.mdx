@@ -1,0 +1,143 @@
+---
+title: Azure DevOps
+description: Connect Azure Repos to TruStacks with a personal access token. The token's scopes and limits, what TruStacks keeps (only whether it works), how it reaches your runner, how to replace it, and how merges and approvals are recorded.
+---
+
+import { Callout } from 'nextra/components'
+
+# Azure DevOps
+
+TruStacks connects to Azure Repos the same way it connects to GitHub: it reads
+your service repos and opens pull requests in your platform repo. A human
+merges. On Azure DevOps it connects with a personal access token (PAT) that
+you create.
+
+<Callout type="info">
+  Azure DevOps support arrives with runner 0.2.16. It has
+  been checked against Microsoft's documented API responses, not yet in a live
+  organization; tell us what you see on your first connection.
+</Callout>
+
+## What you need
+
+- An Azure DevOps **organization** URL, in either form:
+  `https://dev.azure.com/<organization>` or
+  `https://<organization>.visualstudio.com`. Anything else is refused, so the
+  token is never sent to a host you didn't mean.
+- The **project** and the **repository** name.
+- A **personal access token**, created as below.
+- A connected runner ([Runner install](/installation/cluster)). The token is
+  delivered to it, not stored by TruStacks.
+
+Azure DevOps Server (on-premises) is not supported yet.
+
+## Create the token
+
+In Azure DevOps, open **User settings → Personal access tokens → New token**.
+
+| Setting | Value |
+|---|---|
+| **Organization** | The one organization this repo is in. Not "All accessible organizations". |
+| **Expiration** | Short. 90 days or less; you'll paste a new one when it runs out. |
+| **Scopes** | **Code (Read & write)** and **Build (Read)**. For a repo TruStacks only reads (a service repo), **Code (Read)** is enough. |
+
+The token **acts as the person who created it**, so pull requests TruStacks
+opens show that person as the author.
+
+**Never give it** permission to create tags, force push, or bypass branch
+policies. TruStacks doesn't need them, and a token that has them could undo
+the protections the rest of this page relies on.
+
+A service principal (Microsoft Entra), so changes come from a non-human
+identity and there's no token to rotate, is planned.
+
+## Connect the repo
+
+In **Applications**, open the Application and choose **Connect a repo**, pick
+**Service** or **Platform**, then **Azure DevOps**. Enter the organization URL,
+project, repository, a name for the repo in TruStacks, and the token.
+
+### What happens to the token
+
+1. The control plane hands it to your runner **sealed**, so only your runner
+   can open it.
+2. Your runner checks it with one **read-only** call to the repository.
+3. If the check passes, the runner writes it to a Secret in **its own
+   namespace** and confirms.
+
+TruStacks keeps only whether the token works: **configured** or **invalid**.
+The token itself is never stored in the TruStacks database.
+
+### Delivery states
+
+| You see | What it means | What to do |
+|---|---|---|
+| Connected | Your runner has the token and it works. | Nothing. |
+| "Your runner hasn't picked up the token yet" | Delivery is waiting for your runner. It can take a few minutes. | Check **Runners**: the runner must be connected. The repo works as soon as it does. |
+| "The token wasn't picked up before it expired" | The runner didn't collect it in time. | Check the runner is connected, then paste the token again. |
+| "Azure DevOps rejected the token" | The read-only check failed. | Check the token hasn't expired, that it has Code access to this repository, and paste a new one. |
+
+## Replace the token
+
+Open the service and choose **Replace token**, then paste the new token. It's
+delivered and checked the same way, and **your current token keeps working
+until the new one passes the check**. If Azure DevOps refuses the new token,
+you'll see that, and the previous one stays in use. If your runner doesn't pick
+it up in time, the status shows it expired: paste it again. Do this before the
+old token expires.
+
+## Merges and approvals
+
+TruStacks never merges. Protect the platform repo's default branch with
+required reviewers.
+
+Because the token lives in your cluster, your **runner** checks the platform
+repo, about every five minutes, and reports what it sees:
+
+- for each pull request TruStacks opened: whether it merged, when, who
+  completed it, and who approved it (reviewers who voted *Approved*);
+- every completed pull request into the platform repo's default branch, not
+  only TruStacks' own, with the branch-policy results where the token can read
+  them.
+
+That is the record behind "approved by a named person". If the approvals
+can't be read, the merge is still recorded, as *approver not recorded*,
+never as *nobody approved*.
+
+## Pipelines
+
+Connecting Azure Repos doesn't choose your CI. TruStacks writes Azure
+Pipelines files when your Stack file says `ci_cd_platform: azure_pipelines`;
+see [Azure Pipelines](/reference/azure-pipelines). Azure Repos with GitHub
+Actions, or the reverse, works too.
+
+## What TruStacks does not do on Azure DevOps
+
+- **Store your token.** Only its status.
+- **Merge, create tags, force push, or change branch policies.**
+- **Register pipelines, service connections or environments.** Those are
+  yours; the pull request lists them.
+- **Azure DevOps Server** (on-premises), yet.
+
+## Your Stack file
+
+The Stack page shows `environment-profile.yaml` from your Azure Repos platform
+repo. Your runner reads it (the token never leaves your cluster) whenever the
+default branch moves, and at least every six hours, and reports it. Until the
+first report arrives, the Stack page says it's waiting for the runner.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| "use your organization's URL" when connecting | The URL isn't `https://dev.azure.com/<org>` or `https://<org>.visualstudio.com`, or it's plain HTTP. |
+| Connected, but analyses can't clone | The token expired or lost Code access. Replace it. |
+| Pull requests aren't marked merged | The runner isn't connected, or the token lacks Code (Read) on the platform repo. |
+| Approvals show as not recorded | The token can't read the pull request's reviewers; check its Code scope on the platform repo. |
+
+## Where to go next
+
+- [Azure Pipelines](/reference/azure-pipelines): what TruStacks writes and
+  what you set up
+- [Connect a repo](/reference/connect-a-repo): service and platform repo
+  roles
