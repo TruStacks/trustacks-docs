@@ -3,5 +3,6 @@ export default {
   secrets: 'Credentials and trust boundary',
   gitops: 'GitOps integration',
   openshift: 'Running on OpenShift',
-  'azure-devops': 'Azure DevOps'
+  'azure-devops': 'Azure DevOps',
+  gitlab: 'GitLab'
 }
