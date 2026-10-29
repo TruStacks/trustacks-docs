@@ -13,7 +13,7 @@ merges. On Azure DevOps it connects with a personal access token (PAT) that
 you create.
 
 <Callout type="info">
-  Azure DevOps support arrives with the runner release after 0.2.15. It has
+  Azure DevOps support arrives with runner 0.2.16. It has
   been checked against Microsoft's documented API responses, not yet in a live
   organization; tell us what you see on your first connection.
 </Callout>
@@ -79,9 +79,12 @@ The token itself is never stored in the TruStacks database.
 
 ## Replace the token
 
-Run **Connect a repo** again for the same repo with the **same name in
-TruStacks**, and paste the new token. It's delivered and checked the same way,
-and replaces the old one. Do this before the old token expires.
+Open the service and choose **Replace token**, then paste the new token. It's
+delivered and checked the same way, and **your current token keeps working
+until the new one passes the check**. If Azure DevOps refuses the new token,
+you'll see that, and the previous one stays in use. If your runner doesn't pick
+it up in time, the status shows it expired: paste it again. Do this before the
+old token expires.
 
 ## Merges and approvals
 
@@ -115,8 +118,13 @@ Actions, or the reverse, works too.
 - **Register pipelines, service connections or environments.** Those are
   yours; the pull request lists them.
 - **Azure DevOps Server** (on-premises), yet.
-- **Show your Stack file on the Stack page** from an Azure Repos platform
-  repo, yet: the control plane reads it through the GitHub API only today.
+
+## Your Stack file
+
+The Stack page shows `environment-profile.yaml` from your Azure Repos platform
+repo. Your runner reads it (the token never leaves your cluster) whenever the
+default branch moves, and at least every six hours, and reports it. Until the
+first report arrives, the Stack page says it's waiting for the runner.
 
 ## Troubleshooting
 
