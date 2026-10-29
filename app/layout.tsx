@@ -41,7 +41,6 @@ const logo = (
       alt=""
       width={29}
       height={28}
-      priority
     />
     <Image
       className="ts-logo-dark"
@@ -49,7 +48,6 @@ const logo = (
       alt=""
       width={29}
       height={28}
-      priority
     />
     <span style={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
       TruStacks <span style={{ opacity: 0.6, fontWeight: 500 }}>Docs</span>
