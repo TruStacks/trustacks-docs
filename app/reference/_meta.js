@@ -4,6 +4,7 @@ export default {
   'connect-a-repo': 'Connect a repo',
   'platform-repo-layout': 'Platform repo layout',
   'environment-profile': 'Environment profile',
+  'azure-pipelines': 'Azure Pipelines',
   'maturity-scoring': 'Maturity scoring',
   constitution: 'Constitution',
   'policy-in-force': 'Policy in force',

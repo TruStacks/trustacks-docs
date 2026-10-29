@@ -82,21 +82,26 @@ repo in the installation grant**:
 protection or a ruleset, and leave the TruStacks app out of the bypass list.
 
 <Callout type="info">
-  **Providers.** GitHub, through the TruStacks GitHub App, is the only
-  provider for hosted workspaces. Local development uses an in-cluster
-  Gitea. GitLab and Azure DevOps are not connectable yet.
+  **Providers.** Hosted workspaces connect **GitHub**, through the TruStacks
+  GitHub App, and **Azure DevOps** (Azure Repos), with a personal access
+  token: see [Azure DevOps](/installation/azure-devops). Local development
+  uses an in-cluster Gitea. GitLab is not connectable yet.
 </Callout>
 
 ## What crosses the network
 
-- **The runner clones and reads your code inside your cluster.** It uses a
-  GitHub App installation token that the control plane mints, valid for about
-  an hour and sealed to your runner.
+- **The runner clones and reads your code inside your cluster.** On GitHub it
+  uses a GitHub App installation token that the control plane mints, valid
+  for about an hour and sealed to your runner. On Azure DevOps it uses your
+  personal access token, delivered sealed to your runner and kept only in its
+  namespace.
 - **The control plane reads one file directly**: `environment-profile.yaml`
-  from the platform repo root, through the GitHub API.
+  from the platform repo root, through the GitHub API. It can't read it from
+  an Azure Repos platform repo yet.
 - **Analysis results, generated artifacts, and verdicts flow back** to the
   control plane. Your repository is not uploaded.
-- **The pull request goes through GitHub**, opened by the runner.
+- **The pull request goes through your git host** (GitHub or Azure Repos),
+  opened by the runner.
 
 The file contents the agents read are sent to your LLM provider under your
 key. See [Architecture](/reference/architecture#what-leaves-your-cluster).

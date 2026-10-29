@@ -1,0 +1,145 @@
+---
+title: Azure Pipelines
+description: What TruStacks writes when your CI is Azure Pipelines. The extends template in your platform repo, the caller for your service repo, how steps are pinned, what you set up outside YAML, and what the policy gate can and can't verify from a pipeline file.
+---
+
+import { Callout } from 'nextra/components'
+
+# Azure Pipelines
+
+When your Stack file's primary CI platform is Azure Pipelines, the DevOps
+Engineer writes Azure Pipelines files instead of GitHub Actions workflows:
+
+```yaml
+ci_cd_platform:
+  - provider: azure_pipelines
+    primary: true
+```
+
+Everything else is the same: the same test and lint commands per framework,
+the same image reference, the same Helm or Kustomize files, the same policy
+gate, and a human merges.
+
+<Callout type="info">
+  Azure Pipelines support arrives with the runner release after 0.2.15. The
+  files are checked against the policy gate and Microsoft's documented YAML,
+  not yet run in a live organization. Task versions in particular should be
+  confirmed in yours (see [Pinning](#pinning)).
+</Callout>
+
+## What TruStacks writes
+
+All in the **platform repo**. TruStacks never writes to your service repos.
+
+| File | What it is |
+|---|---|
+| `azure-pipelines/templates/ci-<service>.yml` | The shared pipeline for one service: a `test` stage, then a `build` stage that pushes the image. An **`extends` template**. |
+| `azure-pipelines/templates/steps/` | Step fragments the template includes, if any. |
+
+A deploy pipeline for clusters without a GitOps controller is not written yet;
+on Kubernetes, ArgoCD deploys from the platform repo as on GitHub.
+
+### Why `extends`
+
+Microsoft recommends `extends` templates for the most secure pipelines, and
+only `extends` works with the **Required template** check. With that check on
+your registry connection and prod environment, a pipeline that doesn't use the
+template can't push images or deploy.
+
+## The caller in your service repo
+
+You add one file to each service repo, once, and register it as a pipeline.
+The pull request gives you this with your names filled in:
+
+```yaml
+# azure-pipelines.yml in the SERVICE repo
+trigger:
+  branches:
+    include:
+      - main
+resources:
+  repositories:
+    - repository: platform
+      type: git
+      name: <project>/<platform-repo>
+      ref: <platform-commit-sha>
+extends:
+  template: azure-pipelines/templates/ci-<service>.yml@platform
+  parameters:
+    containerRegistry: <registry-service-connection>
+```
+
+**Pin `ref` to a commit.** After the pull request merges, set `ref` to its
+merge commit. A pinned template can't change under you; moving it is a
+reviewed change.
+
+If a commit SHA doesn't resolve in your organization, use an annotated tag
+instead, created **by a person**, with **Force push denied on All tags**.
+Azure Repos has no tag policies, and a tag's creator can move it, so the
+TruStacks token must never create it.
+
+## Pinning
+
+| What | How it's pinned | What that guarantees |
+|---|---|---|
+| The template | `ref:` a platform-repo commit (or a protected tag) | It can't change without a reviewed change. |
+| Built-in tasks | A **full** version, `Name@X.Y.Z`, from an allowlist | **Version-pinned, not immutable.** A task version is a name, not a content hash, and Microsoft retires old versions. |
+| Everything else (toolchains, linters, scanners) | Script steps in a container pinned by digest, `image@sha256:…` | The exact image bytes. |
+
+Marketplace tasks are never used.
+
+### Task allowlist
+
+| Task | Version written | Used for |
+|---|---|---|
+| `Docker` | `2.282.0` | Build and push the image through your registry service connection |
+| `PublishTestResults` | `2.282.0` | Show test results on the run |
+
+These versions come from Microsoft's task definitions (October 2026).
+Microsoft rolls versions out gradually and you can only use versions your
+organization has, so **confirm them in yours**. The gate requires an
+allowlisted task at a full version, not these exact numbers.
+
+## What you set up outside YAML
+
+A pipeline file can't do these, so the pull request lists them as a
+checklist:
+
+- [ ] Register the service repo's `azure-pipelines.yml` as a pipeline.
+- [ ] Give the service project's Build Service identity **Read** on the
+      platform repo, so it can load the template.
+- [ ] Create the registry service connection with **workload identity
+      federation** (no secret), and name it in the caller's
+      `containerRegistry`.
+- [ ] Add a **Required template** check on the registry service connection
+      and on the prod environment, naming the template.
+- [ ] Add **approvals** to the prod environment.
+- [ ] Turn on **Limit job authorization scope** and **Protect access to
+      repositories in YAML pipelines**.
+- [ ] Disable **Marketplace tasks** (Organization settings → Pipelines → Task
+      restrictions).
+- [ ] Protect the platform repo's default branch with **required reviewers**.
+
+## What the gate verifies, and what it can't
+
+The policy gate reads the files TruStacks wrote. Some things are in those
+files; others are settings in Azure DevOps that no file shows.
+
+| Verified from the pipeline files | Not visible in YAML |
+|---|---|
+| A job runs the framework's test command | Approvals and checks on environments |
+| A job runs the lint command | Required template checks |
+| Tasks are allowlisted, at a full version | Branch policies and required reviewers |
+| Containers are pinned by digest | Job authorization scope and repository protection |
+| A prod deploy job names an environment | Tag permissions |
+| No GitHub Actions files on an Azure proposal, and the reverse | Whether the pipeline is registered or has run |
+
+A proposal passing the gate says nothing about the right-hand column. Where
+TruStacks can read those settings, it reports them as **observed**, never as
+verified by the pull request.
+
+## Where to go next
+
+- [Azure DevOps](/installation/azure-devops): connecting Azure Repos
+- [Environment profile](/reference/environment-profile): `ci_cd_platform`
+- [Constitution](/reference/constitution): the rules the gate applies
