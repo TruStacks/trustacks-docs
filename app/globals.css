@@ -194,3 +194,14 @@ html.dark .ts-model__label--gate {
   }
 }
 
+
+/* Navbar mark: one image per theme (layout.tsx). */
+.ts-logo-dark {
+  display: none;
+}
+html.dark .ts-logo-light {
+  display: none;
+}
+html.dark .ts-logo-dark {
+  display: block;
+}
