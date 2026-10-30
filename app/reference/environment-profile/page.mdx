@@ -93,7 +93,7 @@ Unknown fields in an entry are rejected.
 
 | Category | Accepted `provider` values |
 |---|---|
-| `ci_cd_platform` | `github_actions`, `azure_pipelines`, `gitlab_ci`, `tekton`, `jenkins`, `circleci`. `azure_devops` is still accepted for one release and reads as `azure_pipelines`. The primary entry decides which CI files TruStacks writes ([Azure Pipelines](/reference/azure-pipelines)). |
+| `ci_cd_platform` | `github_actions`, `azure_pipelines`, `gitlab_ci`, `tekton`, `jenkins`, `circleci`. `azure_devops` is still accepted for one release and reads as `azure_pipelines`. The primary entry decides which CI files TruStacks writes ([Azure Pipelines](/reference/azure-pipelines), [GitLab CI](/reference/gitlab-ci)). |
 | `container_registry` | `ecr`, `acr`, `gcr`, `quay`, `harbor`, `artifactory`, `docker_hub`, `ghcr` |
 | `image_scanning` | `trivy`, `clair`, `snyk_container`, `anchore`, `aqua` |
 | `sast_sca` | `sonarqube`, `snyk_code`, `checkmarx`, `semgrep`, `github_advanced_security` |

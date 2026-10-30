@@ -21,10 +21,9 @@ the same image reference, the same Helm or Kustomize files, the same policy
 gate, and a human merges.
 
 <Callout type="info">
-  Azure Pipelines support arrives with runner 0.2.16. The
-  files are checked against the policy gate and Microsoft's documented YAML,
-  not yet run in a live organization. Task versions in particular should be
-  confirmed in yours (see [Pinning](#pinning)).
+  **Preview:** works end to end in our tests; not yet validated on a live
+  Azure DevOps environment. Tell us what you find. Task versions in particular
+  should be confirmed in your organization (see [Pinning](#pinning)).
 </Callout>
 
 ## What TruStacks writes
@@ -141,5 +140,6 @@ verified by the pull request.
 ## Where to go next
 
 - [Azure DevOps](/installation/azure-devops): connecting Azure Repos
+- [GitLab CI](/reference/gitlab-ci): the same shape on GitLab
 - [Environment profile](/reference/environment-profile): `ci_cd_platform`
 - [Constitution](/reference/constitution): the rules the gate applies

@@ -13,9 +13,8 @@ repo. A human merges. On GitLab it connects with an access token that you
 create, on gitlab.com or on your own GitLab instance.
 
 <Callout type="info">
-  GitLab support arrives with the runner release after 0.2.16. It has been
-  checked against GitLab's documented API responses, not yet against a live
-  GitLab instance; tell us what you see on your first connection.
+  **Preview:** works end to end in our tests; not yet validated on a live
+  GitLab environment. Tell us what you find.
 </Callout>
 
 ## What you need
@@ -119,19 +118,23 @@ runner.
 
 ## Pipelines
 
-Connecting GitLab doesn't choose your CI. **TruStacks doesn't write GitLab CI
-(`.gitlab-ci.yml`) yet; it's coming.** Until then, proposals write Azure
-Pipelines files when your Stack file says `ci_cd_platform: azure_pipelines`,
-and GitHub Actions workflows otherwise, **including when it says
-`gitlab_ci`**. Neither runs in GitLab CI, so on GitLab today the merge
-requests are most useful for the deployment files (Helm or Kustomize, and the
-ArgoCD Application); review the CI files they carry accordingly.
+Connecting GitLab doesn't choose your CI; your Stack file does. When it says
+`ci_cd_platform: gitlab_ci`, proposals write a GitLab CI pipeline to the
+platform repo at `.gitlab/ci/ci-<service>.yml`, and your service repo's
+`.gitlab-ci.yml` includes it at a commit SHA. TruStacks never writes the
+platform repo's root `.gitlab-ci.yml` or anything in the service repo. See
+[GitLab CI](/reference/gitlab-ci) for the jobs, the include, the policy check
+and the runner and permissions it needs.
+
+When it says `azure_pipelines`, proposals write Azure Pipelines files, and
+otherwise GitHub Actions workflows. Neither runs in GitLab CI.
 
 ## What TruStacks does not do on GitLab
 
 - **Store your token.** Only its status.
 - **Merge, or change protected branches or approval rules.**
-- **Write GitLab CI** files, yet.
+- **Write to your service repos**, including their `.gitlab-ci.yml`. You add
+  the include yourself.
 
 ## Troubleshooting
 
@@ -148,4 +151,5 @@ ArgoCD Application); review the CI files they carry accordingly.
 
 - [Connect a repo](/reference/connect-a-repo): service and platform repo
   roles
+- [GitLab CI](/reference/gitlab-ci): the pipeline TruStacks writes
 - [Azure DevOps](/installation/azure-devops): the same flow for Azure Repos

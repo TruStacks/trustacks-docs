@@ -1,0 +1,216 @@
+---
+title: GitLab CI
+description: What TruStacks writes when your CI is GitLab CI. The shared pipeline in your platform repo, the include for your service repo, its jobs, how images and includes are pinned, the report-only policy check and how to enforce it, the runner and permissions it needs, and what the policy gate can and can't verify from a pipeline file.
+---
+
+import { Callout } from 'nextra/components'
+
+# GitLab CI
+
+When your Stack file's primary CI platform is GitLab CI, the DevOps Engineer
+writes a GitLab CI pipeline instead of a GitHub Actions workflow:
+
+```yaml
+ci_cd_platform:
+  - provider: gitlab_ci
+    primary: true
+```
+
+Everything else is the same: the same test and lint commands per framework,
+the same image reference, the same Helm or Kustomize files, the same policy
+gate, and a human merges.
+
+<Callout type="info">
+  **Preview:** works end to end in our tests; not yet validated on a live
+  GitLab environment. Tell us what you find.
+</Callout>
+
+## What TruStacks writes
+
+All in the **platform repo**. TruStacks never writes to your service repos.
+
+| File | What it is |
+|---|---|
+| `.gitlab/ci/ci-<service>.yml` | The shared pipeline for one service: a `test` stage, then a `build` stage that pushes the image. One file per service, so the services in an Application don't collide. |
+| `.gitlab/ci/steps/` | Fragments the pipeline includes with `include: local`, if any. |
+
+TruStacks **never writes the platform repo's own root `.gitlab-ci.yml`**. The
+gate allows `.gitlab/ci/` only, and the agent's emit tool refuses the root
+file. Your platform repo's own pipeline stays yours.
+
+A deploy pipeline for clusters without a GitOps controller is not written yet;
+on Kubernetes, ArgoCD deploys from the platform repo as on GitHub.
+
+## The include in your service repo
+
+You add one file to each service repo, once. The merge request gives you this
+with your names filled in:
+
+```yaml
+# .gitlab-ci.yml in the SERVICE repo.
+include:
+  - project: <group>/<platform-repo>
+    ref: <platform-commit-sha>   # the full 40-character commit SHA
+    file: .gitlab/ci/ci-<service>.yml
+```
+
+**Pin `ref` to a commit.** After the merge request merges, set `ref` to its
+merge commit, the full 40-character SHA. GitLab accepts a branch, a tag or a
+commit SHA in `ref`, and only a SHA can't move. A pinned pipeline can't change
+under you; moving it is a reviewed change.
+
+**Don't redefine `stages:` or `workflow:`** in the service repo's
+`.gitlab-ci.yml`. The included pipeline defines both, and a definition in the
+including file replaces it: the jobs could land in stages that don't exist, or
+run in pipelines they weren't meant for.
+
+The included jobs run on the **service repo's** source, in the service repo's
+pipelines.
+
+CI/CD components (`include: component`) aren't used. A component is addressed
+by a version, and only a commit SHA there is immutable; `include: project` at a
+SHA is the same file at the same guarantee, without a catalog.
+
+## Jobs
+
+| Job | Stage | Runs on | What it does |
+|---|---|---|---|
+| `policy_check` | `test` | Every pipeline | Checks the repo's delivery files against the signed constitution. Report-only by default (see [The policy check](#the-policy-check)). |
+| `test` | `test` | Every pipeline | The framework's test and lint commands, with test results reported to the merge request. |
+| `build_check` | `build` | Merge request pipelines | Builds the image with Buildah. No login, no push, no credential: a Dockerfile that doesn't build fails the merge request, not the default branch. |
+| `build` | `build` | The default branch | Builds and pushes the image, tagged with the commit SHA. |
+
+The pipeline runs merge request pipelines, and branch pipelines when no merge
+request is open, never both for one push. Jobs use `rules:`, not `only:` or
+`except:`, which GitLab deprecates.
+
+Jobs are `interruptible`, so GitLab can cancel a pipeline a newer one has made
+redundant. The `build` job is not: once a push has started, it runs to the
+end.
+
+### Pushing the image
+
+`build` pushes only from the default branch, so merge request pipelines never
+push and never see a registry credential. It logs in with GitLab's predefined
+`$CI_REGISTRY_USER` and `$CI_REGISTRY_PASSWORD`, the job's own short-lived
+token. No password or token is added to YAML.
+
+That token can push only to the project's own GitLab container registry. If
+your image repository is somewhere else, the merge request says so: replace
+the login with that registry's OIDC federation (`id_tokens`), never a stored
+password.
+
+## Pinning
+
+| What | How it's pinned | What that guarantees |
+|---|---|---|
+| Every job `image:` and `services:` image | By digest, `image@sha256:…`. Never a tag alone, never `latest`. | The exact image bytes. |
+| Includes | `include: local`, or `include: project` / `include: component` at a 40-character commit SHA. Never `include: remote` or `include: template`. | An included file can't change under the same name. |
+| The pipeline itself | The service repo includes it at a platform-repo commit SHA | It can't change without a reviewed change. |
+
+GitLab CI has no built-in tasks: every step is a script line in a job whose
+image is pinned. The gate checks all of the above.
+
+## The policy check
+
+`policy_check` runs the same signed constitution your TruStacks runner uses on
+the repo's delivery files (Dockerfiles, CI pipelines, ECS task
+definitions). It verifies the bundle's signature before it
+evaluates anything, and it fails closed: a delivery file it couldn't check
+counts against enforce.
+
+**It's report-only by default.** Findings show the job as a **warning**: the
+check exits with code 3, and the job's `allow_failure: exit_codes: [3]` lets
+the pipeline continue. Nothing is blocked until you choose to block it.
+
+**To enforce it, set a project CI/CD variable**, not YAML:
+
+1. In the service repo, open **Settings → CI/CD → Variables** and add
+   `TRUSTACKS_ENFORCE_POLICY` with the value `true`. Leave it **not
+   protected**, so merge request pipelines see it.
+2. Turn on **Pipelines must succeed** for the service repo's merge requests.
+
+Findings then exit 1 and fail the pipeline. The pipeline file sets the
+variable to `"false"`, and a merge request can change the file, but it can't
+change a project variable. That is why the switch lives in settings.
+
+**It's safe on merge requests from forks.** It only fetches the repo, needs no
+secret, and uses no variable except the enforce switch.
+
+## Runner
+
+`build_check` and `build` run Buildah's image, which **runs as root**. They
+need either:
+
+- a **privileged runner**. GitLab.com's hosted runners are; or
+- a **self-managed runner** that permits user namespaces or maps a non-root
+  user.
+
+On a runner that allows neither, the build jobs fail.
+
+## Permissions
+
+**Everyone who triggers the service repo's pipelines needs at least the
+Reporter role on the platform repo.** GitLab resolves `include: project` with
+the permissions of the user who triggers the pipeline, not the job token. A
+pipeline started by someone who can't read the platform repo fails before it
+runs.
+
+**Merge requests from forks.** GitLab runs a fork's merge request pipeline in
+the fork by default. If the platform repo is private, a merge request from a
+contributor who can't read it **fails when the pipeline is created**, because
+the include can't be read. Either give outside contributors Reporter on the
+platform repo, or run their pipelines in the parent project after reviewing
+the change. A pipeline run in the parent project gets the parent's runners and
+variables, so always review first.
+
+## What you set up outside YAML
+
+A pipeline file can't do these, so the merge request lists them as a
+checklist:
+
+- [ ] Add the `.gitlab-ci.yml` above to the service repo, with `ref` set to
+      the merge request's merge commit (the full 40-character SHA).
+- [ ] Give everyone who triggers the service repo's pipelines at least
+      **Reporter** on the platform repo.
+- [ ] Run the build jobs on a runner that allows Buildah's image to run as
+      root (see [Runner](#runner)).
+- [ ] Protect the default branch of both repos (**Settings → Repository →
+      Protected branches**): no direct pushes, no force pushes.
+- [ ] Require merge request approvals on the platform repo, and prevent
+      approval by the merge request's author.
+- [ ] Create a protected environment for prod (**Settings → CI/CD → Protected
+      environments**) with required approvals, so a deploy job naming
+      `environment: prod` waits for a person.
+- [ ] Keep registry and deploy credentials in protected, masked variables (or
+      OIDC `id_tokens` federation), never in YAML.
+- [ ] Leave fork merge request pipelines running in the fork (the default),
+      and review the change before running one in the parent project.
+- [ ] When you're ready to block merges, set `TRUSTACKS_ENFORCE_POLICY` and
+      turn on **Pipelines must succeed** (see [The policy
+      check](#the-policy-check)).
+
+## What the gate verifies, and what it can't
+
+The policy gate reads the files TruStacks wrote. Some things are in those
+files; others are settings in GitLab that no file shows.
+
+| Verified from the pipeline files | Not visible in YAML |
+|---|---|
+| A job runs the framework's test command | Protected branches and merge request approval rules on either repo |
+| A job runs the lint command | Protected environments and their approvers |
+| Images are pinned by digest | Who can read the platform repo, which every pipeline's `include: project` needs |
+| Includes are local or pinned to a commit SHA | Whether the runner allows Buildah's image to run as root |
+| A prod deploy job names an environment | Which variables are protected and masked, and whether fork pipelines may run in the parent project |
+| Files are under `.gitlab/ci/`, and no GitHub Actions files on a GitLab proposal | That the service repo includes the pipeline at a commit SHA, and that "Pipelines must succeed" is on |
+
+A proposal passing the gate says nothing about the right-hand column. Where
+TruStacks can read those settings, it reports them as **observed**, never as
+verified by the merge request.
+
+## Where to go next
+
+- [GitLab](/installation/gitlab): connecting GitLab
+- [Azure Pipelines](/reference/azure-pipelines): the same shape on Azure DevOps
+- [Environment profile](/reference/environment-profile): `ci_cd_platform`
+- [Constitution](/reference/constitution): the rules the gate applies
