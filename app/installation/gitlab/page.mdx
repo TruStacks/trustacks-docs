@@ -1,0 +1,170 @@
+---
+title: GitLab
+description: Connect GitLab (gitlab.com or self-managed) to TruStacks with an access token. Which token to create, its scopes and role, what TruStacks keeps (only whether it works), how it reaches your runner, how to replace it, and how merges and approvals are recorded.
+---
+
+import { Callout } from 'nextra/components'
+
+# GitLab
+
+TruStacks connects to GitLab the same way it connects to GitHub and Azure
+DevOps: it reads your service repos and opens merge requests in your platform
+repo. A human merges. On GitLab it connects with an access token that you
+create, on gitlab.com or on your own GitLab instance.
+
+<Callout type="info">
+  **Preview:** works end to end in our tests; not yet validated on a live
+  GitLab environment. Tell us what you find.
+</Callout>
+
+## What you need
+
+- The **GitLab URL**: `https://gitlab.com`, or your self-managed instance's
+  URL, for example `https://gitlab.example.com`, or
+  `https://example.com/gitlab` if GitLab runs under a path. It must be
+  **HTTPS**, with no username or password in it, no query and no fragment,
+  and without `/api/v4` on the end, so the token is never sent to a host you
+  didn't mean.
+- The project's **full path**, including every group it sits in, for example
+  `acme/platform` or `acme/delivery/platform`. Nested groups work.
+- An **access token**, created as below.
+- A connected runner ([Runner install](/installation/cluster)). The token is
+  delivered to it, not stored by TruStacks.
+
+## Create the token
+
+**Prefer a project or group access token.** It belongs to a bot user that is
+a member of only that project or group. GitLab treats these tokens as internal
+users, so on a self-managed instance a token can also reach every project with
+**Internal** visibility; keep the platform repo Private if that matters to
+you. On gitlab.com these need the Premium or
+Ultimate tier; on a self-managed instance every tier has them. Create one in
+the project (or group) under **Settings → Access tokens**.
+
+A **personal access token** works too, but it acts as the person who created
+it, with everything that person can reach, and merge requests show that
+person as the author.
+
+| Setting | Platform repo (TruStacks opens merge requests) | Service repo (TruStacks only reads) |
+|---|---|---|
+| **Scopes** | `api` and `write_repository` | `read_api` and `read_repository` |
+| **Role** | **Developer**, so it can push a branch and open a merge request | **Reporter**. Guest can't read a private repo's code. |
+| **Expiration** | Short. GitLab allows up to 365 days; you'll paste a new one when it runs out. | Same |
+
+GitLab has no narrower scope than `api` that can open a merge request, which
+is why the platform repo's token needs it.
+
+**Never give it the Maintainer or Owner role.** TruStacks doesn't merge, and
+your protected branches should stay out of its reach. The role alone doesn't
+guarantee that: a protected branch can allow Developers to push or merge. Set
+the platform repo's default branch to **Allowed to push and merge: No one**
+and **Allowed to merge: Maintainers** (or named people), so the token can't
+push to it or merge into it.
+
+## Connect the repo
+
+In **Applications**, open the Application and choose **Connect a repo**, pick
+**Service** or **Platform**, then **GitLab**. Enter the GitLab URL, the project
+path, a name for the repo in TruStacks, the token type (project or group
+access token, or personal access token), and the token.
+
+### What happens to the token
+
+1. The control plane hands it to your runner **sealed**, so only your runner
+   can open it.
+2. Your runner checks it with one **read-only** call to the project.
+3. If the check passes, the runner writes it to a Secret in **its own
+   namespace** and confirms.
+
+TruStacks keeps only whether the token works: **configured** or **invalid**.
+The token itself is never stored in the TruStacks database and never logged.
+
+### Delivery states
+
+| You see | What it means | What to do |
+|---|---|---|
+| Connected | Your runner has the token and it works. | Nothing. |
+| "Your runner hasn't picked up the token yet" | Delivery is waiting for your runner. It can take a few minutes. | Check **Runners**: the runner must be connected. The repo works as soon as it does. |
+| "The token wasn't picked up before it expired" | The runner didn't collect it in time. | Check the runner is connected, then paste the token again. |
+| "GitLab rejected the token" | The read-only check failed. | Check it hasn't expired or been revoked, that it can see this project, and that it has the scopes above, then paste a new one. |
+
+## Replace the token
+
+Open the service and choose **Replace token**, then paste the new token. It's
+delivered and checked the same way, and **your current token keeps working
+until the new one passes the check**. If GitLab refuses the new token, you'll
+see that, and the previous one stays in use. If your runner doesn't pick it up
+in time, the status shows it expired: paste it again. Do this before the old
+token expires.
+
+## Merges and approvals
+
+TruStacks never merges. Protect the platform repo's default branch and require
+approvals.
+
+Because the token lives in your cluster, your **runner** checks the platform
+repo and reports what it sees:
+
+- for each merge request TruStacks opened: whether it merged, when, who merged
+  it, and who approved it;
+- every merge request merged into the platform repo's default branch, not only
+  TruStacks' own, with the same details.
+
+GitLab reports approvals on every tier, including Free; approval **rules**
+(how many approvals are required) are a paid feature, and TruStacks doesn't
+need them to record who approved. That is the record behind "approved by a
+named person". If the approvals can't be read, the merge is still recorded, as
+*approver not recorded*, never as *nobody approved*.
+
+## Your Stack file
+
+The Stack page shows `environment-profile.yaml` from your GitLab platform
+repo. Your runner reads it (the token never leaves your cluster) and reports
+it. Until the first report arrives, the Stack page says it's waiting for the
+runner.
+
+## Pipelines
+
+Connecting GitLab doesn't choose your CI; your Stack file does. When its
+primary CI platform is GitLab CI:
+
+```yaml
+ci_cd_platform:
+  - provider: gitlab_ci
+    primary: true
+```
+
+proposals write a GitLab CI pipeline to the
+platform repo at `.gitlab/ci/ci-<service>.yml`, and your service repo's
+`.gitlab-ci.yml` includes it at a commit SHA. TruStacks never writes the
+platform repo's root `.gitlab-ci.yml` or anything in the service repo. See
+[GitLab CI](/reference/gitlab-ci) for the jobs, the include, the policy check
+and the runner and permissions it needs.
+
+When the primary provider is `azure_pipelines`, proposals write Azure
+Pipelines files, and otherwise GitHub Actions workflows. Neither runs in GitLab CI.
+
+## What TruStacks does not do on GitLab
+
+- **Store your token.** Only its status.
+- **Merge, or change protected branches or approval rules.**
+- **Write to your service repos**, including their `.gitlab-ci.yml`. You add
+  the include yourself.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| "the GitLab URL must start with https://" | The URL is plain HTTP, or has no host. |
+| "use the GitLab instance URL" | The URL ends in `/api/v4`, or points inside a project (`/-/`). Use the instance URL. |
+| "the project path is the group and project" | Only the project name was given; include its group, for example `acme/platform`. |
+| Connected, but analyses can't clone | The token expired, was revoked, or lost `read_repository`. Replace it. |
+| Merge requests can't be opened | The platform repo's token lacks `api` or `write_repository`, or its role is below Developer. |
+| Approvals show as not recorded | The token can't read the merge request's approvals; check it can see the platform repo. |
+
+## Where to go next
+
+- [Connect a repo](/reference/connect-a-repo): service and platform repo
+  roles
+- [GitLab CI](/reference/gitlab-ci): the pipeline TruStacks writes
+- [Azure DevOps](/installation/azure-devops): the same flow for Azure Repos

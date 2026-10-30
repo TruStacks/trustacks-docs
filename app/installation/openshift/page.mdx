@@ -142,8 +142,9 @@ The same image runs unchanged elsewhere.
 
 ### Exposure
 
-The Helm chart includes an `Ingress`, **off by default**: the hostname is
-yours, and TruStacks never guesses one. Turn it on in the chart's values:
+With Helm, the chart includes an `Ingress`, **off by default**: the hostname
+is yours, and TruStacks never guesses one. Turn it on in the chart's values
+(Kustomize: see [below](#with-kustomize)):
 
 ```yaml
 ingress:
@@ -160,6 +161,45 @@ also gets HTTP redirected to HTTPS. Two things to know:
 - An unknown `termination` value is ignored and falls back to `edge`.
 - `nginx.ingress.kubernetes.io/*` annotations do nothing on the OpenShift
   router.
+
+#### With Kustomize
+
+Kustomize has no "off" switch, so the Ingress ships as an **opt-in add-on**: a
+Kustomize component at `gitops/<application>/<service>/components/ingress/`
+(`kustomization.yaml` with `kind: Component`, and `ingress.yaml`). **No
+overlay references it, so nothing in it deploys until you add it.** On an
+OpenShift cluster the component's Ingress carries
+`route.openshift.io/termination: edge`, so the router builds a TLS Route that
+redirects HTTP to HTTPS, as above.
+
+To expose the service on a cluster, add this to that cluster's overlay
+(`overlays/<cluster>/kustomization.yaml`), with your own host:
+
+```yaml
+components:
+  - ../../components/ingress
+patches:
+  - target: {kind: Ingress, name: <service>}
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: <your-host>
+      # Only if your cluster needs one:
+      # - op: add
+      #   path: /spec/ingressClassName
+      #   value: <class>
+```
+
+The component's host is the placeholder `change-me.invalid`, which can never
+resolve, so an Ingress you enable without setting a host serves nothing rather
+than a guessed or wildcard host. TruStacks refuses to open a proposal whose
+overlay enables the component with the placeholder still in place.
+
+The host is yours to serve: create a **DNS record** that points it at your
+ingress controller or OpenShift router, and make sure a **TLS certificate**
+matches it. On OpenShift, a host under the cluster's apps domain (for example
+`*.apps.<cluster-domain>`) is covered by the router's default wildcard DNS and
+certificate; any other host needs its own record and certificate.
 
 TruStacks does not write native `Route` objects. If you need a Route-only
 setting, add your own Route; the agents keep files you added

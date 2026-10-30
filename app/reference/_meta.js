@@ -5,6 +5,7 @@ export default {
   'platform-repo-layout': 'Platform repo layout',
   'environment-profile': 'Environment profile',
   'azure-pipelines': 'Azure Pipelines',
+  'gitlab-ci': 'GitLab CI',
   'maturity-scoring': 'Maturity scoring',
   constitution: 'Constitution',
   'policy-in-force': 'Policy in force',
