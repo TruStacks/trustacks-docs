@@ -580,9 +580,9 @@ Once the loop is running, these happen without another setup step:
 - **Git providers.** GitHub is the supported provider for real repos.
 - **Monorepos** connect as one service.
 - **Kustomize** renderer support is Beta; Helm is the default.
-- **Customer overlay rules** can be drafted in the Workspace chat and built
-  with the CLI, but there is no way yet to deliver your own signed rules to a
-  hosted runner.
+- **Customer overlay rules** need runner 0.2.17 or later, which loads them
+  from `rules/` in your platform repo. See
+  [Adding your own rule](/guide/rules#adding-your-own-rule).
 - **Billing.** A Beta code makes the first 45 days free. The strip at the top
   of the app shows **Free until** a date with the days left; add a card
   under **Billing** → **Manage billing** before then to keep going. See

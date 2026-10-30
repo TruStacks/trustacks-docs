@@ -35,6 +35,12 @@ docker run --rm --user "$(id -u):$(id -g)" \
 If you work from a source checkout of the runner, `uv run trustacks` does the
 same.
 
+From 0.2.17, `rule test`, `lint` and `sign` run `opa` with the same
+restricted builtins the runner uses (no network, environment or schema
+`$ref` fetching), so a rule that passes locally compiles on the runner too.
+The runner image carries a matching `opa`. If you use your own `opa` from a
+source checkout and it is much older, you may need to upgrade it.
+
 ## Conventions
 
 - Exit code `0` on success, `1` on any failure.
@@ -117,9 +123,10 @@ is refused, not signed. It does **not** run the rest of `lint`, or `test`.
 | `--insecure / --no-insecure` | `--insecure` (plain HTTP) |
 
 <Callout type="info">
-  The defaults target the local development registry and a local key. Hosted
-  runners do not load overlay bundles yet, and per-customer signing keys are
-  not built. See [the constitution page](/reference/constitution#your-own-rules).
+  The defaults target the local development registry and a local key, and
+  per-customer signing keys are not built. A hosted runner (0.2.17 and later)
+  does not need a bundle: it loads your rules from `rules/` in your platform
+  repo. See [the constitution page](/reference/constitution#rules-from-your-platform-repo).
 </Callout>
 
 ## Not in the CLI
