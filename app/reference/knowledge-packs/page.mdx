@@ -36,14 +36,18 @@ Reviewer and the DevOps Engineer.
 |---|---|---|
 | `python_fastapi` | `fastapi` in `pyproject.toml` or `requirements.txt` | `python:3.12-slim` image, `ruff check` and `pytest` |
 | `spring_boot` | Spring Boot in `pom.xml`, `build.gradle`, or `build.gradle.kts` | Maven build to `eclipse-temurin:21-jre`, `mvn -B verify -Dlint=true` |
-| `dotnet` | `*.csproj`, `*.fsproj`, `*.vbproj`, or `global.json` | `dotnet/sdk:8.0` to `dotnet/aspnet:8.0`, `dotnet format --verify-no-changes`, `dotnet test` |
-| `go` | `go.mod` | `golang:1.23` to `distroless/static:nonroot`, `go vet` and `go test -race` |
+| `dotnet` | `*.csproj`, `*.fsproj`, `*.vbproj`, or `global.json` | `dotnet/sdk:10.0` to `dotnet/aspnet:10.0`, `dotnet format --verify-no-changes`, `dotnet test` |
+| `go` | `go.mod` | `golang:1.27` (or 1.26, from your `go.mod`) to `distroless/static:nonroot`, `go vet` and `go test -race` |
 
 Each pack carries detection rules, a prompt addendum, a reference Dockerfile,
 and a reference CI workflow. The DevOps Engineer may adapt within the shape
 (entrypoint, runtime version, build arguments) but not restructure it: the
 packs ship two jobs, `test` and `build`, and so does the emitted workflow,
 plus any jobs you added yourself.
+
+A project that targets a runtime the pack no longer carries (for example
+.NET 8 after its end of life) gets the pack's default, and the pull request
+says so in a **Runtime support** section with the upgrade it needs.
 
 A repo that matches no pack is still analyzed. Proposals for it are another
 matter: the framework pack is also where pinned foundational actions such as
