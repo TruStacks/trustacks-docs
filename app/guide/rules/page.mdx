@@ -183,9 +183,13 @@ If the job or the capabilities file is already in the repo, it is left
 alone. Before it opens the PR, the runner clones your platform repo at its
 default branch and checks the files again, as they will land.
 
-The PR body says what the rule denies, why, its kind (posture, practice or
-structural) and where it applies, what was checked, and any setup still
-left to you:
+The PR body says what the rule denies, why, what kind of rule it is and
+where it applies, what was checked, and any setup still left to you. The
+kind is given in plain words with the rule's `kind` value beside it: a
+**posture** rule (`kind: structural`) checks what your Stack file declares,
+a **practice** rule (`kind: behavior`) judges how a change's files behave,
+and any other **structural** rule (`kind: structural`) checks the shape of a
+change.
 
 - **GitHub:** make the `opa test rules/` check required on your default
   branch. GitHub only offers the check after it has run once, so do this
