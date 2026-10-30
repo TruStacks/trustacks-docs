@@ -275,11 +275,6 @@ can only add denies and is confined to `data.overlay`: the worst a bad rule
 can do is block your own proposals, which anyone who can push to your
 default branch could already do.
 
-<Callout type="warning">
-  **Branch.** The runner reads `main` today. Detecting a default branch with
-  another name is coming in 0.2.17. Until then, keep `rules/` on `main`.
-</Callout>
-
 **What the runner loads.** Rego only. Every `*.rego` file under `rules/`
 except `*_test.rego`: tests are for `trustacks rule test` and your own CI,
 not for the gate. JSON and YAML data files under `rules/` are not loaded, so
