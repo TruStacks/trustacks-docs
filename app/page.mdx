@@ -62,9 +62,10 @@ CI caller workflow, once per service.
 The constitution is published from the public
 <a href="https://github.com/TruStacks/trustacks-policy" target="_blank" rel="noopener noreferrer">trustacks-policy</a>
 repo and signed, so you can read every rule and verify the bundle your runner
-evaluates. The specialists review your setup during gap analyses. Overlay
-rules can be drafted in the app today; delivering your own signed rules to a
-hosted runner is not available yet.
+evaluates. The specialists review your setup during gap analyses. Your own
+overlay rules can be drafted in the app, and from runner 0.2.17 a hosted
+runner enforces them from `rules/` in your platform repo, once a reviewed
+pull request merges them.
 
 Your GitOps controller deploys merged pull requests the way it always has.
 

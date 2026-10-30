@@ -203,6 +203,10 @@ overlay only adds to `data.overlay`. Earlier runners did not check this.
 
 ### What an overlay may contain
 
+This is what a signed overlay bundle may contain. Rules loaded from your
+platform repo are narrower: Rego only, tests left out. See
+[Rules from your platform repo](#rules-from-your-platform-repo).
+
 - **Rego files** (`*.rego`, tests included, because they are loaded too) must
   declare `package overlay.<name>`. The package is read by OPA's own parser,
   not a pattern match; a file OPA does not attribute to a package is a
@@ -221,11 +225,15 @@ the namespaces `argocd`, `constitution`, `posture`, `practice`, `proposal` and
 
 ### What a violation looks like
 
-The runner gives **no verdict** for a proposal or gap analysis while the
+For a signed bundle, the runner gives **no verdict** for a proposal or gap analysis while the
 overlay is unconfined. The run fails with
 `overlay rejected — overlay rules may only add to data.overlay: <each
 violation>`, and the runner logs `policy.overlay_rejected` with the
 violations. Fix the overlay, re-sign it, and run again.
+
+Rules from your platform repo are handled differently: the run continues
+under the constitution alone and records why your rules were refused. See
+[Rules from your platform repo](#rules-from-your-platform-repo).
 
 `trustacks rule lint` and `trustacks rule sign` run the same check, so you
 see the problem before the runner does, and `sign` refuses to publish an
@@ -242,20 +250,91 @@ listed on Maturity under **Your rules**, outside the score. An overlay can
 still lower a constitution row, never raise one. See
 [Maturity scoring](/reference/maturity-scoring).
 
-What works today:
+### Rules from your platform repo
+
+<Callout type="info">
+  **Available from runner 0.2.17.** Earlier hosted runners load no overlay
+  rules from your repo.
+</Callout>
+
+On the hosted service your overlay rules live in your platform repo, under
+`rules/`. Each rule is a directory, the layout `trustacks rule new` creates:
+
+```text
+rules/<rule_id>/<rule_id>.rego        # package, rule_metadata, deny
+rules/<rule_id>/<rule_id>_test.rego   # opa tests
+```
+
+On every run that evaluates policy (a proposal's policy check and its
+advisory gap check, a gap analysis, and a rule-impact check), the runner
+reads `rules/` from your platform repo's default branch, at the same commit
+it reads `environment-profile.yaml` from. There are no keys, no registry and
+no Helm values to set. The trust anchor is your own Git: branch protection,
+pull-request review and history. That is proportionate because an overlay
+can only add denies and is confined to `data.overlay`: the worst a bad rule
+can do is block your own proposals, which anyone who can push to your
+default branch could already do.
+
+**What the runner loads.** Rego only. Every `*.rego` file under `rules/`
+except `*_test.rego`: tests are for `trustacks rule test` and your own CI,
+not for the gate. JSON and YAML data files under `rules/` are not loaded, so
+put lists inside the rule itself:
+
+```rego
+allowed_registries := {"ghcr.io/acme", "us-docker.pkg.dev/acme"}
+```
+
+Every file must declare `package overlay.<name>`.
+
+**What the runner checks first.** Before it uses any of it, `rules/` must:
+
+- stay within **256 files and 1 MiB** of Rego (tests are not counted);
+- contain **no symlinks**;
+- pass the same **confinement check** a signed bundle gets (every package
+  under `overlay.`, nothing outside `data.overlay`);
+- **compile** together with the constitution (`opa check`), under the same
+  restricted builtins the runner evaluates with.
+
+**All or nothing.** If any check fails, none of `rules/` loads. The run
+continues under the constitution alone, and the reason is recorded on the
+run's `policy_check` or `gap_check` event and in the runner log
+(`policy.repo_overlay_rejected`). Nothing is dropped silently. This differs
+from a signed bundle, where an unconfined overlay stops the run with no
+verdict.
+
+**Restricted builtins.** Every `opa` process the runner starts gets an
+environment containing only `PATH`, and the builtins that reach the network,
+read the environment, or fetch a schema `$ref` are removed: `http.send`,
+`net.lookup_ip_addr`, `opa.runtime`, `json.match_schema`,
+`json.verify_schema` and `providers.aws.sign_req`. A rule that uses one does
+not compile, so it is refused at the check above. Your rule can read the
+proposal and profile it is judging, and nothing else.
+
+**Recorded on every verdict.** `policy_check`, `gap_check` and
+`gap_computed` carry the overlay that decided them: its source (`repo`,
+`bundle` or `none`), the **commit SHA** it was read from, the rule ids
+loaded, and any warnings or violations. The rules appear on the
+[Rules](/guide/rules) page as **Your overlay**.
+
+### A signed bundle wins
+
+A signed overlay bundle (`policyBundle.overlayRef` in the
+[runner chart](/reference/runner-helm-chart)) still works. When the runner
+has verified and loaded one, the bundle **is** the overlay and `rules/` in
+the repo is ignored, with a warning. The two are never merged.
+
+Set `overlay.requireSigned: true` in the runner chart to refuse the repo
+source entirely and load only a signed bundle. It defaults to `false`.
+
+### Drafting and testing
 
 - **Drafting.** Type `/rule new <id>` in the Workspace chat and the
   Coordinator drafts a rule grounded in your environment profile. Drafts are
-  not saved; copy or download them.
-- **Authoring and testing.** `trustacks rule new`, `test`, and `lint` work on a
-  local checkout. See the [Rule CLI](/reference/runner-cli).
-
-<Callout type="warning">
-  **No delivery path to hosted runners yet.** `trustacks rule sign` publishes
-  to a local development registry with a local key, and the hosted runner chart
-  does not load overlay bundles. Per-customer signing keys are not built. Until
-  they are, overlay rules run only on local and self-hosted setups.
-</Callout>
+  not saved; copy or download them, then open a pull request in your
+  platform repo.
+- **Authoring and testing.** `trustacks rule new`, `test`, and `lint` work on
+  a local checkout of your platform repo. See the
+  [Rule CLI](/reference/runner-cli).
 
 ## What is not in the constitution
 

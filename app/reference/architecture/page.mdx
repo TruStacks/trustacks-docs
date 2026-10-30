@@ -97,9 +97,9 @@ How it talks to the control plane:
   refuse and has no way to remove one. From runner 0.2.14 the runner
   enforces this, rejecting an overlay that reaches outside `data.overlay`
   (earlier runners did not check). Overlay authoring runs through the
-  [`trustacks rule` CLI](/reference/runner-cli). There is no delivery path for
-  overlay bundles to hosted runners yet; see
-  [the constitution page](/reference/constitution#your-own-rules).
+  [`trustacks rule` CLI](/reference/runner-cli). From runner 0.2.17 a hosted
+  runner loads them from `rules/` in your platform repo; see
+  [the constitution page](/reference/constitution#rules-from-your-platform-repo).
 
 ## The crew [#baseline-crew]
 

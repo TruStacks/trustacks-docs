@@ -210,7 +210,8 @@ Where the runner gets the constitution, and how it verifies it. See
 | `policyBundle.insecure` | `false` | Plain HTTP to the registry. Local development only. |
 | `policyBundle.keyless.certificateIdentityRegexp` | `trustacks-policy`'s `publish.yml` only, from `0.2.14-rc26` (rc24–rc25 also accepted the retired `trustacks-mvp` signer; see [Supply-chain verification](/reference/supply-chain#policy-bundles-signed-before-100)) | Which workflow may have signed the bundle. |
 | `policyBundle.keyless.certificateOidcIssuer` | `https://token.actions.githubusercontent.com` | OIDC issuer for the signing certificate. |
-| `policyBundle.overlayRef` | `""` | Overlay bundle. Not supported on hosted yet. |
+| `policyBundle.overlayRef` | `""` | Signed overlay bundle. When set and verified, it is the overlay and `rules/` in your platform repo is ignored. |
+| `overlay.requireSigned` | `false` | `true` refuses overlay rules from your platform repo and loads only a signed overlay bundle. From `0.2.17`. See [Rules from your platform repo](/reference/constitution#rules-from-your-platform-repo). |
 
 <Callout type="warning">
   Runner charts before `0.2.14-rc24` have no `keyless` block and point

@@ -17,8 +17,9 @@ reports and Maturity) link here.
 </figure>
 
 Rules is the inventory of the policy your proposals are judged against.
-It is read-only. Rules are authored as Rego in Git and delivered as signed
-bundles; this screen shows what your runner actually loaded.
+It is read-only. Rules are authored as Rego in Git: the constitution
+arrives as a signed bundle, and your own rules come from your platform
+repo. This screen shows what your runner actually loaded.
 
 ## What you see
 
@@ -87,9 +88,37 @@ control plane serves that list; it never reaches into your cluster to ask.
 - Use the search to answer "is there a rule for X?" before writing one.
 - Pair this screen with [Overview → Policy in force](/guide/overview#policy-in-force),
   which shows how often each rule actually refused a proposal.
-- To add a rule, draft it with the Coordinator and land it with the
-  `trustacks rule` CLI. See the
-  [policy authoring workshop](/workshops/policy-authoring).
+- To add a rule, see [Adding your own rule](#adding-your-own-rule).
+
+## Adding your own rule
+
+From runner 0.2.17, a hosted runner loads your overlay rules from your
+platform repo. You land a rule the same way you land any other change: a
+pull request your team reviews.
+
+1. **Draft it.** Use **+ Draft a rule with the Coordinator**, or write it
+   yourself.
+2. **Write the rule and its test** in your platform repo, as
+   `rules/<rule_id>/<rule_id>.rego` and `rules/<rule_id>/<rule_id>_test.rego`.
+   The package must be `overlay.<name>`. Rules are Rego only: put lists
+   inside the rule, not in JSON or YAML data files beside it.
+3. **Test and lint locally** with `trustacks rule test` and
+   `trustacks rule lint` against a checkout of your platform repo. See the
+   [Rule CLI](/reference/runner-cli). They check with the same restricted
+   builtins the runner uses, so a much older local `opa` may need upgrading.
+4. **Open a pull request** in your platform repo and have it reviewed.
+5. **Merge it.** The next run that evaluates policy reads `rules/` from the
+   default branch and enforces the rule. It appears here as **Your overlay**.
+
+Before loading, the runner checks your rules: confined to `data.overlay`,
+compiles with the constitution, within the size cap. If anything fails,
+none of your rules load for that run, the constitution still applies, and
+the reason is recorded. Every verdict records the commit your rules were
+read from. The full rules, including the branch the runner reads, are in
+[the constitution reference](/reference/constitution#rules-from-your-platform-repo).
+
+The [policy authoring workshop](/workshops/policy-authoring) walks through
+the same rule end to end in a local development environment.
 
 ## How it connects
 
@@ -108,9 +137,8 @@ control plane serves that list; it never reaches into your cluster to ask.
   [Runners](/guide/runners). Runners older than that report no rules.
 - **Impact tiles and paired recipes are not built.** They are labeled
   *coming soon*. For real denial counts, use the Overview.
-- **Customer overlays on the hosted service.** There is no supported way
-  yet to deliver your own signed overlay bundle to a hosted runner, so a
-  hosted workspace normally shows constitution rules only.
+- **Your overlay needs runner 0.2.17.** Earlier hosted runners load no
+  rules from your platform repo, so they show constitution rules only.
 - **"deny → re-propose"** in the gate strip describes the loop, not an
   automatic retry: after a deny, someone starts a new proposal.
 - If the list is empty, the empty state refers to `make policy-bundle`,

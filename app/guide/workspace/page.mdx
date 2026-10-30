@@ -126,11 +126,10 @@ notes that.
 
 <Callout type="warning">
   **A draft is not live.** Nothing is saved to your repos and nothing is
-  enforced from the chat. On the hosted service there is no supported way yet
-  to deliver your own rules to your runner; loading them from your platform
-  repo is planned. Today a draft lands through
-  the `trustacks rule` CLI in a local environment; see the
-  [policy authoring workshop](/workshops/policy-authoring).
+  enforced from the chat. To enforce a draft, add it with its test under
+  `rules/` in your platform repo and merge it through a pull request; from
+  runner 0.2.17 the next run enforces it. See
+  [Adding your own rule](/guide/rules#adding-your-own-rule).
 </Callout>
 
 Rule ids are `<namespace>.<name>`, lowercase with underscores, for example
