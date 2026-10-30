@@ -195,6 +195,12 @@ resolve, so an Ingress you enable without setting a host serves nothing rather
 than a guessed or wildcard host. TruStacks refuses to open a proposal whose
 overlay enables the component with the placeholder still in place.
 
+The host is yours to serve: create a **DNS record** that points it at your
+ingress controller or OpenShift router, and make sure a **TLS certificate**
+matches it. On OpenShift, a host under the cluster's apps domain (for example
+`*.apps.<cluster-domain>`) is covered by the router's default wildcard DNS and
+certificate; any other host needs its own record and certificate.
+
 TruStacks does not write native `Route` objects. If you need a Route-only
 setting, add your own Route; the agents keep files you added
 ([how they read your repo first](/guide/applications#a-proposal-from-your-side)).

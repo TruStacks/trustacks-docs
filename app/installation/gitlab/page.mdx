@@ -33,8 +33,11 @@ create, on gitlab.com or on your own GitLab instance.
 
 ## Create the token
 
-**Prefer a project or group access token.** It belongs to a bot user that can
-reach only that project or group. On gitlab.com these need the Premium or
+**Prefer a project or group access token.** It belongs to a bot user that is
+a member of only that project or group. GitLab treats these tokens as internal
+users, so on a self-managed instance a token can also reach every project with
+**Internal** visibility; keep the platform repo Private if that matters to
+you. On gitlab.com these need the Premium or
 Ultimate tier; on a self-managed instance every tier has them. Create one in
 the project (or group) under **Settings → Access tokens**.
 
@@ -45,14 +48,18 @@ person as the author.
 | Setting | Platform repo (TruStacks opens merge requests) | Service repo (TruStacks only reads) |
 |---|---|---|
 | **Scopes** | `api` and `write_repository` | `read_api` and `read_repository` |
-| **Role** | **Developer**, so it can push a branch and open a merge request | **Developer** or lower |
+| **Role** | **Developer**, so it can push a branch and open a merge request | **Reporter**. Guest can't read a private repo's code. |
 | **Expiration** | Short. GitLab allows up to 365 days; you'll paste a new one when it runs out. | Same |
 
 GitLab has no narrower scope than `api` that can open a merge request, which
 is why the platform repo's token needs it.
 
 **Never give it the Maintainer or Owner role.** TruStacks doesn't merge, and
-your protected branches should stay out of its reach.
+your protected branches should stay out of its reach. The role alone doesn't
+guarantee that: a protected branch can allow Developers to push or merge. Set
+the platform repo's default branch to **Allowed to push and merge: No one**
+and **Allowed to merge: Maintainers** (or named people), so the token can't
+push to it or merge into it.
 
 ## Connect the repo
 
@@ -118,16 +125,24 @@ runner.
 
 ## Pipelines
 
-Connecting GitLab doesn't choose your CI; your Stack file does. When it says
-`ci_cd_platform: gitlab_ci`, proposals write a GitLab CI pipeline to the
+Connecting GitLab doesn't choose your CI; your Stack file does. When its
+primary CI platform is GitLab CI:
+
+```yaml
+ci_cd_platform:
+  - provider: gitlab_ci
+    primary: true
+```
+
+proposals write a GitLab CI pipeline to the
 platform repo at `.gitlab/ci/ci-<service>.yml`, and your service repo's
 `.gitlab-ci.yml` includes it at a commit SHA. TruStacks never writes the
 platform repo's root `.gitlab-ci.yml` or anything in the service repo. See
 [GitLab CI](/reference/gitlab-ci) for the jobs, the include, the policy check
 and the runner and permissions it needs.
 
-When it says `azure_pipelines`, proposals write Azure Pipelines files, and
-otherwise GitHub Actions workflows. Neither runs in GitLab CI.
+When the primary provider is `azure_pipelines`, proposals write Azure
+Pipelines files, and otherwise GitHub Actions workflows. Neither runs in GitLab CI.
 
 ## What TruStacks does not do on GitLab
 

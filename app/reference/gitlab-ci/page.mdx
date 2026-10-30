@@ -97,8 +97,10 @@ token. No password or token is added to YAML.
 
 That token can push only to the project's own GitLab container registry. If
 your image repository is somewhere else, the merge request says so: replace
-the login with that registry's OIDC federation (`id_tokens`), never a stored
-password.
+the login with that registry's OIDC federation (`id_tokens`) where it offers
+one. Where it doesn't (Docker Hub, for example), use a scoped,
+short-lived robot or organization access token kept in a **protected, masked**
+CI/CD variable, never in YAML and never a person's password.
 
 ## Pinning
 
