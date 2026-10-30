@@ -57,14 +57,14 @@ Follow-up questions continue the conversation (*"and what about gold?"*).
 
 <Callout type="info">
   **Answers run on your runner, with your LLM key**, like every other agent
-  run. Asking needs a **0.2.15** runner. The install command the app shows
-  still pins **0.2.14**, which can't answer, so the chat says *No connected
-  runner can answer questions yet. Upgrade your runner…*. Upgrade to a 0.2.15
-  pre-release (0.2.15-rc20 is the newest at the time of writing):
+  run. Asking needs runner **0.2.15** or later, and **Propose as PR** needs
+  **0.2.18**. An older runner gets *Upgrade your runner…* in the chat. The
+  install command on **Get set up** always shows the current runner; to
+  upgrade an existing one:
 
   ```bash
   helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-    --version 0.2.15-rc20 \
+    --version 0.2.18 \
     -n "<your-namespace>" --reset-then-reuse-values
   ```
 
