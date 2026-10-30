@@ -1,6 +1,7 @@
 export default {
   index: 'How the product fits together',
   overview: 'Overview',
+  portfolio: 'Portfolio',
   onboarding: 'Get set up',
   runners: 'Runners',
   settings: 'Settings (LLM provider)',

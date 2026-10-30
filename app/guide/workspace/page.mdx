@@ -1,6 +1,6 @@
 ---
 title: Workspace
-description: Ask TruStacks about your setup in plain language and get answers cited to your own records; run a gap analysis; draft a Rego rule and check what it would have blocked.
+description: Ask TruStacks about your setup in plain language and get answers cited to your own records; run a gap analysis; draft a Rego rule, check what it would have blocked, and propose it as a PR.
 ---
 
 import { Callout } from 'nextra/components'
@@ -57,14 +57,14 @@ Follow-up questions continue the conversation (*"and what about gold?"*).
 
 <Callout type="info">
   **Answers run on your runner, with your LLM key**, like every other agent
-  run. Asking needs a **0.2.15** runner. The install command the app shows
-  still pins **0.2.14**, which can't answer, so the chat says *No connected
-  runner can answer questions yet. Upgrade your runner…*. Upgrade to a 0.2.15
-  pre-release (0.2.15-rc20 is the newest at the time of writing):
+  run. Asking needs runner **0.2.15** or later, and **Propose as PR** needs
+  **0.2.18**. An older runner gets *Upgrade your runner…* in the chat. The
+  install command on **Get set up** always shows the current runner; to
+  upgrade an existing one:
 
   ```bash
   helm upgrade trustacks-runner oci://ghcr.io/trustacks/charts/runner \
-    --version 0.2.15-rc20 \
+    --version 0.2.18 \
     -n "<your-namespace>" --reset-then-reuse-values
   ```
 
@@ -78,14 +78,26 @@ Follow-up questions continue the conversation (*"and what about gold?"*).
 |---|---|
 | `/gaps` | Runs a fresh gap analysis in the chat. The Constitution reports the gaps, the Coordinator consults **Baseline Security** and **SOC2**, and the run ends with a summary and **View the full report →**. `/audit` still works. |
 | `/discover` | Takes you to your services to connect a repo. |
-| `/rule new <plain-English description>` | Drafts an overlay rule from your description. The Coordinator proposes a rule id and writes the Rego. |
+| `/rule new <plain-English description>` | Drafts an overlay rule and its tests from your description. The Coordinator proposes a rule id and writes the Rego; TruStacks checks it before you see it. |
 | `/rule new <rule_id>` | Starts a draft with an id you choose; your next message is what the rule should deny. |
 
 ## Drafting a rule
 
 The draft arrives as a file block, `rules/<rule_id>/<rule_id>.rego`, with
-**Copy** and **Download**, the Coordinator's reasoning, and a reminder of the
-CLI steps to land it.
+**Copy** and **Download**, and the Coordinator's reasoning. Under it:
+
+- `rules/<rule_id>/<rule_id>_test.rego`, the cases the rule was tested
+  against: at least one it must deny and one it must allow;
+- **Checked by TruStacks**, listing the checks the draft passed. Every draft
+  is checked in your platform repo's whole `rules/` tree, under the same
+  sandbox the runner uses, before you see it. A draft that fails goes back
+  to the Coordinator, up to 3 tries;
+- **Propose as PR**, which opens a pull request with the rule on your
+  platform repo;
+- the CLI commands, if you would rather land it locally.
+
+The whole flow, including what each check does and what the PR contains, is
+in [Add your own rule](/guide/rules#add-your-own-rule).
 
 <figure className="ts-shot">
   <img src="/guide/workspace-rule-draft.png" alt="" />
@@ -124,19 +136,25 @@ about their target, so a replay sees the same thing. Older proposals are
 replayed with your Application's current target settings, and the result
 notes that.
 
-<Callout type="warning">
-  **A draft is not live.** Nothing is saved to your repos and nothing is
-  enforced from the chat. To enforce a draft, add it with its test under
-  `rules/` in your platform repo and merge it through a pull request; from
-  runner 0.2.17 the next run enforces it. See
-  [Adding your own rule](/guide/rules#adding-your-own-rule).
-</Callout>
-
 Rule ids are `<namespace>.<name>`, lowercase with underscores, for example
 `acme.requires_runbook_link`. TruStacks-reserved namespaces (`argocd`,
 `constitution`, `posture`, `practice`, `proposal`, `trustacks`) are refused.
 Keep the draft's `package overlay.<name>` line as written: the runner refuses
 an overlay with a package outside `overlay.`.
+
+### Propose it as a PR
+
+Under a checked draft, **Propose as PR** opens one pull request on your
+platform repo with the rule, its test and, the first time, a CI job that
+runs `opa test` over `rules/` on every change. The chat shows the PR link.
+A draft that didn't pass its checks can't be proposed, and says why.
+
+<Callout type="warning">
+  **A draft is not live, and neither is the PR.** Nothing is enforced from
+  the chat. The rule is enforced from the next run after a person on your
+  team merges the PR. TruStacks never merges it. See
+  [Add your own rule](/guide/rules#add-your-own-rule).
+</Callout>
 
 ## Your conversation is kept for 24 hours
 
@@ -173,7 +191,11 @@ full parameters. A specialist that wasn't consulted isn't drawn.
 - **The chat doesn't pick an Application.** With more than one Application,
   answers speak to what is common to all of them, and `/gaps` asks you to
   start the run from [Gap analyses](/guide/gap-analyses), where you choose.
-- **Rule drafting is single-pass.** You can't refine a draft turn by turn
-  yet, and the Coordinator doesn't yet check that a rule is satisfiable or
-  scope it to a tier. That is the next slice.
+- **Rule drafting is single-pass.** You can't refine a draft turn by turn.
+  The Coordinator doesn't require a rule to declare its kind or scope it to
+  a tier.
+- **Propose as PR needs runner 0.2.18.** With an older runner, the chat
+  says *No connected runner can open a rule's PR yet. Upgrade your runner*.
+  A draft written on an older runner wasn't checked, so it can't be
+  proposed; draft it again after upgrading.
 - The sidebar's **Crew online** strip is a static roster, not live status.

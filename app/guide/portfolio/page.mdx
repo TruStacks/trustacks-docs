@@ -1,0 +1,163 @@
+---
+title: Portfolio
+description: The Portfolio screen. Every change merged into your platform repos in the last 30 or 90 days, whether policy checked it, whether a named person approved it, and where each Application is exposed.
+---
+
+import { Callout } from 'nextra/components'
+
+# Portfolio
+
+**Where:** **Portfolio**, at the very top of the sidebar (`#/portfolio`).
+
+Portfolio is the view for whoever answers for the workspace. It asks three
+questions about the changes that reached your platform repos: how many there
+were, how many policy checked, and how many a named person approved. It
+names every change behind a gap, with a link to its PR, and then shows where
+each Application is exposed.
+
+**Who sees it:** workspace owners. Other roles don't see the sidebar item,
+and the screen says *The portfolio is for workspace owners*. Today every
+member of a workspace is an owner (see [Team](/guide/team)), so everyone in
+the workspace sees it.
+
+## What you see
+
+### Header
+
+- **Last 30 days** (the default) or **Last 90 days**. These are the only two
+  windows.
+- An **Application** picker, shown when the workspace has two or more
+  Applications. **All applications** sums across every platform repo;
+  picking one narrows the cards and lists to that Application's platform
+  repo.
+
+### The three cards
+
+Under **Production changes, last N days**:
+
+| Card | What it counts |
+|---|---|
+| **Changes** | Every pull request merged into the default branch of your platform repo (or repos) in the window, whoever opened it: TruStacks, a person on your team, or a bot. |
+| **Checked by policy** | Changes with a TruStacks policy verdict on record (**allow** or **deny**). |
+| **Approved by a named person** | Changes approved in your git host by a person who is not a bot, and not only the person who wrote or merged it. |
+
+**Checked by policy** is only knowable for changes TruStacks opened, because
+only those carry a verdict TruStacks recorded. A policy check that errored
+judged nothing, so it doesn't count. When every change in the window came
+from TruStacks, the card reads **N of M**. When any change was opened
+outside TruStacks, the card reads **Checked: N of the M TruStacks opened**
+and says how many changes were opened outside TruStacks: whether policy
+checked those isn't visible, because it needs your platform repo's CI
+result. On GitHub, reading that result needs the `checks: read` permission
+on the TruStacks GitHub App, which it doesn't have. The card never claims
+coverage across changes it can't see.
+
+**Approved by a named person** sorts each change into one of three groups:
+
+- **Approved**: at least one approver who is a person, and not the author
+  or the person who merged it.
+- **Self-approved**: a person wrote the change, and the only approvals came
+  from that person or from whoever merged it. Self-approval is counted on
+  its own. It is never counted as approved, and never as unapproved.
+- **No approval recorded**: no approval in the git host, or approved only by
+  a bot. An approval given somewhere else, in a meeting or a ticket, doesn't
+  show in the git host, so the screen says *no approval recorded*, not
+  *nobody approved*.
+
+Two rules apply to every approval:
+
+- **Bots never count as a person.** Dependabot, Renovate, GitHub Apps
+  (including TruStacks' own), GitLab project and group token users and the
+  Azure DevOps build service are all treated as bots.
+- **A person approving a change TruStacks opened is a named approval.** The
+  agent wrote that change, so nobody is approving their own work. This holds
+  even when the same person approved and merged it, and even on Azure DevOps
+  and GitLab, where the git host lists the owner of the token TruStacks used
+  as the change's author. TruStacks uses its own record of who wrote the
+  change, not the host's author field. This is *agents propose, policy
+  decides, humans approve*, counted.
+
+With no platform repo connected, the cards are replaced by *No platform repo
+is connected*, with a link to Applications. Zero changes there means nothing
+to count, not a clean record.
+
+### The gaps behind the numbers
+
+Under the cards, each gap is a named list. A list appears only when it has
+something in it:
+
+- **Self-approved**
+- **No approval recorded**
+- **Opened by TruStacks, no policy verdict on record**: the policy check
+  errored or never ran for these.
+
+Each entry shows the PR title, the repo and PR number, who merged it, when,
+the reason it is in the list, and **Open the PR**.
+
+**All N changes, with who approved them** opens a table of every change in
+the window: the change (a TruStacks icon marks the ones TruStacks opened),
+when it merged and who merged it, the named approvers, the approval group,
+and the policy column (**Checked**, **No verdict**, or **Not visible yet**
+for a change opened outside TruStacks). For a change TruStacks opened, the
+policy column links to its proposal.
+
+### Exposure
+
+One row per Application, read from its latest weekly snapshot:
+
+| Column | What it shows |
+|---|---|
+| **Application** | Links to the Application. |
+| **Owner** | The owner team, or the owner email, set on the Application's **Owner** card. **No owner** when neither is set. |
+| **Tier** | The maturity tier and coverage percent, with the trend: *flat since* a date when coverage hasn't moved for two weeks or more, or the change in points over the window (*+N pts in 30 days*). **Not scored yet** when the Application has no snapshot. |
+| **Image scanning**, **Secret scanning**, **SAST / SCA** | Whether each tooling category is covered. |
+| **Tests in CI**, **Pinned actions** | Whether each practice is in place. |
+| **Prod gate** | Whether production promotion is manual. |
+| **Runtime** | The most urgent detected runtime and its support status: *past end of life*, *security fixes end* a date, *supported* or *end of life unknown*, plus how many other services there are. **Not recorded** or **None detected** when there is nothing to show. |
+
+The scanning, practice and prod gate cells use one legend:
+
+| Mark | Meaning |
+|---|---|
+| ✓ | verified |
+| ~ | claimed, not verified |
+| ✗ | missing (also *partial*, and *claimed, but not found*) |
+| `—` | not applicable: the Application has no prod cluster |
+| ? | not recorded |
+
+A missing value is shown as not recorded, never as fine. Verified, claimed
+and missing are never blended; see [Maturity](/guide/maturity) for how each
+is decided.
+
+## What to do here
+
+- Open the **Self-approved** and **No approval recorded** lists first. Each
+  entry links to the PR, so you can ask the person who merged it.
+- If **Checked by policy** reads *N of the M TruStacks opened*, the rest of
+  your changes reached the platform repo without going through TruStacks.
+  Whether your CI checked them is a question for your CI, not this screen.
+- Use **Last 90 days** for a quarter's view, and the **Application** picker
+  to look at one platform repo at a time.
+- In **Exposure**, a ✗ or ~ points at a gap you can close; the Application's
+  [gap analysis](/guide/gap-analyses) and [Maturity](/guide/maturity) say
+  what closing it takes. A red runtime is past its end of life.
+
+## How it connects
+
+- Changes TruStacks opened are [proposals](/guide/applications#proposals);
+  their verdicts come from the [rules](/guide/rules) in force.
+- The tier, coverage and cell statuses come from
+  [Maturity](/guide/maturity), snapshotted weekly.
+- The owner is set on each Application's page in
+  [Applications](/guide/applications).
+
+## Beta limits
+
+- **Policy checks on changes opened outside TruStacks aren't counted.** On
+  GitHub that needs the App's `checks: read` permission. On Azure DevOps and
+  GitLab, TruStacks doesn't use pipeline status for this.
+- **Approvals only come from the git host.** An approval given anywhere else
+  isn't seen.
+- **Exposure is as fresh as the current week's snapshot.**
+- **The change table lists at most 2,000 changes per window.** When a window
+  holds more, it shows the newest and says so.

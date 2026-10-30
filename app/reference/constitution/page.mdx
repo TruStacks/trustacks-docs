@@ -328,10 +328,15 @@ source entirely and load only a signed bundle. It defaults to `false`.
 
 ### Drafting and testing
 
-- **Drafting.** Type `/rule new <id>` in the Workspace chat and the
-  Coordinator drafts a rule grounded in your environment profile. Drafts are
-  not saved; copy or download them, then open a pull request in your
-  platform repo.
+- **Drafting and proposing.** Type `/rule new <id>` in the Workspace chat
+  and the Coordinator drafts a rule and its test cases, grounded in your
+  environment profile and the rules already in `rules/`. TruStacks checks
+  each draft under the runner's sandbox (compiles with the constitution,
+  confinement, `opa test`) before you see it. **Propose as PR** opens a pull
+  request on your platform repo with the rule, its test and, the first time,
+  a CI job that runs `opa test` on `rules/`. A person merges it; TruStacks
+  never does. Needs runner 0.2.18. See
+  [Add your own rule](/guide/rules#add-your-own-rule).
 - **Authoring and testing.** `trustacks rule new`, `test`, and `lint` work on
   a local checkout of your platform repo. See the
   [Rule CLI](/reference/runner-cli).

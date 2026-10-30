@@ -88,37 +88,152 @@ control plane serves that list; it never reaches into your cluster to ask.
 - Use the search to answer "is there a rule for X?" before writing one.
 - Pair this screen with [Overview → Policy in force](/guide/overview#policy-in-force),
   which shows how often each rule actually refused a proposal.
-- To add a rule, see [Adding your own rule](#adding-your-own-rule).
+- To add a rule, see [Add your own rule](#add-your-own-rule).
 
-## Adding your own rule
+## Add your own rule
 
-From runner 0.2.17, a hosted runner loads your overlay rules from your
-platform repo. You land a rule the same way you land any other change: a
-pull request your team reviews.
+You land a rule the way you land any other change: a pull request on your
+platform repo that a person on your team reviews and merges. The Coordinator
+drafts it, TruStacks checks it and opens the PR, and you decide whether it
+merges.
 
-1. **Draft it.** Use **+ Draft a rule with the Coordinator**, or write it
-   yourself.
-2. **Write the rule and its test** in your platform repo, as
-   `rules/<rule_id>/<rule_id>.rego` and `rules/<rule_id>/<rule_id>_test.rego`.
-   The package must be `overlay.<name>`. Rules are Rego only: put lists
-   inside the rule, not in JSON or YAML data files beside it.
-3. **Test and lint locally** with `trustacks rule test` and
-   `trustacks rule lint` against a checkout of your platform repo. See the
-   [Rule CLI](/reference/runner-cli). They check with the same restricted
-   builtins the runner uses, so a much older local `opa` may need upgrading.
-4. **Open a pull request** in your platform repo and have it reviewed.
-5. **Merge it.** The next run that evaluates policy reads `rules/` from the
-   default branch and enforces the rule. It appears here as **Your overlay**.
+### 1. Ask for the rule
 
-Before loading, the runner checks your rules: confined to `data.overlay`,
-compiles with the constitution, within the size cap. If anything fails,
-none of your rules load for that run, the constitution still applies, and
-the reason is recorded. Every verdict records the commit your rules were
-read from. The full rules, including the branch the runner reads, are in
+In the [Workspace](/guide/workspace) chat (or **+ Draft a rule with the
+Coordinator** on this screen), type `/rule new` followed by what the rule
+should deny, in plain English, or by a rule id of your choice:
+
+```text
+/rule new deny workflows without explicit permissions
+```
+
+The Coordinator drafts the rule and its test cases: at least one input the
+rule must deny and one it must allow. It writes the cases as data, and
+TruStacks turns them into `rules/<rule_id>/<rule_id>_test.rego`, so a draft
+can't arrive without both kinds of case. The Coordinator sees the rules
+already in `rules/` in your platform repo, with their descriptions, so it
+doesn't redraft one you have.
+
+**What a rule can see.** The gate judges each proposal on what it carries:
+
+- the files the proposal writes (path, content, language) and its
+  explanation (summary, blast radius, rollback, cited rules);
+- the deployment target (name, tier `dev`, `uat` or `prod`, kind), the
+  renderer, the CI system and the platform repo URL;
+- the tooling categories your [Stack](/guide/stack) file declares.
+
+Anything else, such as a ticket number in another system or the state of an
+external service, is outside what the gate can see. When you ask for that,
+the Coordinator says so and drafts the closest rule the gate can check
+instead. For example: *the prod deploy job requires an approval environment*,
+not *a ServiceNow ticket exists*.
+
+### 2. TruStacks checks every draft
+
+Each draft is formatted with `opa fmt` and placed in a copy of your
+platform repo's whole `rules/` tree, as it would be after the merge. Then it
+goes through the same checks, in the same sandbox, the runner applies when
+it loads your rules:
+
+- the rule id meets the [naming standard](/reference/rule-naming-standard)
+  and the package is `overlay.<rule_id>` (the dot as an underscore);
+- no symlinks, within the size cap, and confined to `data.overlay`;
+- it compiles together with the constitution and your other rules, under
+  the runner's restricted builtins (no network, no environment);
+- `rule_metadata` names the rule, and no other rule uses the same package
+  or rule id;
+- `opa test` passes over the whole `rules/` tree.
+
+A draft that fails goes back to the Coordinator with the errors, and the
+Coordinator revises it, up to 3 tries. The chat narrates each check:
+*checked the draft: it compiles in the runner's sandbox and passes its N
+tests*, or *the draft failed its checks, so I'm revising it*. The finished draft shows the
+rule, its `_test.rego` under *the cases it was tested against*, and a line
+**Checked by TruStacks** listing what passed. A draft that never passes is
+shown as it is, can't be proposed, and says why.
+
+### 3. Check what it would have blocked
+
+Under the draft, **Would it have blocked my recent proposals?** replays your
+Application's recent proposals through the policy engine with and without
+the draft. See
+[Check what a draft would have blocked](/guide/workspace#check-what-a-draft-would-have-blocked).
+
+### 4. Propose as PR
+
+**Propose as PR** opens one pull request on your platform repo with:
+
+- `rules/<rule_id>/<rule_id>.rego` and `rules/<rule_id>/<rule_id>_test.rego`,
+  exactly as checked;
+- `.trustacks/opa-capabilities-v1.15.2.json`, the runner's own list of
+  allowed OPA builtins;
+- the first time, a CI job for the CI system your Stack file declares,
+  which runs `opa fmt`, `opa check` and `opa test` over `rules/` on every
+  change, with the capabilities file, the runner's OPA version (checked
+  against its release checksum) and an empty environment. It needs no
+  secret.
+
+| CI system | The job TruStacks adds |
+|---|---|
+| GitHub Actions | `.github/workflows/trustacks-rules.yaml` |
+| Azure Pipelines | `azure-pipelines/trustacks-rules.yml` |
+| GitLab CI | `.gitlab/ci/trustacks-rules.yml` |
+
+If the job or the capabilities file is already in the repo, it is left
+alone. Before it opens the PR, the runner clones your platform repo at its
+default branch and checks the files again, as they will land.
+
+The PR body says what the rule denies, why, what kind of rule it is and
+where it applies, what was checked, and any setup still left to you. The
+kind is given in plain words with the rule's `kind` value beside it: a
+**posture** rule (`kind: structural`) checks what your Stack file declares,
+a **practice** rule (`kind: behavior`) judges how a change's files behave,
+and any other **structural** rule (`kind: structural`) checks the shape of a
+change.
+
+- **GitHub:** make the `opa test rules/` check required on your default
+  branch. GitHub only offers the check after it has run once, so do this
+  after the PR's first run.
+- **Azure DevOps:** register the pipeline, run it once, then add it as a
+  required build validation policy on your default branch.
+- **GitLab:** TruStacks never creates or edits your root `.gitlab-ci.yml`.
+  The PR body gives you the `include:` line to add (or the whole file, if the
+  repo has none), and asks you to turn on *Pipelines must succeed* for merge
+  requests.
+
+The chat shows the PR link. Clicking **Propose as PR** again for the same
+draft shows the PR that is already open; it doesn't open a second one.
+
+### 5. Merge it
+
+A person on your team reviews and merges the PR. TruStacks never merges it,
+and nothing in this flow merges itself. From the next run after the merge (a
+proposal or a gap analysis), the runner reads `rules/` from the default
+branch and enforces the rule. It appears on this screen as **Your overlay**.
+
+Every time it loads your rules, the runner checks them again: confined to
+`data.overlay`, compiles with the constitution, within the size cap. CI
+doesn't do the confinement and constitution checks; the runner does. If
+anything fails, none of your rules load for that run, the constitution still
+applies, and the reason is recorded. Every verdict records the commit your
+rules were read from. The full rules, including the branch the runner reads,
+are in
 [the constitution reference](/reference/constitution#rules-from-your-platform-repo).
 
-The [policy authoring workshop](/workshops/policy-authoring) walks through
-the same rule end to end in a local development environment.
+### Without the chat: the rule CLI
+
+You can also write the rule yourself in a checkout of your platform repo, as
+`rules/<rule_id>/<rule_id>.rego` and `rules/<rule_id>/<rule_id>_test.rego`
+with `package overlay.<name>`. Scaffold it with `trustacks rule new`, then
+check it with `trustacks rule test` and `trustacks rule lint`, which use the
+same restricted builtins the runner uses. See the
+[Rule CLI](/reference/runner-cli). Rules are Rego only: put lists inside the
+rule, not in JSON or YAML data files beside it. Open the pull request
+yourself; merging it enforces the rule from the next run, the same as a
+proposed one.
+
+The [policy authoring workshop](/workshops/policy-authoring) walks through a
+rule end to end in a local development environment.
 
 ## How it connects
 
@@ -139,6 +254,13 @@ the same rule end to end in a local development environment.
   *coming soon*. For real denial counts, use the Overview.
 - **Your overlay needs runner 0.2.17.** Earlier hosted runners load no
   rules from your platform repo, so they show constitution rules only.
+- **Propose as PR needs runner 0.2.18.** With an older runner, the chat
+  says *No connected runner can open a rule's PR yet. Upgrade your runner*.
+  See [Runners](/guide/runners). Drafts are checked by the runner, so a
+  draft written before the upgrade can't be proposed; draft it again.
+- **A draft is written in one pass.** You can't refine a draft turn by
+  turn, and the Coordinator doesn't require a rule to declare its kind or
+  scope it to a tier.
 - **"deny → re-propose"** in the gate strip describes the loop, not an
   automatic retry: after a deny, someone starts a new proposal.
 - If the list is empty, the empty state refers to `make policy-bundle`,
