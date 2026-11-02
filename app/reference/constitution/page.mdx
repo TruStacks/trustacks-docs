@@ -319,8 +319,12 @@ differently:
   state report, and on the rule in the Rules API (`warnings`, with
   `kind_declared: false`). Add the fields to clear it.
 
-A signed bundle is loaded as it was signed, so run `trustacks rule lint`
-before `trustacks rule sign`.
+Signed bundles get the same check. `trustacks rule sign` refuses to sign a
+bundle with an invalid value, and a runner refuses to load one that has
+it: none of the bundle's rules are enforced, the constitution still
+applies, and the policy state shows the overlay as not loaded with the
+reason (`metadata_invalid`) and each invalid value. A bundle that is only
+missing fields still loads, with the warning above.
 
 ### Overlay rules and your score
 
