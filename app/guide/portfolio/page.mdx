@@ -1,6 +1,6 @@
 ---
 title: Portfolio
-description: The Portfolio screen. Every change merged into your platform repos in the last 30 or 90 days, whether policy checked it, whether a named person approved it, and where each Application is exposed.
+description: The Portfolio screen. Every change merged into your platform repos in the last 30 or 90 days, whether policy checked it, whether a named person approved it, where each Application is exposed, which runtimes are near end of life, and which standards are in force. Exports as a PDF.
 ---
 
 import { Callout } from 'nextra/components'
@@ -13,7 +13,8 @@ Portfolio is the view for whoever answers for the workspace. It asks three
 questions about the changes that reached your platform repos: how many there
 were, how many policy checked, and how many a named person approved. It
 names every change behind a gap, with a link to its PR, and then shows where
-each Application is exposed.
+each Application is exposed, which runtimes are past or near their end of
+life, and which standards are in force.
 
 **Who sees it:** workspace owners. Other roles don't see the sidebar item,
 and the screen says *The portfolio is for workspace owners*. Today every
@@ -30,6 +31,8 @@ the workspace sees it.
   Applications. **All applications** sums across every platform repo;
   picking one narrows the cards and lists to that Application's platform
   repo.
+- **Export PDF** downloads the view you're looking at, for the same window
+  and the same Application filter. See [The PDF](#the-pdf).
 
 ### The three cards
 
@@ -113,7 +116,7 @@ One row per Application, read from its latest weekly snapshot:
 | **Image scanning**, **Secret scanning**, **SAST / SCA** | Whether each tooling category is covered. |
 | **Tests in CI**, **Pinned actions** | Whether each practice is in place. |
 | **Prod gate** | Whether production promotion is manual. |
-| **Runtime** | The most urgent detected runtime and its support status: *past end of life*, *security fixes end* a date, *supported* or *end of life unknown*, plus how many other services there are. **Not recorded** or **None detected** when there is nothing to show. |
+| **Runtime** | The most urgent detected runtime and its support status: *past end of life*, *security fixes end* a date, *supported* or *end of life unknown*, plus how many other services there are. **Not recorded** or **None detected** when there is nothing to show. Every service is listed under [Runtimes](#runtimes). |
 
 The scanning, practice and prod gate cells use one legend:
 
@@ -129,6 +132,122 @@ A missing value is shown as not recorded, never as fine. Verified, claimed
 and missing are never blended; see [Maturity](/guide/maturity) for how each
 is decided.
 
+#### Draft the fix
+
+Some scanning cells carry a **Draft the fix** button. It is the same gap
+remediation as **Draft pipeline PR** on the [Maturity](/guide/maturity) page: the
+crew opens a pull request adding the missing step to the Application's
+pipeline, policy checks it, and a person on your team reviews and merges it.
+Nothing merges on its own. Once the request is sent, the button becomes
+**Watch the crew work**, which opens the proposal.
+
+The button appears on a cell only when all of these hold:
+
+- The cell is a tooling category (**Image scanning**, **Secret scanning**,
+  **SAST / SCA**) that is missing, partial, or claimed but not found.
+- The Application's latest snapshot comes from a finished gap analysis of
+  its own platform repo, which lists that category as an open gap and
+  recommends a tool the crew can add.
+- At least one of the Application's services has a finished analysis.
+
+If any of these is missing, the cell has no button, so the button never
+offers a fix that would be refused.
+
+The score doesn't move when the pull request merges. It moves once the tool
+is also declared in `environment-profile.yaml`, and that claim is yours to
+make.
+
+Some cells never get the button:
+
+- **Practices** (**Tests in CI**, **Pinned actions**, **Prod gate**).
+  Declaring a practice is your attestation, not something the crew writes
+  for you.
+- **Runtimes.** There is no governed fix flow for upgrading a runtime, and
+  the DevOps Engineer doesn't upgrade runtimes.
+- **Claimed cells** (~). A claim that isn't verified yet doesn't need a new
+  pipeline step; what it lacks is verification.
+- **A platform repo shared by two Applications.** The fix is built from the
+  platform repo, so it could land on the other Application. Neither gets the
+  button.
+
+### Runtimes
+
+One row per service, most urgent first: past end of life, then security
+fixes only (soonest end first), then detected with an unknown end of life,
+then not detected, then supported.
+
+Each runtime is **detected by the Code Reviewer** from the service's repo.
+It is read by the model, not verified. TruStacks checks it against the
+endoflife.date data bundled with the Control Plane.
+
+A summary above the table leads with what needs action, for example *1
+service runs a runtime past end of life (dotnet 6): no more security
+fixes*, or *2 services are on a runtime that gets security fixes only
+(...); the first loses them in 12 days*.
+
+The **End of life** column reads:
+
+| Status | Meaning |
+|---|---|
+| **past end of life** (with the date) | No more security fixes. |
+| **security fixes end** a date | Still patched for security, nothing else. |
+| **supported** | Inside its supported window. |
+| **end of life unknown** | Detected, but not found in the end-of-life data. |
+| **not detected yet** | The service has no finished analysis. |
+| **not recorded yet** | The Application's snapshot doesn't record runtimes, or there is no snapshot. |
+
+A service TruStacks couldn't detect is listed and counted, never dropped and
+never shown as supported.
+
+### Standards
+
+**Rules in force**, as your runners last reported them:
+
+- **TruStacks constitution**: how many rules, and whether its signature was
+  verified (**signature verified**, **signature not verified**, or
+  **signature status not reported**).
+- **Your own rules**: **none in force**, the number in force from a signed
+  bundle with its signature status, or the number read from your platform
+  repo. Rules read from the platform repo are unsigned by design: your
+  repo's review is the trust anchor. See
+  [Add your own rule](/guide/rules#add-your-own-rule).
+- If no runner has reported yet, the panel says the rules in force aren't
+  known. It never says there are none.
+- If your runners report different rules, the panel says so and shows the
+  newest report.
+
+**Per Application**, every practice the latest gap analysis scored, with
+the same marks as Exposure. The headline reads *N of M scored applications
+meet every practice, verified*. Only verified counts as met: a claimed
+practice is counted on its own (*N claimed, not verified*), never as met.
+An Application with no snapshot reads **Not scored yet**.
+
+### The PDF
+
+**Export PDF** renders the current view, for the same window and
+Application filter, as a printable PDF. Like the screen, it is for
+workspace owners only.
+
+Page one is the change-control summary: the three cards and every change
+behind a gap, with links to the PRs, then the full change table. It is
+written to be usable as evidence of change control, for example for SOC2
+CC8.1 (change management). It is evidence for your auditor to weigh, not a
+certification. Exposure, Runtimes and Standards follow.
+
+The PDF uses the screen's wording, including what it can't see:
+
+- When any change was opened outside TruStacks, the policy card reads
+  **Checked: N of the M TruStacks opened**, never *N of all*.
+- **No approval recorded**, never *nobody approved*.
+- **Self-approved** is its own line, never counted as approved.
+- The bot rule is stated on the page.
+- A runtime with no detection, or an unknown end of life, is printed as
+  such, never as supported.
+
+The response carries an `X-TruStacks-Content-Sha256` header with the PDF's
+SHA-256, as the audit report PDF does, so a forwarded copy can be checked
+against what the Control Plane produced.
+
 ## What to do here
 
 - Open the **Self-approved** and **No approval recorded** lists first. Each
@@ -140,7 +259,13 @@ is decided.
   to look at one platform repo at a time.
 - In **Exposure**, a ✗ or ~ points at a gap you can close; the Application's
   [gap analysis](/guide/gap-analyses) and [Maturity](/guide/maturity) say
-  what closing it takes. A red runtime is past its end of life.
+  what closing it takes. A red runtime is past its end of life; see
+  [Runtimes](#runtimes) for every service.
+- On a tooling gap with **Draft the fix**, click it to have the crew open
+  the pull request. Review and merge it, then declare the tool in
+  `environment-profile.yaml` so the score moves.
+- When an auditor asks for change-control evidence, pick the window and
+  Application and click **Export PDF**.
 
 ## How it connects
 
@@ -158,6 +283,9 @@ is decided.
   GitLab, TruStacks doesn't use pipeline status for this.
 - **Approvals only come from the git host.** An approval given anywhere else
   isn't seen.
-- **Exposure is as fresh as the current week's snapshot.**
+- **Exposure, Runtimes and per-Application practices are as fresh as the
+  current week's snapshot.**
+- **Runtimes are detected, not verified.** The Code Reviewer reads them from
+  the repo.
 - **The change table lists at most 2,000 changes per window.** When a window
   holds more, it shows the newest and says so.
