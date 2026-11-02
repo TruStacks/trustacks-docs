@@ -450,8 +450,9 @@ platform repo of the Application the service belongs to, read at the commit
 its `environment-profile.yaml` was read from, with the same checks and
 sandbox. A signed bundle the runner has verified still takes precedence,
 and `overlay.requireSigned: true` still refuses the repo source. If your
-rules are refused, or the platform repo can't be read, the audit runs with
-the constitution and says why. A service that no Application owns yet is
+rules are refused, the platform repo can't be read, or evaluating your
+rules fails, the audit still files the constitution's findings and says
+why: a problem with your rules never hides TruStacks' own findings. A service that no Application owns yet is
 audited with the constitution and any signed bundle.
 
 The `policy_audit` event records the overlay it used (source, commit SHA,
@@ -459,7 +460,8 @@ rules, warnings, violations), the same shape as `policy_check`. A finding
 from one of your rules reads *Your overlay rule `<rule_id>` (the platform
 repo's rules/ at `<commit>`) denies this file in the repository itself*,
 or names your signed overlay bundle. A finding from the constitution
-names the signed TruStacks policy rule.
+names the signed TruStacks policy rule. The runner tags each denial with
+the rule set that produced it, so the label always matches its source.
 
 ### Drafting and testing
 
