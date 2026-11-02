@@ -96,9 +96,14 @@ Read what the Coordinator produced. A good draft has:
 
 - a header comment, `package overlay.acme_requires_explicit_workflow_permissions`
   and `import rego.v1`;
-- a `rule_metadata` map keyed on the rule id, with a `description` and
-  `required_tooling_categories` (empty here, because the rule only reads
-  the proposal), and `rule_index := rule_metadata`;
+- a `rule_metadata` map keyed on the rule id that declares every
+  [required field](/reference/constitution#rule-metadata): a
+  `description`, `kind: "structural"` (it checks the shape of a workflow),
+  `required_tooling_categories: []` and `practice_dimensions: []` (it only
+  reads the proposal), and `tier_scope` and `target_kinds` of `["any"]`.
+  It may add `"subjects": ["proposal", "repo"]`, so the repo audit also
+  judges your service repo's own workflows with it. Then
+  `rule_index := rule_metadata`;
 - a `deny contains msg if { … }` block with a real condition, emitting
   `{"rule_id": …, "message": …}`.
 
@@ -228,10 +233,11 @@ says so. Fix the draft before landing it.
    `rule test` runs `opa test` on the rule. `rule lint` checks the rule's
    structure: the directory name is a valid rule id, both files exist, the
    `package` and `rule_metadata` are present and name the rule id,
-   `opa check` passes, and the overlay is confined to `data.overlay` (the
-   same check the runner makes before it evaluates an overlay). Without OPA
-   on your `PATH`, lint skips `opa check` and the package part of the
-   confinement check.
+   `opa check` passes, the overlay is confined to `data.overlay` (the
+   same check the runner makes before it evaluates an overlay), and
+   `rule_metadata` declares every required field with values in the
+   schema. Without OPA on your `PATH`, lint skips `opa check`, the package
+   part of the confinement check and the metadata check.
 
 5. **Sign and publish the overlay bundle:**
 

@@ -1,6 +1,6 @@
 ---
 title: Policy linter
-description: What trustacks rule lint actually checks on your overlay rules. Rule ID, file layout, package and rule_metadata, an opa check compile pass and overlay confinement. What it does not check, and why overlays can only be stricter.
+description: What trustacks rule lint actually checks on your overlay rules. Rule ID, file layout, package, an opa check compile pass, overlay confinement and the rule_metadata schema. What it does not check, and why overlays can only be stricter.
 ---
 
 import { Callout } from 'nextra/components'
@@ -53,11 +53,29 @@ named rule's findings):
 The full rules, and what the runner does with an overlay that breaks them,
 are in [the constitution reference](/reference/constitution#your-own-rules).
 
+Then it checks each rule's `rule_metadata` against the
+[schema](/reference/constitution#rule-metadata), reading it the way OPA
+evaluates it:
+
+| Check | Fails when |
+|---|---|
+| Required fields declared | `description`, `kind`, `required_tooling_categories`, `tier_scope` or `target_kinds` is missing. The runner still loads an existing rule like this, with a warning; lint refuses it so a new rule is complete. |
+| `kind` | It is not `structural` or `behavior`. |
+| `practice_dimensions` | A `behavior` rule names no practice, or a `structural` rule names some. |
+| `tier_scope` | It is not `["any"]` or a list of `dev`, `uat` and `prod`, or it mixes `"any"` with tiers. |
+| `target_kinds` | It is not `["any"]` or a list of target kinds (lowercase identifiers such as `kubernetes` or `ecs-fargate`), or it mixes `"any"` with kinds. |
+| `subjects` | When present, it is not a non-empty list of `proposal` and `repo`. |
+| `description`, `required_tooling_categories` | Not a non-empty string, or not a list of strings. |
+
+A value outside the schema is also what makes the runner refuse your whole
+`rules/` tree, so lint is where to find it.
+
 The naming checks are the [rule-naming standard](/reference/rule-naming-standard).
 
 <Callout type="info">
   If `opa` is not on your `PATH`, lint prints a warning and skips the
-  `opa check` pass and the package part of the confinement check. The file
+  `opa check` pass, the package part of the confinement check and the
+  rule metadata check. The file
   checks still run. Install OPA so a clean lint
   means what it says.
 </Callout>

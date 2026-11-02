@@ -74,6 +74,12 @@ The **kind** filter separates two families:
   These are also the evidence behind the behavior rows on
   [Maturity](/guide/maturity).
 
+Your overlay rules are filed by the `kind` their `rule_metadata` declares
+(`structural` or `behavior`). A rule that predates the
+[metadata schema](/reference/constitution#rule-metadata) and declares no
+kind is filed as before, by whether it lists practice dimensions, and
+carries a warning saying so.
+
 Some rules never deny and only feed the score (for example, whether image
 scanning is declared). The [constitution reference](/reference/constitution)
 lists every rule.
@@ -142,12 +148,18 @@ it loads your rules:
   the runner's restricted builtins (no network, no environment);
 - `rule_metadata` names the rule, and no other rule uses the same package
   or rule id;
+- `rule_metadata` declares every
+  [required field](/reference/constitution#rule-metadata), with values in
+  the schema: `kind`, `required_tooling_categories`, `practice_dimensions`
+  for a behavior rule, `tier_scope` and `target_kinds`;
 - `opa test` passes over the whole `rules/` tree.
 
 A draft that fails goes back to the Coordinator with the errors, and the
 Coordinator revises it, up to 3 tries. The chat narrates each check:
 *checked the draft: it compiles in the runner's sandbox and passes its N
-tests*, or *the draft failed its checks, so I'm revising it*. The finished draft shows the
+tests*, or *the draft failed its checks, so I'm revising it*. A passing
+draft's checks include *rule_metadata declares kind behavior and its
+scope* (or `structural`). The finished draft shows the
 rule, its `_test.rego` under *the cases it was tested against*, and a line
 **Checked by TruStacks** listing what passed. A draft that never passes is
 shown as it is, can't be proposed, and says why.
@@ -184,8 +196,9 @@ alone. Before it opens the PR, the runner clones your platform repo at its
 default branch and checks the files again, as they will land.
 
 The PR body says what the rule denies, why, what kind of rule it is and
-where it applies, what was checked, and any setup still left to you. The
-kind is given in plain words with the rule's `kind` value beside it: a
+where it applies (its tiers and, when it names them, its target kinds),
+what was checked, and any setup still left to you. The kind is given in
+plain words with the `kind` the rule declares beside it: a
 **posture** rule (`kind: structural`) checks what your Stack file declares,
 a **practice** rule (`kind: behavior`) judges how a change's files behave,
 and any other **structural** rule (`kind: structural`) checks the shape of a
@@ -212,7 +225,8 @@ proposal or a gap analysis), the runner reads `rules/` from the default
 branch and enforces the rule. It appears on this screen as **Your overlay**.
 
 Every time it loads your rules, the runner checks them again: confined to
-`data.overlay`, compiles with the constitution, within the size cap. CI
+`data.overlay`, compiles with the constitution, within the size cap, and
+`rule_metadata` values within the schema. CI
 doesn't do the confinement and constitution checks; the runner does. If
 anything fails, none of your rules load for that run, the constitution still
 applies, and the reason is recorded. Every verdict records the commit your
@@ -220,13 +234,63 @@ rules were read from. The full rules, including the branch the runner reads,
 are in
 [the constitution reference](/reference/constitution#rules-from-your-platform-repo).
 
+### Your rules in the repo audit
+
+Each [analysis](/guide/applications#analyses) of a service also audits the
+service repo's own Dockerfiles, CI workflows and ECS task definitions,
+whoever wrote them. A rule of yours is part of that audit when its
+`rule_metadata` declares `"subjects": ["proposal", "repo"]`. The audit
+reads `rules/` from your Application's platform repo at the commit its
+`environment-profile.yaml` was read from, with the same checks as a
+proposal; a signed overlay bundle still takes precedence. Its denials
+arrive on [Signals](/guide/signals) as findings that read *Your overlay
+rule `<rule_id>` (the platform repo's rules/ at `<commit>`) denies this file
+in the repository itself*. The audit never fails the analysis. Details are
+in [the constitution reference](/reference/constitution#repo-audit).
+
 ### Without the chat: the rule CLI
 
 You can also write the rule yourself in a checkout of your platform repo, as
 `rules/<rule_id>/<rule_id>.rego` and `rules/<rule_id>/<rule_id>_test.rego`
 with `package overlay.<name>`. Scaffold it with `trustacks rule new`, then
 check it with `trustacks rule test` and `trustacks rule lint`, which use the
-same restricted builtins the runner uses. See the
+same restricted builtins the runner uses. Declare the full
+[rule metadata](/reference/constitution#rule-metadata); lint refuses a rule
+without it:
+
+```rego
+package overlay.acme_requires_explicit_workflow_permissions
+
+import rego.v1
+
+rule_metadata := {
+	"acme.requires_explicit_workflow_permissions": {
+		"description": "Workflows must declare top-level permissions explicitly",
+		"kind": "structural",
+		"required_tooling_categories": [],
+		"practice_dimensions": [],
+		"tier_scope": ["any"],
+		"target_kinds": ["any"],
+		"subjects": ["proposal", "repo"],
+	},
+}
+
+rule_index := rule_metadata
+
+deny contains msg if {
+	some f in input.proposal.files
+	startswith(f.path, ".github/workflows/")
+	not regex.match(`(?m)^permissions:`, f.content)
+	msg := {
+		"rule_id": "acme.requires_explicit_workflow_permissions",
+		"message": sprintf("workflow %s must declare top-level permissions: explicitly", [f.path]),
+	}
+}
+```
+
+`"subjects": ["proposal", "repo"]` also makes the rule part of the
+[repo audit](#your-rules-in-the-repo-audit): each analysis judges the
+service repo's own workflows with it, not only TruStacks' proposals. See the
 [Rule CLI](/reference/runner-cli). Rules are Rego only: put lists inside the
 rule, not in JSON or YAML data files beside it. Open the pull request
 yourself; merging it enforces the rule from the next run, the same as a
@@ -239,6 +303,9 @@ rule end to end in a local development environment.
 
 - Every [proposal](/guide/applications#proposals) is judged against these
   rules; denials cite them by id.
+- Every [analysis](/guide/applications#analyses) audits the service repo's
+  own delivery files with the rules that declare `repo` in `subjects`,
+  yours included. See [Your rules in the repo audit](#your-rules-in-the-repo-audit).
 - [Gap analyses](/guide/gap-analyses) and [Maturity](/guide/maturity) use
   each rule's metadata (the categories and behaviors it scores).
 - The bundle a runner loads, and whether it was verified, is described in
@@ -259,8 +326,12 @@ rule end to end in a local development environment.
   See [Runners](/guide/runners). Drafts are checked by the runner, so a
   draft written before the upgrade can't be proposed; draft it again.
 - **A draft is written in one pass.** You can't refine a draft turn by
-  turn, and the Coordinator doesn't require a rule to declare its kind or
-  scope it to a tier.
+  turn.
+- **Declared metadata needs runner 0.2.19.** From that release every new
+  draft declares its `kind`, `tier_scope` and `target_kinds`, and the
+  repo audit applies your rules. A rule already in `rules/` without them
+  keeps loading, with a warning. The warning is in your runner's policy
+  state report and on the Rules API; the Rules page doesn't show it.
 - **"deny → re-propose"** in the gate strip describes the loop, not an
   automatic retry: after a deny, someone starts a new proposal.
 - If the list is empty, the empty state refers to `make policy-bundle`,
