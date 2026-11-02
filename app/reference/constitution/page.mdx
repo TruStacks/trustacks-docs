@@ -297,34 +297,34 @@ rule_metadata := {
 rule_index := rule_metadata
 ```
 
-**Refused or warned.** There are two kinds of problem, and they are handled
-differently:
+**Refused when you write it, never switched off when it runs.** Metadata
+problems are caught while you author a rule. Once a rule reaches a runner, a
+metadata problem never turns it off:
 
 - **A value outside the schema** (`kind: "posture"`,
   `tier_scope: ["staging"]`, a `behavior` rule with no practice dimensions,
-  a `structural` rule that lists some) is refused by `trustacks rule lint`,
-  by the checks on every Coordinator draft, and by the runner when it loads
-  `rules/` from your platform repo. Like any other check the runner makes
-  first, it refuses the whole tree: none of `rules/` loads, the constitution
-  still applies, and the reason is recorded on the run. See
-  [Rules from your platform repo](#rules-from-your-platform-repo).
+  a `structural` rule that lists some), or **one rule id declared in two
+  packages**, is refused by `trustacks rule lint`, by `trustacks rule sign`,
+  and by the checks on every Coordinator draft.
 - **A required field that isn't declared** is refused by `trustacks rule
-  lint` and for a new Coordinator draft. A rule that is already in your repo
-  or a signed bundle still loads and is enforced. Its kind is derived as
-  before (`behavior` if it lists practice dimensions, otherwise
-  `structural`) and it carries a warning such as
+  lint` and for a new Coordinator draft.
+- **If such a rule still reaches a runner**, through `rules/` in your
+  platform repo or a signed bundle, it **still loads and enforces**. A
+  missing or invalid `kind` falls back to the derived kind (`behavior` if it
+  lists practice dimensions, otherwise `structural`), and each problem shows
+  as a warning (`metadata_invalid`, or for a missing field a message such as
   `acme.foo: rule_metadata does not declare kind, tier_scope, target_kinds.
-  Its kind was derived as structural, as before.` The warning is in the overlay record
-  on `policy_check`, `gap_check` and `policy_audit`, in your runner's policy
-  state report, and on the rule in the Rules API (`warnings`, with
-  `kind_declared: false`). Add the fields to clear it.
+  Its kind was derived as structural, as before.`). The warning is in the
+  overlay record on `policy_check`, `gap_check` and `policy_audit`, in your
+  runner's policy state report, and on the rule in the Rules API
+  (`warnings`). Fix the metadata to clear it.
 
-Signed bundles get the same check. `trustacks rule sign` refuses to sign a
-bundle with an invalid value, and a runner refuses to load one that has
-it: none of the bundle's rules are enforced, the constitution still
-applies, and the policy state shows the overlay as not loaded with the
-reason (`metadata_invalid`) and each invalid value. A bundle that is only
-missing fields still loads, with the warning above.
+What does stop an overlay loading is a safety check, not metadata: a rule
+outside `data.overlay`, a compile failure, the size cap, a symlink, or (for
+`rules/` in your platform repo) one rule id in more than one package. Then
+none of the overlay loads, the constitution still applies, and the reason is
+recorded on the run. See
+[Rules from your platform repo](#rules-from-your-platform-repo).
 
 ### Overlay rules and your score
 
