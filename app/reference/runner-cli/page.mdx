@@ -77,6 +77,30 @@ trustacks rule new acme.requires_runbook_link \
   --description "Every service ships a runbook link"
 ```
 
+The stub declares every [rule metadata](/reference/constitution#rule-metadata)
+field, as a structural rule that applies everywhere:
+
+```rego
+rule_metadata := {
+    "acme.requires_runbook_link": {
+        "description": "Every service ships a runbook link",
+        "kind": "structural",
+        "required_tooling_categories": [],
+        "practice_dimensions": [],
+        "tier_scope": ["any"],
+        "target_kinds": ["any"],
+    },
+}
+
+rule_index := rule_metadata
+```
+
+Change `kind` to `"behavior"` and name at least one practice in
+`practice_dimensions` if the rule judges how a change's files behave. Add
+`"subjects": ["proposal", "repo"]` to include it in the
+[repo audit](/reference/constitution#repo-audit). Without `--description`,
+the description is a `TODO` placeholder.
+
 ### `trustacks rule test`
 
 ```bash
@@ -94,10 +118,13 @@ trustacks rule lint [rule_id]
 ```
 
 Checks rule ID validity, that both files exist, that the rule declares a
-`package` and a `rule_metadata` map keyed by its ID, then runs `opa check`
-and the overlay confinement check (every package under `overlay.`, data only
-in `data.overlay`, no symlinks, allowlisted file types). Without `opa` on
-your `PATH`, it skips `opa check` and the package part of confinement. See [Policy linter](/reference/policy-linter) for the full list and what it
+`package` and a `rule_metadata` map keyed by its ID, then runs `opa check`,
+the overlay confinement check (every package under `overlay.`, data only
+in `data.overlay`, no symlinks, allowlisted file types) and the
+[rule metadata](/reference/constitution#rule-metadata) check: every
+required field declared, with values in the schema. Without `opa` on your
+`PATH`, it skips `opa check`, the package part of confinement and the
+metadata check. See [Policy linter](/reference/policy-linter) for the full list and what it
 does not check.
 
 ### `trustacks rule sign`

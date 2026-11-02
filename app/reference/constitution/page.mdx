@@ -241,6 +241,87 @@ unconfined overlay. `trustacks rule new --package` must start with
 `overlay.`. See the [Rule CLI](/reference/runner-cli) and the
 [policy linter](/reference/policy-linter).
 
+### Rule metadata [#rule-metadata]
+
+<Callout type="info">
+  **Required from runner 0.2.19.** Earlier runners read `description`,
+  `required_tooling_categories`, `practice_dimensions` and `tier_scope`,
+  and derive the kind.
+</Callout>
+
+Every overlay rule declares a `rule_metadata` map with one key, its rule id,
+and these fields:
+
+| Field | Required | Values |
+|---|---|---|
+| `description` | Yes | One sentence a reviewer can read. |
+| `kind` | Yes | `"structural"` or `"behavior"`. |
+| `required_tooling_categories` | Yes | Tooling categories the rule reads from your [Stack file](/reference/environment-profile) (`data.env.tooling_categories.*`), or `[]`. |
+| `practice_dimensions` | For `behavior` | At least one practice key for a `behavior` rule. Empty, or left out, for a `structural` rule. |
+| `tier_scope` | Yes | `["any"]`, or a list of tiers from `"dev"`, `"uat"` and `"prod"`. |
+| `target_kinds` | Yes | `["any"]`, or a list of target kinds such as `"kubernetes"` and `"ecs-fargate"`. |
+| `subjects` | No | `["proposal"]` (the default) or `["proposal", "repo"]`. See [Your rules in the repo audit](#repo-audit). |
+
+`"any"` can't be mixed with other values: `["any", "prod"]` is refused.
+
+A rule's PR body (from **Propose as PR**) calls it one of three things.
+Each maps to the fields like this:
+
+| You call it | `kind` | Tooling and practice fields |
+|---|---|---|
+| A **practice** rule: how the files a change writes behave | `behavior` | At least one `practice_dimensions` entry |
+| A **posture** rule: your Stack file declares a tool | `structural` | The categories it reads in `required_tooling_categories` |
+| A **structural** rule: the shape of a change | `structural` | Neither |
+
+A declared `kind` is used as declared. A rule doesn't need a `practice.`
+id to be a behavior rule (it can't have one: the `practice` namespace is
+reserved).
+
+`tier_scope` and `target_kinds` describe where the rule applies, and the PR
+body states it. They are metadata: they don't filter what the gate
+evaluates, so a rule meant for production also checks
+`input.context.target.tier` in its deny body.
+
+```rego
+rule_metadata := {
+	"acme.prod_deploy_requires_approval": {
+		"description": "Production deploy jobs run in an approval environment",
+		"kind": "behavior",
+		"required_tooling_categories": [],
+		"practice_dimensions": ["prod_deploy_requires_approval"],
+		"tier_scope": ["prod"],
+		"target_kinds": ["any"],
+	},
+}
+
+rule_index := rule_metadata
+```
+
+**Refused or warned.** There are two kinds of problem, and they are handled
+differently:
+
+- **A value outside the schema** (`kind: "posture"`,
+  `tier_scope: ["staging"]`, a `behavior` rule with no practice dimensions,
+  a `structural` rule that lists some) is refused by `trustacks rule lint`,
+  by the checks on every Coordinator draft, and by the runner when it loads
+  `rules/` from your platform repo. Like any other check the runner makes
+  first, it refuses the whole tree: none of `rules/` loads, the constitution
+  still applies, and the reason is recorded on the run. See
+  [Rules from your platform repo](#rules-from-your-platform-repo).
+- **A required field that isn't declared** is refused by `trustacks rule
+  lint` and for a new Coordinator draft. A rule that is already in your repo
+  or a signed bundle still loads and is enforced. Its kind is derived as
+  before (`behavior` if it lists practice dimensions, otherwise
+  `structural`) and it carries a warning such as
+  `acme.foo: rule_metadata does not declare kind, tier_scope, target_kinds.
+  Its kind was derived as structural, as before.` The warning is in the overlay record
+  on `policy_check`, `gap_check` and `policy_audit`, in your runner's policy
+  state report, and on the rule in the Rules API (`warnings`, with
+  `kind_declared: false`). Add the fields to clear it.
+
+A signed bundle is loaded as it was signed, so run `trustacks rule lint`
+before `trustacks rule sign`.
+
 ### Overlay rules and your score
 
 Overlay rules are enforced on every proposal, but they do not count toward
@@ -266,7 +347,8 @@ rules/<rule_id>/<rule_id>_test.rego   # opa tests
 ```
 
 On every run that evaluates policy (a proposal's policy check and its
-advisory gap check, a gap analysis, and a rule-impact check), the runner
+advisory gap check, a gap analysis, a rule-impact check, and the
+[repo audit](#repo-audit) of an analysis), the runner
 reads `rules/` from your platform repo's default branch, at the same commit
 it reads `environment-profile.yaml` from. There are no keys, no registry and
 no Helm values to set. The trust anchor is your own Git: branch protection,
@@ -294,10 +376,12 @@ Every file must declare `package overlay.<name>`.
   under `overlay.`, nothing outside `data.overlay`);
 - **compile** together with the constitution (`opa check`), under the same
   restricted builtins the runner evaluates with.
+- declare **`rule_metadata` values within the schema** (from runner
+  0.2.19). See [Rule metadata](#rule-metadata).
 
 **All or nothing.** If any check fails, none of `rules/` loads. The run
 continues under the constitution alone, and the reason is recorded on the
-run's `policy_check` or `gap_check` event and in the runner log
+run's `policy_check`, `gap_check` or `policy_audit` event and in the runner log
 (`policy.repo_overlay_rejected`). Nothing is dropped silently. This differs
 from a signed bundle, where an unconfined overlay stops the run with no
 verdict.
@@ -310,8 +394,8 @@ read the environment, or fetch a schema `$ref` are removed: `http.send`,
 not compile, so it is refused at the check above. Your rule can read the
 proposal and profile it is judging, and nothing else.
 
-**Recorded on every verdict.** `policy_check`, `gap_check` and
-`gap_computed` carry the overlay that decided them: its source (`repo`,
+**Recorded on every verdict.** `policy_check`, `gap_check`,
+`gap_computed` and `policy_audit` carry the overlay that decided them: its source (`repo`,
 `bundle` or `none`), the **commit SHA** it was read from, the rule ids
 loaded, and any warnings or violations. The rules appear on the
 [Rules](/guide/rules) page as **Your overlay**.
@@ -326,13 +410,61 @@ the repo is ignored, with a warning. The two are never merged.
 Set `overlay.requireSigned: true` in the runner chart to refuse the repo
 source entirely and load only a signed bundle. It defaults to `false`.
 
+### Your rules in the repo audit [#repo-audit]
+
+<Callout type="info">
+  **Available from runner 0.2.19.** Earlier runners audit a repo with the
+  constitution and a signed overlay bundle only.
+</Callout>
+
+Every [analysis](/guide/applications#analyses) of a service also audits
+the repo's own delivery files: its Dockerfiles and Containerfiles, its
+`.github/workflows/*.yml` and `.yaml` files, and its ECS task definitions
+(up to 200 files, each up to 256 KiB). Whoever wrote them, a person or an
+AI assistant, they are judged by the same rules as a proposal. It is an
+audit, not a gate: it never fails the analysis. Its denials arrive on
+[Signals](/guide/signals) as findings observed by
+`trustacks-policy:repo-audit`.
+
+Only rules that declare `repo` in `subjects` are part of the audit,
+constitution and overlay alike. A rule such as *the proposal includes a
+Helm chart* means nothing for a service repo, so it stays
+`["proposal"]`. To add one of your rules:
+
+```rego
+"subjects": ["proposal", "repo"],
+```
+
+Declare `repo` only when a file in the service repo is enough to judge the
+rule. In the audit, `input.context.subject` is `"repo"` and there is no
+deployment target, so a rule that needs `input.context.target` doesn't
+fire there. An overlay rule that reuses a constitution rule id is not
+added.
+
+**Which overlay.** The audit uses the same selection as a proposal: the
+platform repo of the Application the service belongs to, read at the commit
+its `environment-profile.yaml` was read from, with the same checks and
+sandbox. A signed bundle the runner has verified still takes precedence,
+and `overlay.requireSigned: true` still refuses the repo source. If your
+rules are refused, or the platform repo can't be read, the audit runs with
+the constitution and says why. A service that no Application owns yet is
+audited with the constitution and any signed bundle.
+
+The `policy_audit` event records the overlay it used (source, commit SHA,
+rules, warnings, violations), the same shape as `policy_check`. A finding
+from one of your rules reads *Your overlay rule `<rule_id>` (the platform
+repo's rules/ at `<commit>`) denies this file in the repository itself*,
+or names your signed overlay bundle. A finding from the constitution
+names the signed TruStacks policy rule.
+
 ### Drafting and testing
 
 - **Drafting and proposing.** Type `/rule new <id>` in the Workspace chat
   and the Coordinator drafts a rule and its test cases, grounded in your
   environment profile and the rules already in `rules/`. TruStacks checks
   each draft under the runner's sandbox (compiles with the constitution,
-  confinement, `opa test`) before you see it. **Propose as PR** opens a pull
+  confinement, the [rule metadata](#rule-metadata), `opa test`) before you
+  see it. **Propose as PR** opens a pull
   request on your platform repo with the rule, its test and, the first time,
   a CI job that runs `opa test` on `rules/`. A person merges it; TruStacks
   never does. Needs runner 0.2.18. See
