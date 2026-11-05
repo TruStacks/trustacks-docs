@@ -206,8 +206,10 @@ The button appears on a cell only when all of these hold:
   tool for that category is on every active runner.
 - At least one of the Application's services has a finished analysis.
 
-If any of these is missing, the cell has no button, so the button never
-offers a fix that would be refused.
+If any of these is missing, the cell has no button. A fix that is offered can
+still stop once it runs, for example when the service has no CI workflow or
+calls several platform workflows; see
+[when a fix stops](/guide/maturity#what-a-fix-changes).
 
 #### A fix already on record
 

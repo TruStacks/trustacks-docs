@@ -128,7 +128,7 @@ category, `practices`, the name, an existing entry) is refused.
 - **Already declared:** the PR leaves `environment-profile.yaml` alone and
   only adds the step.
 - **Step already in the workflow:** nothing is added to the workflow. The PR
-  says *Already present — nothing to add: `<tool>` step in `<workflow>`*,
+  says the `<tool>` step is already present in `<workflow>` and there is nothing to add,
   ships only the declaration, and is titled `trustacks: declare <tool>
   (<category>)`.
 - **Stack file not editable here:** when `environment-profile.yaml` lives in
@@ -146,8 +146,9 @@ commit message names nobody.
 
 ### Which workflow it edits
 
-A fix edits the workflow your service actually runs. TruStacks reads the
-service repo's CI and looks for the platform-repo workflow it calls (on
+When TruStacks can identify the workflow your service runs, a fix edits that
+one. It reads the service repo's CI and looks for the platform-repo workflow
+it calls (on
 GitHub Actions, a `uses: <owner>/<platform-repo>/.github/workflows/<file>@<ref>`
 line).
 
@@ -212,7 +213,7 @@ declare <tool> (<category>)` when the step was already there. The body
 opens with **Your choice**: *&lt;name&gt; chose &lt;tool&gt; for &lt;category&gt;
 in TruStacks on &lt;date&gt;*, and what merging does to
 `environment-profile.yaml`. **Fix requested** follows: the tool added, or
-*Already present — nothing to add*, then **Requested but not added**, each
+the note that the step is already present, then **Requested but not added**, each
 with the reason, when a tool couldn't be added, then which workflow the fix
 edits and why. The summary leads with **Scoped fix**: the files that
 actually changed (a file identical to the platform repo's is neither listed
