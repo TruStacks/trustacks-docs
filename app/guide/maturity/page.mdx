@@ -230,6 +230,12 @@ means the step is present in that workflow. It doesn't mean TruStacks has
 seen the step run. The workflow targeting above is what puts the step in
 the workflow your service calls.
 
+If your service repo calls that workflow pinned to a commit SHA (or a tag),
+merging the fix doesn't change what the service runs yet. Move the service
+repo's `uses:` pin to the merge commit, as for any
+[workflow change](/reference/platform-repo-layout), and the new step runs
+on its next build.
+
 When the PR couldn't declare the tool (the Stack file is elsewhere, or on
 GitLab CI and Azure Pipelines), the category stays missing until you
 declare it yourself.
