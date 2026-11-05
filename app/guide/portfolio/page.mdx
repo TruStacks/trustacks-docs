@@ -36,7 +36,7 @@ the workspace sees it.
 
 ### The three cards
 
-Under **Production changes, last N days**:
+Under **Changes to your platform repos, last N days**:
 
 | Card | What it counts |
 |---|---|
@@ -81,7 +81,7 @@ Two rules apply to every approval:
   decides, humans approve*, counted.
 
 With no platform repo connected, the cards are replaced by *No platform repo
-is connected*, with a link to Applications. Zero changes there means nothing
+is connected, so there are no changes to count*, with a link to Applications. Zero changes there means nothing
 to count, not a clean record.
 
 ### The gaps behind the numbers
@@ -136,10 +136,12 @@ is decided.
 
 Some scanning cells carry a **Draft the fix** button. It is the same gap
 remediation as **Draft pipeline PR** on the [Maturity](/guide/maturity) page: the
-crew opens a pull request adding the missing step to the Application's
-pipeline, policy checks it, and a person on your team reviews and merges it.
-Nothing merges on its own. Once the request is sent, the button becomes
-**Watch the crew work**, which opens the proposal.
+crew opens a pull request adding the missing tool's step to the service's
+existing CI workflow, policy checks it, and a person on your team reviews and
+merges it. Nothing merges on its own. A fix is scoped: it changes nothing
+but that workflow, and only by adding to it. See
+[What a fix changes](/guide/maturity#what-a-fix-changes). Once the request
+is sent, the cell reads **Fix in progress → view**.
 
 The button appears on a cell only when all of these hold:
 
@@ -153,9 +155,33 @@ The button appears on a cell only when all of these hold:
 If any of these is missing, the cell has no button, so the button never
 offers a fix that would be refused.
 
+#### A fix already on record
+
+Once a fix has been drafted, the cell shows where the newest one stands.
+This comes from TruStacks' record of the run, not from the page, so leaving
+Portfolio and coming back shows the same thing:
+
+| The cell reads | What it means | **Draft the fix** offered again |
+|---|---|---|
+| **Fix in progress → view** | The crew is working on it. The link opens the run. | No |
+| **Fix PR open → review**, and **See the run** | The pull request is open. The first link opens the PR in your git host, the second the run. | No |
+| **Fix merged** | Someone on your team merged it. The cell adds that the score moves once the tool is declared in `environment-profile.yaml`. | No |
+| **Fix failed → view** | The run ended in an error. | Yes |
+| **Fix stalled → view** | The run was still queued or running after 15 minutes, so it is treated as lost. | Yes |
+| **Fix PR closed → view** | The PR was closed without merging. | Yes |
+| **Last fix opened no PR → view** | The run finished without opening a PR, for example because there was nothing to change. | Yes |
+
+Once the category is covered, a merged or closed fix is no longer shown.
+
+**One fix per gap at a time.** While a fix for a category is in progress,
+TruStacks refuses a second one for the same gap, whether it is asked for
+from Portfolio, from Maturity or from a tab that was left open. The cell
+then shows the run already going. A run still in progress after 15 minutes
+no longer blocks a new one.
+
 The score doesn't move when the pull request merges. It moves once the tool
 is also declared in `environment-profile.yaml`, and that claim is yours to
-make.
+make. The PR says so too.
 
 Some cells never get the button:
 
@@ -228,7 +254,8 @@ An Application with no snapshot reads **Not scored yet**.
 Application filter, as a printable PDF. Like the screen, it is for
 workspace owners only.
 
-Page one is the change-control summary: the three cards and every change
+Page one is the change-control summary, headed *Change control · changes to
+your platform repos*: the three cards and every change
 behind a gap, with links to the PRs, then the full change table. It is
 written to be usable as evidence of change control, for example for SOC2
 CC8.1 (change management). It is evidence for your auditor to weigh, not a
@@ -262,8 +289,10 @@ against what the Control Plane produced.
   what closing it takes. A red runtime is past its end of life; see
   [Runtimes](#runtimes) for every service.
 - On a tooling gap with **Draft the fix**, click it to have the crew open
-  the pull request. Review and merge it, then declare the tool in
-  `environment-profile.yaml` so the score moves.
+  the pull request. When the cell reads **Fix PR open → review**, review
+  and merge it, then declare the tool in `environment-profile.yaml` so the
+  score moves. If it reads **Fix failed → view**, open the run to see why
+  before drafting it again.
 - When an auditor asks for change-control evidence, pick the window and
   Application and click **Export PDF**.
 

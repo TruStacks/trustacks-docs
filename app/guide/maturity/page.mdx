@@ -56,8 +56,9 @@ analysis**.
 
 - **One card per unsatisfied tooling category**: the category, the rule
   that requires it, the recommended tool and why. **Draft pipeline PR**
-  asks the crew to add that tool's step to your pipeline and opens a
-  proposal (**Watch the crew work →**). The card says plainly that your
+  asks the crew to add that tool's step to the service's existing CI
+  workflow and opens a proposal (**Watch the crew work →**). The fix
+  changes nothing else; see [What a fix changes](#what-a-fix-changes). The card says plainly that your
   score moves only once you also declare the tool in
   `environment-profile.yaml`, because that declaration is yours to make.
 - **A behaviors card** (*N behaviors unearned*), split three ways:
@@ -86,6 +87,66 @@ What is left, in two voices:
   count half, and it names them), and the score that closing every gap on
   the page would actually reach. If that ceiling is below 90%, it says gold
   is not reachable yet and why.
+
+## What a fix changes
+
+**Draft pipeline PR** here and **Draft the fix** on
+[Portfolio](/guide/portfolio#draft-the-fix) start the same run: a **scoped
+fix**, not a full plan. It closes one gap and changes nothing else.
+
+Today a fix adds every tool the gap recommends, in `.github/workflows/ci-<service>.yaml` (or `.yml`) in your platform repo; on GitLab CI and Azure Pipelines, in the service's pipeline file a full plan wrote.
+
+What TruStacks enforces, in code and not only in the agent's instructions:
+
+- **Only the existing workflow.** The DevOps Engineer may write that one
+  file. Any other file (a Helm chart, a Kustomize overlay, an ArgoCD
+  Application, a Dockerfile) is refused, and so is retiring a file.
+- **Only additions.** The edited workflow is compared with the original. On
+  GitHub Actions, every top-level key other than `jobs` stays as it was and
+  none is added, no job is added, every original job keeps its settings,
+  and its original steps are all there, unchanged and in order. A job's
+  `permissions` may gain only what the tool's step needs to upload its
+  results (`contents: read`, `security-events: write`). On GitLab CI and
+  Azure Pipelines, every original job and step must still be there,
+  unchanged; additions may go anywhere. An edit that changes anything else
+  is sent back to the agent; after 3 refusals the run fails and says why.
+- **The step must be there.** On GitHub Actions, the fix can't be
+  submitted until the workflow has a step whose `uses:` is each requested
+  tool's curated, pinned action.
+- **Policy still decides.** The constitution judges the fix together with
+  the service's deploy files as they will stand after the merge.
+
+A fix stops, and changes nothing, when:
+
+- **The service has no CI workflow yet.** The run says *No CI workflow for
+  this service yet* and to *run a full plan first*, naming the paths it
+  looked for. A fix extends a pipeline; it never builds one.
+- **TruStacks couldn't read the platform repo.** Retry; nothing was changed.
+- **A file the fix needs can't be read safely**: a symlink, a file outside
+  the repo, a file that isn't UTF-8 text, or one that is too large
+  (200,000 bytes for the workflow, 1 MiB for the deploy files policy reads
+  beside it). The run names the file and the reason. A workflow that is a
+  symlink isn't used at all, so the run reports that there is no CI
+  workflow.
+
+The pull request says what it is. Its title reads `trustacks: add <tool>`,
+followed by the agent's summary. The body opens with **Fix requested**,
+which names the tool and says the PR doesn't declare it in
+`environment-profile.yaml`, because that is yours to declare. The summary
+then leads with **Scoped fix**, the files it changed and the steps it
+added, and states that every existing step, job and trigger is unchanged.
+The proposal's **Explanation** leads the same way.
+
+### When a fix fails
+
+**Re-run plan**, on the error in the proposal's activity, re-runs the same
+request as a new proposal. For a fix that means the same fix: the same
+tool, from the same gap, still scoped. The failed proposal stays as the
+record. Only a run that ended in an error can be re-run; one that is still
+going, or that finished, can't.
+
+While a fix for a gap is in progress, a second one for the same gap is
+refused, so a double click or a second tab doesn't open a second PR.
 
 ## What it means
 

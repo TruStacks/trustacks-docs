@@ -251,6 +251,11 @@ bottom:
    - **opened a PR on `<branch>`** with a link. If your platform repo
      already matches the proposal exactly, the run ends with "nothing to
      change" instead.
+   - If the run fails, **Re-run plan** on the error starts the same request
+     again as a new proposal, and the failed one stays as the record. A
+     failed fix re-runs as the same scoped fix (see
+     [What a fix changes](/guide/maturity#what-a-fix-changes)). Only a run
+     that ended in an error can be re-run.
 2. **Pull request opened** banner: the PR link, branch, base and head SHA.
    (Or a **Dry run** banner if you skipped the PR.)
 3. **Explanation**: summary, blast radius, rollback, the rules cited, and
