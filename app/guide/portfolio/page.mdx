@@ -67,6 +67,13 @@ coverage across changes it can't see.
   show in the git host, so the screen says *no approval recorded*, not
   *nobody approved*.
 
+A self-approved or unapproved change that a person on your team has since
+reviewed in TruStacks moves to its own line, **reviewed after merge** (see
+[Record a review after merge](#record-a-review-after-merge)). It is never
+counted as approved. The card then reads, for example, *0 of 2 approved by
+a named person*, with *1 reviewed after merge* and *1 with no approval
+recorded* listed under it.
+
 Two rules apply to every approval:
 
 - **Bots never count as a person.** Dependabot, Renovate, GitHub Apps
@@ -91,11 +98,45 @@ something in it:
 
 - **Self-approved**
 - **No approval recorded**
+- **Reviewed after merge**
 - **Opened by TruStacks, no policy verdict on record**: the policy check
   errored or never ran for these.
 
 Each entry shows the PR title, the repo and PR number, who merged it, when,
 the reason it is in the list, and **Open the PR**.
+
+#### Record a review after merge
+
+Every entry under **Self-approved** and **No approval recorded** has a
+**Record a review after merge** button. It is for a change that shipped
+without a named person's approval, when someone on your team has since
+looked at it and wants that on the record under their own name. Like the
+rest of Portfolio, it is for workspace owners.
+
+The form asks for:
+
+- **What you reviewed, and why it's acceptable** (required): 10 to 1,000
+  characters, in your own words. It starts empty.
+- **Outcome** (optional): *No concerns* or *Follow-up needed*. It starts at
+  *Not stated*.
+- **Link** (optional): an http(s) URL, for example a ticket or a follow-up
+  PR.
+
+TruStacks records you as the reviewer, from your sign-in, and the time;
+neither can be set in the form. The change then moves to **Reviewed after
+merge**, which lists each review: who, when, the outcome, the reason and
+the link, beside the git host's own verdict on the change.
+
+What a review after merge is not:
+
+- **Not an approval.** A reviewed change is never counted under **Approved
+  by a named person**. The review came after the change shipped, and the
+  screen says so.
+- **Not a correction.** The change's own record, including the git host's
+  verdict, stays as it was. Each review is stored on its own.
+- **Not editable.** A review can't be edited or deleted, and each person can
+  record one review of a change. A change approved by a named person can't
+  be reviewed this way.
 
 **All N changes, with who approved them** opens a table of every change in
 the window: the change (a TruStacks icon marks the ones TruStacks opened),
@@ -135,11 +176,22 @@ is decided.
 #### Draft the fix
 
 Some scanning cells carry a **Draft the fix** button. It is the same gap
-remediation as **Draft pipeline PR** on the [Maturity](/guide/maturity) page: the
-crew opens a pull request adding the missing tool's step to the service's
-existing CI workflow, policy checks it, and a person on your team reviews and
-merges it. Nothing merges on its own. A fix is scoped: it changes nothing
-but that workflow, and only by adding to it. See
+remediation as **Draft pipeline PR** on the [Maturity](/guide/maturity) page.
+
+1. **You choose the tool.** The button opens **Draft the fix:
+   &lt;category&gt;**, a list of the tools TruStacks can add for that
+   category, with the recommended one pre-selected. It says: *Merging this
+   PR declares &lt;tool&gt; for &lt;category&gt; in your Stack file and adds
+   its CI step.* **Cancel** drafts nothing.
+2. **The crew opens one pull request** that adds the tool's step to the
+   workflow your service actually calls and declares the tool in
+   `environment-profile.yaml`. The PR names who chose the tool, by display
+   name, never by email.
+3. **Policy checks it, and a person on your team reviews and merges it.**
+   Nothing merges on its own.
+
+A fix is scoped: it changes nothing but that workflow, only by adding to
+it, plus the one entry in your Stack file. See
 [What a fix changes](/guide/maturity#what-a-fix-changes). Once the request
 is sent, the cell reads **Fix in progress → view**.
 
@@ -149,7 +201,9 @@ The button appears on a cell only when all of these hold:
   **SAST / SCA**) that is missing, partial, or claimed but not found.
 - The Application's latest snapshot comes from a finished gap analysis of
   its own platform repo, which lists that category as an open gap and
-  recommends a tool the crew can add.
+  recommends a tool for it.
+- Once your runners have reported which tools they can add, at least one
+  tool for that category is on every active runner.
 - At least one of the Application's services has a finished analysis.
 
 If any of these is missing, the cell has no button, so the button never
@@ -165,7 +219,7 @@ Portfolio and coming back shows the same thing:
 |---|---|---|
 | **Fix in progress → view** | The crew is working on it. The link opens the run. | No |
 | **Fix PR open → review**, and **See the run** | The pull request is open. The first link opens the PR in your git host, the second the run. | No |
-| **Fix merged** | Someone on your team merged it. The cell adds that the score moves once the tool is declared in `environment-profile.yaml`. | No |
+| **Fix merged** | Someone on your team merged it. The cell adds that it reads verified once TruStacks sees the step and the tool is declared in `environment-profile.yaml`. | No |
 | **Fix failed → view** | The run ended in an error. | Yes |
 | **Fix stalled → view** | The run was still queued or running after 15 minutes, so it is treated as lost. | Yes |
 | **Fix PR closed → view** | The PR was closed without merging. | Yes |
@@ -179,9 +233,11 @@ from Portfolio, from Maturity or from a tab that was left open. The cell
 then shows the run already going. A run still in progress after 15 minutes
 no longer blocks a new one.
 
-The score doesn't move when the pull request merges. It moves once the tool
-is also declared in `environment-profile.yaml`, and that claim is yours to
-make. The PR says so too.
+Merging the pull request is the claim: it declares the tool you chose. The
+category then reads claimed, not verified, until a gap analysis finds the
+tool's pinned step in your platform repo's workflow. When the PR couldn't
+declare the tool, it says so and gives the lines to add yourself. See
+[After you merge](/guide/maturity#after-you-merge).
 
 Some cells never get the button:
 
@@ -255,8 +311,10 @@ Application filter, as a printable PDF. Like the screen, it is for
 workspace owners only.
 
 Page one is the change-control summary, headed *Change control · changes to
-your platform repos*: the three cards and every change
-behind a gap, with links to the PRs, then the full change table. It is
+your platform repos*: the three cards (including the *reviewed after merge*
+line) and every change behind a gap, with links to the PRs, a **Reviewed
+after merge · N** section with each review's reviewer, date, outcome,
+reason and link beside the git host's verdict, then the full change table. It is
 written to be usable as evidence of change control, for example for SOC2
 CC8.1 (change management). It is evidence for your auditor to weigh, not a
 certification. Exposure, Runtimes and Standards follow.
@@ -267,6 +325,7 @@ The PDF uses the screen's wording, including what it can't see:
   **Checked: N of the M TruStacks opened**, never *N of all*.
 - **No approval recorded**, never *nobody approved*.
 - **Self-approved** is its own line, never counted as approved.
+- **Reviewed after merge** is its own line too, never counted as approved.
 - The bot rule is stated on the page.
 - A runtime with no detection, or an unknown end of life, is printed as
   such, never as supported.
@@ -278,7 +337,9 @@ against what the Control Plane produced.
 ## What to do here
 
 - Open the **Self-approved** and **No approval recorded** lists first. Each
-  entry links to the PR, so you can ask the person who merged it.
+  entry links to the PR, so you can ask the person who merged it. Once
+  someone has looked at it, **Record a review after merge** puts that on
+  the record under their name, without counting it as approved.
 - If **Checked by policy** reads *N of the M TruStacks opened*, the rest of
   your changes reached the platform repo without going through TruStacks.
   Whether your CI checked them is a question for your CI, not this screen.
@@ -288,10 +349,9 @@ against what the Control Plane produced.
   [gap analysis](/guide/gap-analyses) and [Maturity](/guide/maturity) say
   what closing it takes. A red runtime is past its end of life; see
   [Runtimes](#runtimes) for every service.
-- On a tooling gap with **Draft the fix**, click it to have the crew open
-  the pull request. When the cell reads **Fix PR open → review**, review
-  and merge it, then declare the tool in `environment-profile.yaml` so the
-  score moves. If it reads **Fix failed → view**, open the run to see why
+- On a tooling gap with **Draft the fix**, click it, choose the tool, and
+  the crew opens the pull request. When the cell reads **Fix PR open →
+  review**, review and merge it; merging declares the tool. If it reads **Fix failed → view**, open the run to see why
   before drafting it again.
 - When an auditor asks for change-control evidence, pick the window and
   Application and click **Export PDF**.

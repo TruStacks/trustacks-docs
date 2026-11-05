@@ -343,7 +343,11 @@ patch. Each pull request lists what was kept, replaced, or removed under
 **Preservation notes**.
 
 An agent may delete a file only when the same proposal adds its replacement,
-and the pull request says so.
+and the pull request says so. Even then, a plan never deletes or renames a
+CI workflow your service repo still calls, a reusable workflow (`on:
+workflow_call`) or a shared GitLab or Azure Pipelines template, since
+another service may call it. Those stay, listed under **Kept — still in
+use** with the reason.
 
 ## Where to go next
 
