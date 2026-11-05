@@ -129,7 +129,10 @@ never blocks the pull request.
 The runner pushes a branch to your platform repo and opens a pull request.
 The body explains what changed and why, cites the rules and profile entries
 behind each choice, and lists preservation notes for anything of yours it
-kept.
+kept. Any file it retires is listed under **Files removed**, with what
+replaces it. A CI workflow a service still calls, a reusable workflow and a
+shared pipeline template are never deleted; when the agent proposed
+retiring one, it is listed under **Kept, still in use**, with the reason.
 
 **TruStacks never merges.** You review and merge, under your branch
 protection.

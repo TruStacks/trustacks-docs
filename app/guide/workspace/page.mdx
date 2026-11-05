@@ -7,8 +7,14 @@ import { Callout } from 'nextra/components'
 
 # Workspace
 
-**Where:** **Workspace** in the sidebar (`#/activity`). The older crew canvas
-is one click away via **Crew view** in the header (`#/workspace`).
+**Where:** **Workspace** in the sidebar (`#/activity`). It opens the chat.
+The crew canvas, where you watch the agents work a run, is one click away via
+**The crew at work →** in the header (`#/workspace`).
+
+The sidebar item's tooltip says it is where the crew works. While any
+analysis, plan or fix is running, a pulsing dot sits beside it, on every
+page, and the tooltip adds *a run is active*. A run still queued or running
+after 15 minutes isn't counted as active.
 
 The Workspace is a chat with the **Coordinator**. Ask it about your setup in
 plain language, or run a slash command. Every answer shows the records it came
@@ -166,13 +172,27 @@ What is kept is a list of references to your questions, gap analyses and rule
 drafts, in your browser, per workspace and per user. The content is reloaded
 from TruStacks when you return. **New conversation** clears it.
 
-## Crew view
+## The crew at work
 
-**Crew view** (header, top right) shows the newest analysis or proposal as a
-flow of the agents that took part: who delegated to whom, each event in the
-voice of the agent that produced it, and the most recent tool call with its
-full parameters. A specialist that wasn't consulted isn't drawn.
-**Back to the chat** returns here.
+**The crew at work →** (header, top right) opens the crew canvas: one run
+drawn as a flow of the agents that took part. You see who delegated to
+whom, each event in the voice of the agent that produced it, and the most
+recent tool call with its full parameters. A specialist that wasn't
+consulted isn't drawn. **Back to the chat** returns here.
+
+**Recent crew runs**, across the top, lists the crew's 10 newest runs,
+analyses and proposals together, newest first. Each shows the lead agent
+(the Code Reviewer for an analysis, the DevOps Engineer for a plan or a
+fix), the service, the kind of run (**Analysis**, **Plan**, or **Fix** with
+the gap it closes, such as *Fix · Image scanning*), its status and how long
+ago it started. Click one to follow it.
+
+The canvas opens on the newest run and stays on the run you're following:
+it doesn't jump when something newer starts, though the new run appears in
+the list. The header names the run, for example *Fix · Image scanning on
+orders-api*, and says whether it is the **Active run**, the **Most recent
+run** or an **Earlier run**. **Open the run →** opens its analysis or
+proposal page.
 
 ## How it connects
 
@@ -199,3 +219,4 @@ full parameters. A specialist that wasn't consulted isn't drawn.
   A draft written on an older runner wasn't checked, so it can't be
   proposed; draft it again after upgrading.
 - The sidebar's **Crew online** strip is a static roster, not live status.
+  The pulse on **Workspace** is the live signal.

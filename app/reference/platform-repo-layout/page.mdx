@@ -21,7 +21,10 @@ reusable CI workflow.
 
 Every file in a proposal must live under one of three prefixes. The
 constitution rule `proposal.allowed_paths` refuses anything else, and
-`proposal.no_path_traversal` refuses absolute paths and `..`.
+`proposal.no_path_traversal` refuses absolute paths and `..`. The one
+exception is a [scoped fix](/guide/maturity#what-a-fix-changes) that declares
+the tool you chose: it may also change the root `environment-profile.yaml`,
+and only to add that one entry.
 
 ```text
 gitops/              deploy artifacts (Helm chart, Kustomize base + overlays,
@@ -31,8 +34,11 @@ argo-apps/           ArgoCD Application manifests, one directory per cluster
                      Fargate targets a deploy workflow per service per target
 ```
 
-`environment-profile.yaml` also lives at the repo root. TruStacks reads it but
-never proposes changes to it. That file is yours.
+`environment-profile.yaml` also lives at the repo root. That file is yours.
+TruStacks reads it, and proposes a change to it in one case only: a
+[scoped fix](/guide/maturity#what-a-fix-changes) for a tool you chose adds
+that tool's declaration, one entry, in the same PR as its CI step. The runner
+writes that entry, not the agent, and nothing else in the file changes.
 
 ## Helm layout
 
@@ -343,7 +349,10 @@ patch. Each pull request lists what was kept, replaced, or removed under
 **Preservation notes**.
 
 An agent may delete a file only when the same proposal adds its replacement,
-and the pull request says so.
+and the pull request says so. Even then, a plan never deletes or renames a
+CI workflow your service repo still calls, a reusable workflow (`on:
+workflow_call`) or a shared GitLab or Azure Pipelines template, since
+another service may call it. Those stay, listed under **Kept, still in use** with the reason.
 
 ## Where to go next
 

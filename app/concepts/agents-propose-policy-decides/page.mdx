@@ -168,13 +168,35 @@ content your team wrote cannot be targeted. Removals appear at the top of the
 PR body, under **Files removed**, naming what replaced each one. As always,
 nothing happens until a person merges.
 
+**A plan never deletes a pipeline a service still calls.** Before a removal
+reaches the pull request, TruStacks reads the service repo's CI. It keeps,
+and never deletes or renames away:
+
+- a CI workflow or pipeline file the service repo calls;
+- a reusable GitHub workflow (`on: workflow_call`) or a shared GitLab or
+  Azure Pipelines template, even when this service doesn't call it, because
+  another service of the same Application may, and TruStacks can read only
+  this service's repo;
+- every pipeline file, when the service repo's CI couldn't be read.
+
+This is checked when the agent asks to retire a file and again just before
+the pull request opens. A kept file is listed under **Kept, still in use**
+in the PR body, with the reason (for example, which workflow in the service
+repo calls it), so the reviewer knows the old file stays beside its
+replacement on purpose. A plain push-triggered workflow that nothing calls
+can still be retired. To remove a reusable workflow once you know nothing
+calls it, delete it by hand.
+
 ## What agents cannot do
 
 - Merge, approve or sync anything.
 - Bypass the policy gate or validation.
 - Write outside the paths the constitution allows.
 - Add tools to your pipeline that your profile does not declare (they
-  record a recommendation instead).
+  record a recommendation instead). The one exception is a
+  [scoped fix](/guide/maturity#what-a-fix-changes) for a tool a person on
+  your team chose: that pull request declares the tool in the same change,
+  and the declaration is written by the runner, not the agent.
 - Invent action versions: every `uses:` must come from a curated pack, or
   the step is omitted and flagged.
 - Fill in an attestation for you (see

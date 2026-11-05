@@ -56,10 +56,11 @@ analysis**.
 
 - **One card per unsatisfied tooling category**: the category, the rule
   that requires it, the recommended tool and why. **Draft pipeline PR**
-  asks the crew to add that tool's step to your pipeline and opens a
-  proposal (**Watch the crew work →**). The card says plainly that your
-  score moves only once you also declare the tool in
-  `environment-profile.yaml`, because that declaration is yours to make.
+  asks the crew to add a tool's step to the service's existing CI
+  workflow and opens a proposal (**Watch the crew work →**). You
+  choose the tool first; the PR adds its step and declares it in
+  `environment-profile.yaml`, and the card says so before you click. The
+  fix changes nothing else; see [What a fix changes](#what-a-fix-changes).
 - **A behaviors card** (*N behaviors unearned*), split three ways:
   - **You declared these, and what we found disagrees** (disputed);
   - **You've declared these … and we couldn't verify them** (claimed,
@@ -86,6 +87,169 @@ What is left, in two voices:
   count half, and it names them), and the score that closing every gap on
   the page would actually reach. If that ceiling is below 90%, it says gold
   is not reachable yet and why.
+
+## What a fix changes
+
+**Draft pipeline PR** here and **Draft the fix** on
+[Portfolio](/guide/portfolio#draft-the-fix) start the same run: a **scoped
+fix**, not a full plan. It closes one gap and changes nothing else.
+
+### You choose the tool
+
+Both buttons open the same picker, **Draft the fix: &lt;category&gt;**. It
+lists the tools TruStacks can add for that category, with the one the gap
+analysis recommends pre-selected and marked **recommended**. It says what
+merging will do: *Merging this PR declares &lt;tool&gt; for &lt;category&gt; in
+your Stack file and adds its CI step.* **Draft** starts the run; **Cancel**
+drafts nothing.
+
+- **One gap, one tool.** A fix adds the one tool you picked, never every
+  tool the gap recommends.
+- **Only tools every active runner can add.** A tool is offered, and
+  accepted, only when every runner connected to your workspace has its
+  curated, pinned action. If each runner could add a tool but they share
+  none, there is nothing to pick, and TruStacks says *Your runners are on
+  different versions and don't share a tool TruStacks can add for
+  &lt;category&gt;. Upgrade them to the same release, then try again.*
+  Before any runner has reported its tools, the picker has no list and
+  says *TruStacks will add the tool this gap recommends.*
+- **Your choice is recorded.** TruStacks keeps who chose the tool and when,
+  and a Re-run of the fix keeps the same choice.
+
+### One pull request: the step and the declaration
+
+The pull request adds the tool's CI step and declares the tool in
+`environment-profile.yaml`, so merging it is the claim, made by you. The
+runner writes the declaration, not the agent: one entry under the gap's
+category, inserted as text so your comments stay. It is marked `primary:
+true` only when the category had no tool yet. Anything else in the file (another
+category, `practices`, the name, an existing entry) is refused.
+
+- **Already declared:** the PR leaves `environment-profile.yaml` alone and
+  only adds the step.
+- **Step already in the workflow:** nothing is added to the workflow. The PR
+  says the `<tool>` step is already present in `<workflow>` and there is nothing to add,
+  ships only the declaration, and is titled `trustacks: declare <tool>
+  (<category>)`.
+- **Stack file not editable here:** when `environment-profile.yaml` lives in
+  another repo, is missing or a symlink, or is laid out in a way the edit
+  can't handle safely, nothing is written to it. The PR adds the step only
+  and gives the lines to add yourself.
+- **GitLab CI and Azure Pipelines:** TruStacks can't yet check those
+  pipelines for the tool's step, so the PR never claims or declares the tool
+  there. It lists the tool as not added, with that reason, and asks you to
+  review the pipeline change yourself.
+
+The PR names who chose the tool by their display name, never their email
+address. When there is no display name, it says *a workspace owner*. The
+commit message names nobody.
+
+### Which workflow it edits
+
+When TruStacks can identify the workflow your service runs, a fix edits that
+one. It reads the service repo's CI and looks for the platform-repo workflow
+it calls (on
+GitHub Actions, a `uses: <owner>/<platform-repo>/.github/workflows/<file>@<ref>`
+line).
+
+| Your service repo's CI | The fix edits | The PR says |
+|---|---|---|
+| Calls exactly one platform workflow | That workflow | Which file calls it, and, if it isn't `ci-<service>.yaml`, that the step goes where your pipeline actually runs it |
+| Calls several | Nothing. The run stops | The workflows it calls, and to add the step to the one you want by hand, or call one workflow and retry |
+| Calls none | `.github/workflows/ci-<service>.yaml` (or `.yml`) | **Your service repo doesn't call this workflow yet**, with the `uses:` snippet to add to the service repo, or the step won't run |
+| Can't be read | `ci-<service>.yaml` | That it couldn't check which workflow the service calls, and to check that the service calls this one |
+
+On GitLab CI and Azure Pipelines the same applies to `include: project` and
+`template: <file>@<alias>`.
+
+### What TruStacks enforces
+
+In code, not only in the agent's instructions:
+
+- **Only that workflow, and the Stack-file entry.** The DevOps Engineer may
+  write the one workflow. Any other file (a Helm chart, a Kustomize overlay,
+  an ArgoCD Application, a Dockerfile) is refused, and so is retiring a
+  file. The declaration in `environment-profile.yaml` is added only after
+  the tool's step is in the workflow, and is checked again before the PR
+  opens.
+- **Only additions.** The edited workflow is compared with the original. On
+  GitHub Actions, every top-level key other than `jobs` stays as it was and
+  none is added, no job is added, every original job keeps its settings,
+  and its original steps are all there, unchanged and in order. A job's
+  `permissions` may gain only what the tool's step needs to upload its
+  results (`contents: read`, `security-events: write`). On GitLab CI and
+  Azure Pipelines, every original job and step must still be there,
+  unchanged; additions may go anywhere. An edit that changes anything else
+  is sent back to the agent; after 3 refusals the run fails and says why.
+- **The step must be there.** On GitHub Actions, the fix can't be
+  submitted until the workflow has a step whose `uses:` is the tool's
+  curated, pinned action.
+- **Policy still decides.** The constitution judges the fix together with
+  the service's deploy files as they will stand after the merge. It allows
+  a write to `environment-profile.yaml` only for a fix that declares the
+  tool you chose; every other proposal is still denied that file.
+
+A fix stops, and changes nothing, when:
+
+- **The service has no CI workflow yet.** The run says *No CI workflow for
+  this service yet* and to *run a full plan first*, naming the paths it
+  looked for. A fix extends a pipeline; it never builds one.
+- **The service calls several platform workflows.** See the table above.
+- **TruStacks has no pinned action for the tool.** There is no reviewed
+  step to add. Add the tool to your pipeline by hand, or pick a tool
+  TruStacks curates.
+- **TruStacks couldn't read the platform repo.** Retry; nothing was changed.
+- **A file the fix needs can't be read safely**: a symlink, a file outside
+  the repo, a file that isn't UTF-8 text, or one that is too large
+  (200,000 bytes for the workflow, 1 MiB for the deploy files policy reads
+  beside it). The run names the file and the reason. A workflow that is a
+  symlink isn't used at all, so the run reports that there is no CI
+  workflow.
+
+### What the pull request says
+
+Its title reads `trustacks: add <tool> (<category>)`, or `trustacks:
+declare <tool> (<category>)` when the step was already there. The body
+opens with **Your choice**: *&lt;name&gt; chose &lt;tool&gt; for &lt;category&gt;
+in TruStacks on &lt;date&gt;*, and what merging does to
+`environment-profile.yaml`. **Fix requested** follows: the tool added, or
+the note that the step is already present, then **Requested but not added**, each
+with the reason, when a tool couldn't be added, then which workflow the fix
+edits and why. The summary leads with **Scoped fix**: the files that
+actually changed (a file identical to the platform repo's is neither listed
+nor shipped) and the steps added, and states that every existing step, job
+and trigger is unchanged. The proposal's **Explanation** leads the same
+way.
+
+### After you merge
+
+Merging declares the tool, so the category reads **claimed** (counted
+half). It reads **verified** once a gap analysis finds the tool's pinned
+step in a workflow in your platform repo; run a new one to see it. Verified
+means the step is present in that workflow. It doesn't mean TruStacks has
+seen the step run. The workflow targeting above is what puts the step in
+the workflow your service calls.
+
+If your service repo calls that workflow pinned to a commit SHA (or a tag),
+merging the fix doesn't change what the service runs yet. Move the service
+repo's `uses:` pin to the merge commit, as for any
+[workflow change](/reference/platform-repo-layout), and the new step runs
+on its next build.
+
+When the PR couldn't declare the tool (the Stack file is elsewhere, or on
+GitLab CI and Azure Pipelines), the category stays missing until you
+declare it yourself.
+
+### When a fix fails
+
+**Re-run plan**, on the error in the proposal's activity, re-runs the same
+request as a new proposal. For a fix that means the same fix: the same
+tool, from the same gap, still scoped. The failed proposal stays as the
+record. Only a run that ended in an error can be re-run; one that is still
+going, or that finished, can't.
+
+While a fix for a gap is in progress, a second one for the same gap is
+refused, so a double click or a second tab doesn't open a second PR.
 
 ## What it means
 
@@ -121,8 +285,8 @@ The full model, and why it works this way, is in
 
 ## What to do here
 
-1. Start with **Open gaps**. For a tooling gap, **Draft pipeline PR**, review
-   and merge the PR, then declare the tool in your profile.
+1. Start with **Open gaps**. For a tooling gap, **Draft pipeline PR**, pick
+   the tool, then review and merge the PR. Merging declares the tool.
 2. For a missing behavior, put the practice in place, then add the line to
    `practices:`. For a disputed one, read the note: the evidence disagrees
    with your claim, so fix the pipeline or remove the claim.
