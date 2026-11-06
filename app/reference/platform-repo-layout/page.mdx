@@ -148,6 +148,53 @@ merge, at the cost of trusting whoever can push to that branch. The
 proposal's summary includes the snippet with your names filled in, in the
 shorter `@main` and `on: [push, pull_request]` form; prefer the one above.
 
+### The caller's permissions
+
+A called workflow can only keep or reduce its caller's `GITHUB_TOKEN`, never
+raise it. When one of its jobs asks for a scope the calling job didn't
+grant, GitHub refuses the run before a step executes. The
+`contents: read` and `packages: write` above are right for a workflow with
+no tool steps. Tool steps need more: gitleaks adds `pull-requests: read`,
+and a SARIF upload adds `actions: read` and `security-events: write` (see
+[Token permissions](/reference/knowledge-packs#token-permissions)).
+
+From runner 0.2.21, TruStacks computes the grant for you. A plan's pull
+request has a **Calling job permissions** section, and the
+*Your service repo doesn't call this workflow yet* snippet uses the same
+set: the union of every job's `permissions` in the workflow, highest level
+per scope, plus what the tool steps of jobs without their own block need.
+When a fix adds a step that needs a new scope, the pull request says which
+ones your calling job must add.
+
+That set is a **minimum**:
+
+- **Keep what your calling job already grants.** A job without its own
+  `permissions` inherits your grant, and TruStacks can only see what its
+  tool steps need. If the calling job grants `packages: write` because the
+  workflow pushes images, keep it.
+- **If the calling job has no `permissions` block yet**, adding one sets
+  every scope it doesn't list to `none`. List everything the workflow uses,
+  not only the new scopes.
+
+For example, a workflow with a gitleaks step and a Trivy scan with SARIF
+upload:
+
+```yaml
+jobs:
+  trustacks:
+    uses: <owner>/<platform-repo>/.github/workflows/ci-<service>.yaml@<commit-sha>
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+      pull-requests: read
+      security-events: write
+```
+
+If the workflow runs gitleaks and your repo is owned by an organization,
+the calling job must also pass the license secret. See
+[gitleaks](/reference/knowledge-packs#gitleaks).
+
 ### Private platform repos
 
 A private repo shares its reusable workflows with nothing by default. The
