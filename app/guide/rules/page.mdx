@@ -56,6 +56,18 @@ be `package overlay.<name>`, and an overlay that reaches outside
 runners did not check. The full rules are in
 [the constitution reference](/reference/constitution#your-own-rules).
 
+<Callout type="info">
+  **Your rule's scope is enforced, from policy 1.11.0 / runner 0.2.21.** A
+  rule's denies count only when the proposal's tier is in its `tier_scope`
+  and its target kind is in its `target_kinds`, so a `["prod"]` rule no longer
+  needs to check `input.context.target.tier` itself. A missing or invalid
+  scope means "any": the rule still enforces. A rule scoped to a specific tier
+  or kind is skipped where there is no deployment target, such as the repo
+  audit, so a repo-audited rule uses `["any"]`. Constitution rules keep their
+  own logic. See
+  [Where your rule applies](/reference/constitution#rule-scope).
+</Callout>
+
 Overlay rules are enforced on every proposal but do not count toward your
 [Maturity](/guide/maturity) headline, which is computed from constitution
 rules alone. What only your rules ask for shows on Maturity under **Your
@@ -239,7 +251,9 @@ are in
 Each [analysis](/guide/applications#analyses) of a service also audits the
 service repo's own Dockerfiles, CI workflows and ECS task definitions,
 whoever wrote them. A rule of yours is part of that audit when its
-`rule_metadata` declares `"subjects": ["proposal", "repo"]`. The audit
+`rule_metadata` declares `"subjects": ["proposal", "repo"]`. A repo has no
+deployment target, so from policy 1.11.0 / runner 0.2.21 the audit only
+runs a rule whose `tier_scope` and `target_kinds` are both `["any"]`. The audit
 reads `rules/` from your Application's platform repo at the commit its
 `environment-profile.yaml` was read from, with the same checks as a
 proposal; a signed overlay bundle still takes precedence. Its denials
