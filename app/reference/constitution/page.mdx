@@ -96,7 +96,10 @@ deploys pin a digest, that guarantee does not exist.
 
 Every rule declares the target kinds it applies to in its metadata
 (`target_kinds`), beside the tiers it applies to (`tier_scope`). A rule
-without `target_kinds` applies to every kind.
+without `target_kinds` applies to every kind. For the constitution rules
+below this is descriptive: each checks the kind in its own Rego. For your
+own rules the gate enforces it (see
+[Where your rule applies](#rule-scope)).
 
 | `target_kinds` | Rules |
 |---|---|
@@ -277,10 +280,38 @@ A declared `kind` is used as declared. A rule doesn't need a `practice.`
 id to be a behavior rule (it can't have one: the `practice` namespace is
 reserved).
 
-`tier_scope` and `target_kinds` describe where the rule applies, and the PR
-body states it. They are metadata: they don't filter what the gate
-evaluates, so a rule meant for production also checks
-`input.context.target.tier` in its deny body.
+#### Where your rule applies [#rule-scope]
+
+<Callout type="info">
+  **Available from policy 1.11.0 / runner 0.2.21.** Runners follow the
+  policy release on its own; runner 0.2.21 also carries it in its built-in
+  policy. Before that, `tier_scope` and `target_kinds` were descriptive only,
+  and a rule meant for production had to check `input.context.target.tier`
+  in its deny body.
+</Callout>
+
+For your rules, the gate enforces `tier_scope` and `target_kinds`. A rule's
+denies count only when the proposal's tier is in its `tier_scope` and its
+target kind is in its `target_kinds`. Outside that scope the rule is
+skipped, and the PR body states the scope. You don't need to check
+`input.context.target.tier` in the deny body (a rule that still does keeps
+working).
+
+- **`["any"]` applies everywhere.** So does a rule that doesn't declare the
+  field.
+- **A missing or invalid scope means "any".** A value outside the schema
+  (`["staging"]`, `[]`, `"prod"` not in a list, `["any", "prod"]`, a target
+  kind the constitution doesn't know) widens the rule to every tier or kind.
+  The rule still enforces, and the value shows as a `metadata_invalid`
+  warning. A mistake in the scope never switches a rule off.
+- **No tier means a tier-scoped rule is skipped.** When a proposal names no
+  tier, a rule scoped to specific tiers can't be shown to apply. A proposal
+  with no target kind is Kubernetes, as it is for every constitution rule.
+- **The repo audit has no deployment target.** A rule scoped to a specific
+  tier or target kind is skipped in the [repo audit](#repo-audit). A rule
+  you want in the audit uses `["any"]` for both.
+- **Constitution rules keep their own logic.** Their `tier_scope` and
+  `target_kinds` describe them; each checks tier and kind in its own Rego.
 
 ```rego
 rule_metadata := {
@@ -433,7 +464,11 @@ audit, not a gate: it never fails the analysis. Its denials arrive on
 Only rules that declare `repo` in `subjects` are part of the audit,
 constitution and overlay alike. A rule such as *the proposal includes a
 Helm chart* means nothing for a service repo, so it stays
-`["proposal"]`. To add one of your rules:
+`["proposal"]`. A repo has no deployment target, so from policy 1.11.0 /
+runner 0.2.21 the audit skips any rule of yours scoped to a specific tier or
+target kind: give a repo-audited rule `tier_scope` and `target_kinds` of
+`["any"]` (see [Where your rule applies](#rule-scope)). To add one of your
+rules:
 
 ```rego
 "subjects": ["proposal", "repo"],
