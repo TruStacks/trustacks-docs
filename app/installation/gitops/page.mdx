@@ -109,6 +109,13 @@ the cost of trusting whoever can push to the platform repo's `main`. The
 proposal summary shows the snippet with `@main` and `on: [push, pull_request]`;
 the pinned form above is the hardened one.
 
+**Grant what the workflow's jobs need.** The `permissions` above are a
+minimum for a workflow with no tool steps. A gitleaks step or a SARIF upload
+needs more, and GitHub refuses the run if the calling job grants less than a
+called job asks for. The pull request lists the set under **Calling job
+permissions**; grant at least that and keep what your calling job already
+grants. See [The caller's permissions](/reference/platform-repo-layout#the-callers-permissions).
+
 Same-repo pull requests still build and push an image, tagged with the pull
 request's commit SHA. Image tag promotion follows only your default branch,
 so those images are never proposed for deployment.

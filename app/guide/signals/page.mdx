@@ -119,6 +119,10 @@ code-scanning alerts, and from release 0.2.15-rc6, when your EnvironmentProfile
 declares a scanner that writes SARIF (Trivy, Semgrep), the DevOps Engineer's CI
 workflow uploads that scanner's results to GitHub code scanning. Your CI runs
 the scanner, GitHub stores the results, and the next sweep brings them here.
+Code scanning is available only on public repos, or on private and
+internal repos with GitHub Advanced Security. Without it the upload step
+fails without failing the build, and the SARIF is kept as a workflow
+artifact (`<tool>-sarif`) on the run; download it and upload it here.
 See the [Signals workshop](/workshops/signals-governed-fix).
 
 ### Upload a SARIF file
