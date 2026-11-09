@@ -195,9 +195,14 @@ and upload it in [Signals](/guide/signals#upload-a-sarif-file).
 
   jobs:
     ci:
+      runs-on: ubuntu-latest
       steps:
+        - uses: actions/checkout@<commit-sha>
+          with:
+            fetch-depth: 0
         - uses: gitleaks/gitleaks-action@<commit-sha>
           env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
   ```
 

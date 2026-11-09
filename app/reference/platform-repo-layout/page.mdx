@@ -173,9 +173,10 @@ That set is a **minimum**:
   of its own, in a workflow with no top-level block, inherits your grant,
   and TruStacks can only see what its tool steps need. If the calling job
   grants `packages: write` because the workflow pushes images, keep it.
-  Your grant is a ceiling: where the called workflow has a top-level block,
-  jobs get what that block lists, and a scope it omits can't be restored
-  from the calling job.
+  Your grant is a ceiling, not the whole answer: where the called workflow
+  has a top-level block, jobs without their own block get what it lists, and
+  a scope it omits can't be restored from the calling job. A job with its
+  own block can still use any scope your grant allows.
 - **If the calling job has no `permissions` block yet**, adding one sets
   every scope it doesn't list to `none`. List everything the workflow uses,
   not only the new scopes.
