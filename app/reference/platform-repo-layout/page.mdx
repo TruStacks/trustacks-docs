@@ -161,17 +161,21 @@ and a SARIF upload adds `actions: read` and `security-events: write` (see
 From runner 0.2.21, TruStacks computes the grant for you. A plan's pull
 request has a **Calling job permissions** section, and the
 *Your service repo doesn't call this workflow yet* snippet uses the same
-set: the union of every job's `permissions` in the workflow, highest level
-per scope, plus what the tool steps of jobs without their own block need.
+set: the union of every job's effective `permissions` in the workflow
+(its own block, or the workflow's top-level block if it has none), highest
+level per scope, plus what the tool steps of inheriting jobs need.
 When a fix adds a step that needs a new scope, the pull request says which
 ones your calling job must add.
 
 That set is a **minimum**:
 
-- **Keep what your calling job already grants.** A job without its own
-  `permissions` inherits your grant, and TruStacks can only see what its
-  tool steps need. If the calling job grants `packages: write` because the
-  workflow pushes images, keep it.
+- **Keep what your calling job already grants.** A job with no `permissions`
+  of its own, in a workflow with no top-level block, inherits your grant,
+  and TruStacks can only see what its tool steps need. If the calling job
+  grants `packages: write` because the workflow pushes images, keep it.
+  Your grant is a ceiling: where the called workflow has a top-level block,
+  jobs get what that block lists, and a scope it omits can't be restored
+  from the calling job.
 - **If the calling job has no `permissions` block yet**, adding one sets
   every scope it doesn't list to `none`. List everything the workflow uses,
   not only the new scopes.

@@ -178,8 +178,9 @@ In code, not only in the agent's instructions:
   and its original steps are all there, unchanged and in order. A job's
   explicit `permissions` may gain only the scopes the packs of its tool
   steps declare, at exactly the declared level, and never lose or lower
-  one. A job with no `permissions` block is never given one; the pull
-  request names what your calling job must grant instead. See
+  one. A job that inherits the calling job's grant, with no `permissions`
+  of its own and none at the top of the workflow, is never given a block;
+  the pull request names what your calling job must grant instead. See
   [Token permissions](/reference/knowledge-packs#token-permissions). On GitLab CI and
   Azure Pipelines, every original job and step must still be there,
   unchanged; additions may go anywhere. An edit that changes anything else

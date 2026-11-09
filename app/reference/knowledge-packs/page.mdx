@@ -120,9 +120,10 @@ these rules:
   the whole workflow.
 - **Never removes or lowers a grant.** Every scope already there keeps its
   level. An edit that drops or reduces one is refused.
-- **Never adds a block to a job that inherits.** A job with no
-  `permissions` of its own in a reusable workflow inherits the calling job's
-  grant. A block would replace that grant and silently drop every other
+- **Never adds a block to a job that inherits.** In a reusable workflow, a
+  job with no `permissions` of its own, and no top-level `permissions` in
+  the workflow, inherits the calling job's grant. (With a top-level block,
+  the job uses that block instead, and the rule below applies.) A block would replace that grant and silently drop every other
   scope it carries, such as `packages: write`. So TruStacks leaves the job
   as it is, and the pull request tells you which permissions your calling
   job must grant instead.
@@ -146,8 +147,8 @@ called workflow can only keep or reduce its caller's token. See
 
 ### SARIF upload
 
-When your profile declares a scanner that writes SARIF (Trivy, Semgrep), the
-scan step is followed by two more, both with `if: always()` so a scan that
+When your profile declares a scanner with a working step that writes SARIF
+(Trivy today; Semgrep is pending, see below), the scan step is followed by two more, both with `if: always()` so a scan that
 fails the build on findings still reports them:
 
 1. **The code scanning upload** (`codeql-upload-sarif`), with
@@ -191,7 +192,18 @@ and upload it in [Signals](/guide/signals#upload-a-sarif-file).
       secrets:
         GITLEAKS_LICENSE:
           required: false
+
+  jobs:
+    ci:
+      steps:
+        - uses: gitleaks/gitleaks-action@<commit-sha>
+          env:
+            GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
   ```
+
+  Either way, the Gitleaks step itself has to set `GITLEAKS_LICENSE` in its
+  `env:`. Passing the secret to the workflow does not put it in the action's
+  environment.
 - **Inline comments.** The action also tries to comment on leaked lines in
   the pull request. That needs `pull-requests: write`; without it the action
   logs a warning and carries on, and the findings still reach the job
