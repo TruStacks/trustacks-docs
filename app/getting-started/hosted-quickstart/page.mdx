@@ -449,6 +449,13 @@ request that changes this workflow, update the SHA in the same review.
 of trusting whoever can push to that branch. The proposal summary shows this
 snippet with `@main` and `on: [push, pull_request]`; use the pinned form above.
 
+**Grant what the workflow's jobs need.** The `permissions` above are a
+minimum for a workflow with no tool steps. A gitleaks step or a SARIF upload
+needs more, and GitHub refuses the run if the calling job grants less than a
+called job asks for. The pull request lists the set under **Calling job
+permissions**; grant at least that and keep what your calling job already
+grants. See [The caller's permissions](/reference/platform-repo-layout#the-callers-permissions).
+
 **If your platform repo is private, grant Actions access once.** A private
 repo shares its reusable workflows with nothing by default, and GitHub reports
 that as `workflow was not found` (naming your generated file), not as a

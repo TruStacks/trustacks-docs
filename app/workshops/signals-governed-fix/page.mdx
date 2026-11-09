@@ -61,8 +61,15 @@ Application. Anything that reaches GitHub code scanning reaches Signals.
    **and uploads its results to GitHub code scanning**: a pinned
    `github/codeql-action/upload-sarif` step right after the scan, which runs
    even when the scan fails the build. This needs release 0.2.15-rc6 or later.
-   Semgrep works the same way.
-4. Merge that PR. Your CI runs the scanner, GitHub stores the results, and your
+   Code scanning shows the results only on a public repo, or with GitHub
+   Advanced Security on a private one. From release 0.2.21 the upload never
+   fails the build, and the SARIF is also kept as a workflow artifact, so
+   without code scanning, download that artifact, extract the `.sarif` file
+   from the ZIP, and upload it as in the quick path below.
+   The Semgrep pack has no working step yet, so use Trivy for this workshop.
+4. Merge that PR. If your service repo's calling job pins the workflow to a
+   commit SHA, update it to the platform repo's merge commit first, or CI
+   keeps running the old workflow. Your CI then runs the scanner, GitHub stores the results, and your
    runner's next sweep turns them into findings. The GitHub source sweeps every
    6 hours; **last sweep Nm ago** on its row tells you when it last ran.
 
