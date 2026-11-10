@@ -132,17 +132,9 @@ make seed-token      # a machine-user token for curl against the control plane
 
 ## Run the crew
 
-From the UI, open a seeded service, click **Run analysis**, then **Promote to
-proposal**. Or from the CLI (the local control plane accepts it without a
-token; the hosted service does not):
-
-```bash
-cd runner && uv sync
-uv run trustacks review sample-app-gitea           # Code Reviewer; prints the analysis id
-read -r -p "Analysis id printed above: " ANALYSIS_ID
-uv run trustacks plan "$ANALYSIS_ID" --dry-run     # DevOps Engineer, no PR
-uv run trustacks plan "$ANALYSIS_ID"               # opens a PR in Gitea
-```
+From the UI, open a seeded service and click **Run analysis**. When it's done,
+use **promote →** on the **Analyses** tab. To preview without opening a PR, tick
+**dry-run (skip PR)** before you click **Promote (dry-run)**.
 
 A proposal runs artifact validation, then the policy gate against the
 Zot-pulled constitution, then an advisory gap check, then opens the PR on the
