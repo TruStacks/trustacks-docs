@@ -18,14 +18,11 @@ decides, humans approve.
 
 <Callout type="warning">
   **This workshop needs a local development environment.** It uses the
-  seeded sample repos, the in-cluster Gitea and ArgoCD, and the `trustacks`
-  CLI, which talks to a local or self-hosted control plane (the CLI sends no
-  credentials, so it cannot drive the hosted service). Set up with
+  seeded sample repos and the in-cluster Gitea and ArgoCD. Set up with
   [Local development](/contributing/local-dev) first.
 
   **On the hosted product?** You can follow most of it in the app against
-  your own repos. Steps 2, 3 and 5 are app screens; for steps 1 and 4 use
-  **Run analysis** and **Promote to proposal** on the service; for step 6,
+  your own repos. Steps 1 to 5 work the same way there; for step 6,
   promote without dry run and the pull request opens in your GitHub platform
   repo; for step 8, merge there and sync in your own ArgoCD; step 9 is in
   the app. For step 7, you land the rule in `rules/` in your platform repo
@@ -71,14 +68,11 @@ Open `http://ui.localtest.me:8080`. You should see the app with the sidebar
 
 ## Walkthrough
 
-### Step 1. Run the Code Reviewer from the CLI
+### Step 1. Run the Code Reviewer
 
-```bash
-cd runner && uv sync
-uv run trustacks review sample-app-gitea
-```
-
-The CLI streams the run's events live. The shape:
+Go to **Applications → View all services across applications**, open
+`sample-app-gitea`, and click **Run analysis**. The run's events stream live.
+The shape:
 
 ```text
 started → cloned → framework_detected (python_fastapi)
@@ -94,17 +88,9 @@ not guess. It then reads files with a small, explicit set of tools, and
 submits a typed `RepositoryAnalysis`. Each `tool_call` is the agent asking
 to read something; each `tool_result` is the answer.
 
-Note the analysis id at the top of the output, and keep it in a shell
-variable for the next steps:
-
-```bash
-read -r -p "Analysis id printed above: " ANALYSIS_ID
-```
-
 ### Step 2. See the same run in the app
 
-Go to **Applications → View all services across applications**, open
-`sample-app-gitea`, and look at the **Analyses** tab. Your CLI run is there.
+On the service, look at the **Analyses** tab. Your run is there.
 **open →** shows the same events as an **Activity** log, with the
 Coordinator narrating and the Code Reviewer's tool calls attributed to it.
 When the run is done, the **Repository Analysis** card shows framework,
@@ -124,13 +110,7 @@ gap analysis instead.
 
 ### Step 4. Promote the analysis to a proposal
 
-From the CLI, with a dry run first:
-
-```bash
-uv run trustacks plan "$ANALYSIS_ID" --dry-run
-```
-
-Or in the app: on the service's **Analyses** tab, **promote →**, tick
+Do a dry run first: on the service's **Analyses** tab, **promote →**, tick
 **dry-run (skip PR)**, then **Promote (dry-run)**.
 
 The event shape:
@@ -162,8 +142,7 @@ Watch for three things:
 
 ### Step 5. Read the proposal
 
-Open the proposal (the CLI prints its id; the app navigates there). Below
-the timeline:
+The app opens the proposal when you promote. Below the timeline:
 
 - **Explanation**: summary, blast radius, rollback, rules cited, and which
   profile entries were used.
@@ -179,11 +158,7 @@ pack is left out and recorded as a TODO, never guessed.
 
 ### Step 6. Open the real pull request
 
-Run it again without dry run:
-
-```bash
-uv run trustacks plan "$ANALYSIS_ID"
-```
+Promote the analysis again, this time without ticking **dry-run (skip PR)**.
 
 The run ends with `pr_opened` and a link to the PR in Gitea. The PR body
 carries the reviewer's context: **Summary**, **Blast radius**,
