@@ -66,7 +66,10 @@ Application. Anything that reaches GitHub code scanning reaches Signals.
    fails the build, and the SARIF is also kept as a workflow artifact, so
    without code scanning, download that artifact, extract the `.sarif` file
    from the ZIP, and upload it as in the quick path below.
-   The Semgrep pack has no working step yet, so use Trivy for this workshop.
+   Trivy or Semgrep both work (Semgrep from release 0.2.23). Semgrep runs as
+   a container step, so the CI runner needs Docker (GitHub-hosted Linux
+   runners have it) and HTTPS to semgrep.dev; see
+   [Knowledge packs](/reference/knowledge-packs#tool-action-packs).
 4. Merge that PR. If your service repo's calling job pins the workflow to a
    commit SHA, update it to the platform repo's merge commit first, or CI
    keeps running the old workflow. Your CI then runs the scanner, GitHub stores the results, and your
