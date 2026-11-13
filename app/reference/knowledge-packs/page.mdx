@@ -148,7 +148,7 @@ called workflow can only keep or reduce its caller's token. See
 ### SARIF upload
 
 When your profile declares a scanner with a working step that writes SARIF
-(Trivy today; Semgrep is pending, see below), the scan step is followed by two more, both with `if: always()` so a scan that
+(Trivy, and Semgrep from runner 0.2.23), the scan step is followed by two more, both with `if: always()` so a scan that
 fails the build on findings still reports them:
 
 1. **The code scanning upload** (`codeql-upload-sarif`), with
@@ -220,9 +220,15 @@ full commit SHA that appears in a reviewed table of action, commit and
 release tag; a test in both repositories fails on anything else (a tag such
 as `@v3`, a branch, a short SHA, or a commit nobody reviewed). Each pin was
 resolved through GitHub's API, and the actions run on **Node 24**: GitHub
-removed Node 20 from its hosted runners on 2026-09-23. The one exception is
-the Semgrep tool-action entry, which is not a GitHub Action and has no
-working step today; it is listed as unresolved rather than pinned.
+removed Node 20 from its hosted runners on 2026-09-23. Semgrep publishes no
+GitHub Action, so from runner 0.2.23 its entry is a **container step**:
+`docker://semgrep/semgrep:<version>@sha256:<digest>`, pinned by the image's
+digest and checked against a reviewed table of image, digest and tag the same
+way. It runs `semgrep scan` with Semgrep's default ruleset (`p/default`),
+fails the build only on ERROR-severity findings, and needs Docker on the
+runner (GitHub-hosted Linux runners have it) and outbound HTTPS to
+semgrep.dev for the ruleset. On Azure Pipelines it runs as a `docker run`
+script step, because the image can't be an Azure container job.
 Pipelines that TruStacks generated before runner 0.2.19 keep their existing
 pins until the next proposal for that service.
 
